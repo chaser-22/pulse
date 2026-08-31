@@ -1,6 +1,7 @@
 export type MemberStatus = 'active' | 'expiring' | 'absent' | 'expired' | 'recovered';
 export type RiskLevel = 'high' | 'medium' | 'low';
 export type Channel = 'WhatsApp' | 'Viber' | 'SMS';
+export type RecoveryOutcome = 'no_answer' | 'replied' | 'follow_up' | 'declined';
 
 export type Visit = { date: string; time: string };
 export type Payment = { date: string; amount: number; method: string; note: string };
@@ -28,6 +29,8 @@ export type Member = {
   recoveredAmount?: number;
   recoveredAt?: string;
   queuedMessage?: { channel: Channel; text: string; queuedAt: string };
+  recoveryOutcome?: RecoveryOutcome;
+  followUpAt?: string;
 };
 
 export type Automation = {

@@ -5,7 +5,7 @@ import {
   Activity, AlertTriangle, ArrowRight, Cake, CalendarClock, Check, CheckCircle2,
   ChevronRight, CircleGauge, Clock3, CreditCard, FileSpreadsheet, History,
   LayoutDashboard, LogIn, Mail, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
-  Send, Settings2, ShieldAlert, Sparkles, Upload, UserX, Users, WalletCards, X, Zap,
+  RotateCcw, Send, Settings2, ShieldAlert, Sparkles, Upload, UserX, Users, WalletCards, X, Zap,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,10 +17,11 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import {
   copy, initialAutomations, initialMembers, occupancy,
-  type Automation, type Channel, type Member, type MemberStatus, type RiskLevel,
+  type Automation, type Channel, type Member, type MemberStatus, type RecoveryOutcome, type RiskLevel,
 } from '@/lib/pulse-data';
 
-type View = 'dashboard' | 'members' | 'radar' | 'automations';
+type View = 'dashboard' | 'staff' | 'members' | 'radar' | 'automations';
+type Workspace = 'owner' | 'staff';
 type Filter = 'all' | MemberStatus;
 type MemberForm = Pick<Member, 'firstName' | 'lastName' | 'phone' | 'email' | 'birthday' | 'packageName' | 'price' | 'startDate' | 'endDate' | 'status' | 'preferredChannel'>;
 
@@ -34,8 +35,16 @@ const filters: Array<{ id: Filter; label: string }> = [
   { id: 'absent', label: 'Odsutni' }, { id: 'expired', label: 'Istekli' }, { id: 'recovered', label: 'Oporavljeni' },
 ];
 
+const outcomeLabels: Record<RecoveryOutcome, string> = {
+  no_answer: 'Bez odgovora',
+  replied: 'Odgovorio/la',
+  follow_up: 'Pratiti sjutra',
+  declined: 'Ne želi obnovu',
+};
+
 const viewMeta: Record<View, { eyebrow: string; title: string; subtitle: string }> = {
   dashboard: { eyebrow: 'PONEDJELJAK, 31. AVGUST', title: 'Dobro jutro, Marko.', subtitle: 'Evo gdje je prihod u riziku i šta treba uraditi danas.' },
+  staff: { eyebrow: 'DNEVNI OPERATIVNI PLAN', title: 'Prioriteti za tim', subtitle: 'Jasan red poziva, poruka i praćenja koji treba završiti danas.' },
   members: { eyebrow: 'BAZA ČLANOVA', title: 'Članovi', subtitle: 'Pronađite, ažurirajte i kontaktirajte svakog člana na jednom mjestu.' },
   radar: { eyebrow: 'RANI SIGNALI ODLASKA', title: 'Churn Radar', subtitle: 'Jasan prioritet, razlog rizika i sljedeći najbolji potez.' },
   automations: { eyebrow: 'DOSLJEDAN KONTAKT', title: 'Automatizacije', subtitle: 'Prave poruke u pravom trenutku — za sada samo u redu za slanje.' },
@@ -86,6 +95,7 @@ function blankMemberForm(): MemberForm {
 
 export default function Home() {
   const [view, setView] = useState<View>('dashboard');
+  const [workspace, setWorkspace] = useState<Workspace>('owner');
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [automations, setAutomations] = useState<Automation[]>(initialAutomations);
   const [ready, setReady] = useState(false);
@@ -101,6 +111,8 @@ export default function Home() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [memberForm, setMemberForm] = useState<MemberForm>(blankMemberForm());
   const [automationPreviewId, setAutomationPreviewId] = useState<string | null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [pilotOpen, setPilotOpen] = useState(false);
   const [success, setSuccess] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -165,6 +177,35 @@ export default function Home() {
   function goTo(nextView: View) {
     setView(nextView);
     setMobileNav(false);
+  }
+
+  function switchWorkspace(nextWorkspace: Workspace) {
+    setWorkspace(nextWorkspace);
+    setView(nextWorkspace === 'owner' ? 'dashboard' : 'staff');
+    setMobileNav(false);
+  }
+
+  function recordOutcome(memberId: string, outcome: RecoveryOutcome) {
+    const member = members.find((item) => item.id === memberId);
+    if (!member) return;
+    setMembers((current) => current.map((item) => item.id === memberId ? {
+      ...item,
+      recoveryOutcome: outcome,
+      followUpAt: outcome === 'follow_up' ? 'Sjutra u 10:00' : undefined,
+    } : item));
+    setSuccess(`${fullName(member)}: ${outcomeLabels[outcome]}.`);
+  }
+
+  function resetDemo() {
+    setMembers(initialMembers);
+    setAutomations(initialAutomations);
+    setWorkspace('owner');
+    setView('dashboard');
+    setSelectedMemberId(null);
+    setFilter('all');
+    setSearch('');
+    setResetOpen(false);
+    setSuccess('Demo je vraćen na početne podatke i spreman je za novu prezentaciju.');
   }
 
   function openMember(member: Member) {
@@ -292,15 +333,22 @@ export default function Home() {
         <div className="brand"><span className="brand-mark">P</span><span>PULSE</span></div>
         <button className="sidebar-close" aria-label="Zatvori meni" onClick={() => setMobileNav(false)}><X /></button>
         <nav aria-label="Glavna navigacija">
-          <NavButton active={view === 'dashboard'} icon={<LayoutDashboard />} label={t.nav.dashboard} onClick={() => goTo('dashboard')} />
+          {workspace === 'owner' ? <>
+          <NavButton active={view === 'dashboard'} icon={<LayoutDashboard />} label="Vlasnički pregled" onClick={() => goTo('dashboard')} />
           <NavButton active={view === 'members'} icon={<Users />} label={t.nav.members} count={members.length} onClick={() => goTo('members')} />
           <NavButton active={view === 'radar'} icon={<Radar />} label={t.nav.radar} count={riskMembers.length} onClick={() => goTo('radar')} />
           <NavButton active={view === 'automations'} icon={<Zap />} label={t.nav.automations} onClick={() => goTo('automations')} />
+          </> : <>
+          <NavButton active={view === 'staff'} icon={<CheckCircle2 />} label="Dnevni zadaci" count={riskMembers.length} onClick={() => goTo('staff')} />
+          <NavButton active={view === 'members'} icon={<Users />} label={t.nav.members} count={members.length} onClick={() => goTo('members')} />
+          <NavButton active={view === 'radar'} icon={<Radar />} label="Signali rizika" count={riskMembers.length} onClick={() => goTo('radar')} />
+          </>}
         </nav>
         <div className="sidebar-insight">
           <span className="pulse-dot" />
           <div><strong>{euro(metrics.recoveredRevenue)}</strong><small>oporavljeno ovog mjeseca</small></div>
         </div>
+        <button className="demo-reset-button" onClick={() => setResetOpen(true)}><RotateCcw /> Resetuj demo</button>
         <div className="gym-card"><span className="gym-monogram">PD</span><span><strong>{t.gymName}</strong><small>{t.location} · Demo podaci</small></span><Settings2 /></div>
       </aside>
 
@@ -311,13 +359,15 @@ export default function Home() {
           <button className="mobile-menu" aria-label="Otvori meni" onClick={() => setMobileNav(true)}><Menu /></button>
           <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1><p>{viewMeta[view].subtitle}</p></div>
           <div className="top-actions">
+            <fieldset className="workspace-switch"><legend className="sr-only">Izaberite radni prostor</legend><button type="button" className={workspace === 'owner' ? 'active' : ''} onClick={() => switchWorkspace('owner')}><LayoutDashboard /> Vlasnik</button><button type="button" className={workspace === 'staff' ? 'active' : ''} onClick={() => switchWorkspace('staff')}><Users /> Tim</button></fieldset>
             {view === 'members' && <Button variant="outline" className="dark-outline" onClick={() => fileInputRef.current?.click()}><Upload /> {t.actions.import}</Button>}
-            <Button className="lime-button" onClick={() => openMemberForm()}><Plus /> {t.actions.add}</Button>
+            {workspace === 'owner' && <Button className="lime-button" onClick={() => openMemberForm()}><Plus /> {t.actions.add}</Button>}
           </div>
           <input ref={fileInputRef} hidden type="file" accept=".csv,text/csv" onChange={(event) => { const file = event.target.files?.[0]; if (file) importCsv(file); event.target.value = ''; }} />
         </header>
 
-        {view === 'dashboard' && <Dashboard metrics={metrics} highRiskMembers={highRiskMembers} members={members} onOpenMember={openMember} onNavigate={goTo} />}
+        {view === 'dashboard' && <Dashboard metrics={metrics} highRiskMembers={highRiskMembers} members={members} onOpenMember={openMember} onNavigate={goTo} onPilot={() => setPilotOpen(true)} />}
+        {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onOutcome={recordOutcome} />}
         {view === 'members' && <MembersScreen members={filteredMembers} total={members.length} filter={filter} search={search} onFilter={setFilter} onSearch={setSearch} onOpenMember={openMember} onImport={() => fileInputRef.current?.click()} />}
         {view === 'radar' && <RadarScreen members={riskMembers} onOpenMember={openMember} />}
         {view === 'automations' && <AutomationsScreen automations={automations} onToggle={(id, enabled) => { setAutomations((current) => current.map((item) => item.id === id ? { ...item, enabled, lastActivity: enabled ? 'Uključeno upravo sada' : 'Pauzirano upravo sada' } : item)); setSuccess(enabled ? 'Automatizacija je uključena.' : 'Automatizacija je pauzirana.'); }} onPreview={setAutomationPreviewId} />}
@@ -368,6 +418,22 @@ export default function Home() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+        <DialogContent className="confirm-dialog">
+          <DialogHeader><span className="confirm-icon"><RotateCcw /></span><DialogTitle>Resetovati demo?</DialogTitle><DialogDescription>Sve probne poruke, ishodi, dolasci i obnove biće vraćeni na početno stanje. Ovo utiče samo na podatke u ovom pregledaču.</DialogDescription></DialogHeader>
+          <DialogFooter><Button variant="outline" onClick={() => setResetOpen(false)}>Odustani</Button><Button className="lime-button" onClick={resetDemo}>Resetuj i pripremi demo</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={pilotOpen} onOpenChange={setPilotOpen}>
+        <DialogContent className="pilot-dialog">
+          <DialogHeader><Badge className="pilot-badge">PILOT SA VAŠIM PODACIMA</Badge><DialogTitle>Provjerite koliko prihoda PULSE može vratiti vašoj teretani.</DialogTitle><DialogDescription>Za početak je dovoljan jednostavan Excel ili CSV spisak. Nije potrebna promjena postojećeg sistema.</DialogDescription></DialogHeader>
+          <div className="pilot-steps"><div><span>01</span><p><strong>Uvezemo članove</strong>Ime, datum isteka, posljednji dolazak i cijena članarine.</p></div><div><span>02</span><p><strong>PULSE označava rizik</strong>Dobijate prioritetnu listu i jasan razlog za svakog člana.</p></div><div><span>03</span><p><strong>Mjerimo rezultat</strong>Pratimo kontakt, odgovor, obnovu i stvarno oporavljeni prihod.</p></div></div>
+          <div className="pilot-note"><ShieldAlert /><span><strong>Vaši podaci ostaju pod vašom kontrolom.</strong>Za demonstraciju nijesu potrebne stvarne poruke niti integracije.</span></div>
+          <DialogFooter><Button variant="outline" onClick={() => setPilotOpen(false)}>Zatvori</Button><Button className="lime-button" onClick={() => { setPilotOpen(false); setView('members'); setWorkspace('owner'); setSuccess('Otvoren je ekran za uvoz članova iz CSV-a.'); }}><Upload /> Pogledaj kako izgleda uvoz</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {success && <output className="success-toast" aria-live="polite"><CheckCircle2 /><span>{success}</span></output>}
     </main>
   );
@@ -385,13 +451,18 @@ function LoadingState() {
   return <main className="loading-shell"><aside><div className="skeleton logo" />{[1,2,3,4].map((item) => <div className="skeleton nav" key={item} />)}</aside><section><div className="skeleton title" /><div className="loading-grid"><div className="skeleton large" /><div className="skeleton large" /></div><div className="loading-stats">{[1,2,3,4].map((item) => <div className="skeleton stat" key={item} />)}</div></section><div className="loading-label"><span className="loader-ring" />Učitavanje PULSE podataka…</div></main>;
 }
 
-function Dashboard({ metrics, highRiskMembers, members, onOpenMember, onNavigate }: {
+function Dashboard({ metrics, highRiskMembers, members, onOpenMember, onNavigate, onPilot }: {
   metrics: { active: number; expiring: number; absent: number; highRisk: number; riskRevenue: number; recoveredCount: number; recoveredRevenue: number };
-  highRiskMembers: Member[]; members: Member[]; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void;
+  highRiskMembers: Member[]; members: Member[]; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void; onPilot: () => void;
 }) {
   const collectedRevenue = 10320 + metrics.recoveredRevenue;
   const monthlyTarget = 12500;
   const targetProgress = Math.min(100, (collectedRevenue / monthlyTarget) * 100);
+  const completedActions = members.filter((member) => member.queuedMessage || member.recoveryOutcome).length;
+  const recoveredToday = members.filter((member) => member.recoveredAt === today);
+  const weeklyContacted = 6 + completedActions;
+  const weeklyRenewed = 3 + recoveredToday.length;
+  const weeklyRecovered = 115 + recoveredToday.reduce((sum, member) => sum + (member.recoveredAmount ?? 0), 0);
   return <div className="screen-stack dashboard-screen">
     <div className="hero-grid">
       <article className="risk-hero">
@@ -437,6 +508,11 @@ function Dashboard({ metrics, highRiskMembers, members, onOpenMember, onNavigate
       <Metric icon={<WalletCards />} label="Oporavljen prihod" value={euro(metrics.recoveredRevenue)} hint="ovog mjeseca" tone="lime" />
     </section>
 
+    <section className="weekly-proof panel-card" aria-label="Sedmični rezultat PULSE-a">
+      <div className="weekly-proof-intro"><span className="proof-icon"><Zap /></span><div><p className="eyebrow">SEDMIČNI REZULTAT</p><h2>PULSE pretvara signale u mjerljiv prihod</h2><p>Pregled aktivnosti od ponedjeljka do danas.</p></div></div>
+      <div className="proof-metrics"><div><small>PREPOZNATO</small><strong>9</strong><span>članova u riziku</span></div><ArrowRight /><div><small>KONTAKTIRANO</small><strong>{weeklyContacted}</strong><span>zabilježenih akcija</span></div><ArrowRight /><div><small>OBNOVLJENO</small><strong>{weeklyRenewed}</strong><span>{Math.round((weeklyRenewed / weeklyContacted) * 100)}% uspješnosti</span></div><ArrowRight /><div className="proof-revenue"><small>OPORAVLJENO</small><strong>{euro(weeklyRecovered)}</strong><span>stvarnog prihoda</span></div></div>
+    </section>
+
     <div className="lower-grid">
       <section className="panel-card occupancy-card">
         <div className="section-heading"><div><p className="eyebrow">DANAS</p><h2>Popunjenost teretane po satu</h2></div><span className="chart-legend"><i /> Broj dolazaka</span></div>
@@ -452,6 +528,30 @@ function Dashboard({ metrics, highRiskMembers, members, onOpenMember, onNavigate
         <div className="mini-recovered-list">{members.filter((member) => member.status === 'recovered').slice(-3).map((member) => <button key={member.id} onClick={() => onOpenMember(member)}><span className="avatar">{initials(member)}</span><span><strong>{fullName(member)}</strong><small>{euro(member.recoveredAmount ?? member.price)} · obnovljeno</small></span><Check /></button>)}</div>
       </section>
     </div>
+    <section className="pilot-cta panel-card"><div><span className="pilot-cta-mark">P</span><div><p className="eyebrow">SLJEDEĆI KORAK</p><h2>Pokrenite PULSE sa podacima vaše teretane.</h2><p>Jedan Excel ili CSV spisak je dovoljan da vidite ko je stvarno u riziku i koliko prihoda možete oporaviti.</p></div></div><Button className="lime-button" onClick={onPilot}>Pogledaj pilot proces <ArrowRight /></Button></section>
+  </div>;
+}
+
+function StaffBoard({ members, onOpenMember, onOutcome }: { members: Member[]; onOpenMember: (member: Member) => void; onOutcome: (memberId: string, outcome: RecoveryOutcome) => void }) {
+  const completed = members.filter((member) => member.recoveryOutcome || member.queuedMessage).length;
+  const followUps = members.filter((member) => member.recoveryOutcome === 'follow_up').length;
+  return <div className="screen-stack staff-screen">
+    <section className="staff-briefing panel-card">
+      <div className="briefing-main"><span><CheckCircle2 /></span><div><p className="eyebrow">JUTARNJI BRIEFING</p><h2>Danas prvo kontaktirajte {members.filter((member) => member.risk === 'high').length} visoko-rizična člana.</h2><p>Završite svaki red bilježenjem ishoda. Vlasnik odmah vidi rezultat na svom pregledu.</p></div></div>
+      <div className="staff-stats"><div><strong>{members.length}</strong><small>ukupno zadataka</small></div><div><strong>{completed}</strong><small>završeno</small></div><div><strong>{followUps}</strong><small>praćenja</small></div></div>
+    </section>
+    <section className="staff-queue panel-card">
+      <div className="section-heading"><div><p className="eyebrow">RED ZA DANAS</p><h2>Kontakt i ishod u jednom koraku</h2></div><Badge className="period-badge">{members.length - completed} PREOSTALO</Badge></div>
+      <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${member.recoveryOutcome || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
+        <span className="task-priority">{String(index + 1).padStart(2, '0')}</span><span className="avatar large">{initials(member)}</span>
+        <div className="task-person"><div><h3>{fullName(member)}</h3><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : 'Srednji'}</span></div><p>{member.riskReason}</p><small><MessageCircle /> {member.preferredChannel} <i /> {euro(member.price)} u riziku</small></div>
+        <div className="task-next"><small>PREPORUČENI POTEZ</small><p>{member.nextAction}</p></div>
+        <div className="task-actions">
+          {member.status === 'recovered' ? <span className="task-done"><CheckCircle2 /> Obnovljeno</span> : member.recoveryOutcome ? <><span className={`outcome-badge outcome-${member.recoveryOutcome}`}><Check /> {outcomeLabels[member.recoveryOutcome]}</span><button onClick={() => onOpenMember(member)}>Otvori profil</button></> : <><button onClick={() => onOutcome(member.id, 'no_answer')}><Phone /> Bez odgovora</button><button onClick={() => onOutcome(member.id, 'replied')}><MessageCircle /> Odgovorio/la</button><button onClick={() => onOutcome(member.id, 'follow_up')}><Clock3 /> Prati sjutra</button><button className="task-primary" onClick={() => onOpenMember(member)}><CheckCircle2 /> Evidentiraj obnovu</button></>}
+        </div>
+      </article>)}</div>
+    </section>
+    <div className="staff-boundary"><ShieldAlert /><span><strong>Tim vidi samo ono što treba da uradi.</strong>Finansijski pregled, trendovi i ukupni poslovni rezultat ostaju u vlasničkom radnom prostoru.</span></div>
   </div>;
 }
 
