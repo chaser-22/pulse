@@ -389,6 +389,9 @@ function Dashboard({ metrics, highRiskMembers, members, onOpenMember, onNavigate
   metrics: { active: number; expiring: number; absent: number; highRisk: number; riskRevenue: number; recoveredCount: number; recoveredRevenue: number };
   highRiskMembers: Member[]; members: Member[]; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void;
 }) {
+  const collectedRevenue = 10320 + metrics.recoveredRevenue;
+  const monthlyTarget = 12500;
+  const targetProgress = Math.min(100, (collectedRevenue / monthlyTarget) * 100);
   return <div className="screen-stack dashboard-screen">
     <div className="hero-grid">
       <article className="risk-hero">
@@ -409,6 +412,22 @@ function Dashboard({ metrics, highRiskMembers, members, onOpenMember, onNavigate
       </section>
     </div>
 
+    <section className="revenue-overview panel-card" aria-label="Finansijski pregled ovog mjeseca">
+      <div className="revenue-total">
+        <div className="revenue-title-row"><p className="eyebrow">NAPLAĆENO OVOG MJESECA</p><Badge className="period-badge">AVGUST 2026.</Badge></div>
+        <strong>{euro(collectedRevenue)}</strong>
+        <p><span>+8,4%</span> u odnosu na jul</p>
+        <div className="revenue-progress-copy"><span>{Math.round(targetProgress)}% mjesečnog cilja</span><b>Cilj {euro(monthlyTarget)}</b></div>
+        <div className="revenue-progress"><span style={{ width: `${targetProgress}%` }} /></div>
+      </div>
+      <RevenueTrend collectedRevenue={collectedRevenue} />
+      <div className="revenue-breakdown">
+        <div><span className="breakdown-dot memberships" /><p><small>REDOVNE ČLANARINE</small><strong>{euro(9500)}</strong></p></div>
+        <div><span className="breakdown-dot recovered" /><p><small>PULSE OPORAVAK</small><strong>{euro(metrics.recoveredRevenue)}</strong></p></div>
+        <div><span className="breakdown-dot other" /><p><small>DNEVNE KARTE I OSTALO</small><strong>{euro(820)}</strong></p></div>
+      </div>
+    </section>
+
     <section className="metric-grid" aria-label="Ključne metrike">
       <Metric icon={<Users />} label="Aktivni članovi" value={String(metrics.active)} hint="+8 ovog mjeseca" tone="neutral" />
       <Metric icon={<CalendarClock />} label="Ističe za 7 dana" value={String(metrics.expiring)} hint="6 još nije kontaktirano" tone="amber" />
@@ -423,7 +442,7 @@ function Dashboard({ metrics, highRiskMembers, members, onOpenMember, onNavigate
         <div className="section-heading"><div><p className="eyebrow">DANAS</p><h2>Popunjenost teretane po satu</h2></div><span className="chart-legend"><i /> Broj dolazaka</span></div>
         <div className="chart-wrap">
           <div className="chart-y"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div>
-          <div className="bar-chart">{occupancy.map((item) => <div className={`bar-slot ${item.value > 78 ? 'peak' : ''}`} key={item.hour}><div className="bar" style={{ height: `${item.value}%` }}><span>{item.value}</span></div><small>{item.hour}</small></div>)}</div>
+          <div className="bar-chart">{occupancy.map((item, index) => <div className={`bar-slot ${item.value > 78 ? 'peak' : ''}`} key={item.hour}><div className="bar" style={{ height: `${item.value}%`, animationDelay: `${index * 38}ms` }}><span>{item.value}</span></div><small>{item.hour}</small></div>)}</div>
         </div>
         <div className="peak-note"><Sparkles /><span><strong>Najveća gužva: 18:00–19:00</strong>Preporuka: pojačajte recepciju i podsjetite članove na mirniji termin prije 16:00.</span></div>
       </section>
@@ -433,6 +452,22 @@ function Dashboard({ metrics, highRiskMembers, members, onOpenMember, onNavigate
         <div className="mini-recovered-list">{members.filter((member) => member.status === 'recovered').slice(-3).map((member) => <button key={member.id} onClick={() => onOpenMember(member)}><span className="avatar">{initials(member)}</span><span><strong>{fullName(member)}</strong><small>{euro(member.recoveredAmount ?? member.price)} · obnovljeno</small></span><Check /></button>)}</div>
       </section>
     </div>
+  </div>;
+}
+
+function RevenueTrend({ collectedRevenue }: { collectedRevenue: number }) {
+  return <div className="revenue-trend">
+    <div className="trend-heading"><span>Trend prihoda</span><strong>+{euro(collectedRevenue - 10000)}</strong></div>
+    <svg viewBox="0 0 360 112">
+      <title>Trend naplaćenog prihoda od marta do avgusta raste sa 8.900 na preko 10.800 eura</title>
+      <defs><linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#c7f932" stopOpacity=".22"/><stop offset="100%" stopColor="#c7f932" stopOpacity="0"/></linearGradient></defs>
+      <path className="trend-grid-line" d="M8 24H352M8 55H352M8 86H352" />
+      <path className="revenue-area" d="M10 82 C45 78 62 70 78 68 S130 59 146 61 S198 70 214 55 S265 49 282 40 S327 24 350 20 L350 100 L10 100 Z" />
+      <path className="revenue-line" pathLength="1" d="M10 82 C45 78 62 70 78 68 S130 59 146 61 S198 70 214 55 S265 49 282 40 S327 24 350 20" />
+      <circle className="revenue-current-halo" cx="350" cy="20" r="10" />
+      <circle className="revenue-current-dot" cx="350" cy="20" r="4" />
+    </svg>
+    <div className="trend-months"><span>MAR</span><span>APR</span><span>MAJ</span><span>JUN</span><span>JUL</span><span>AVG</span></div>
   </div>;
 }
 
