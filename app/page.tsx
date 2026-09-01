@@ -86,6 +86,17 @@ function statusClass(status: MemberStatus) {
   return 'status-active';
 }
 
+function PulseLogo({ compact = false }: { compact?: boolean }) {
+  return <span className={`pulse-logo ${compact ? 'compact' : ''}`} aria-hidden="true">
+    <svg viewBox="0 0 48 48">
+      <path className="logo-frame" d="M12 5h24c4 0 7 3 7 7v24c0 4-3 7-7 7H12c-4 0-7-3-7-7V12c0-4 3-7 7-7Z" />
+      <path className="logo-signal" d="M12 31.5l8.3-8.2 5.6 5.5L36 17.5" />
+      <path className="logo-arrow" d="M29.8 17.5H36v6.2" />
+      <circle cx="12" cy="31.5" r="2.2" />
+    </svg>
+  </span>;
+}
+
 function blankMemberForm(): MemberForm {
   return {
     firstName: '', lastName: '', phone: '+382 ', email: '', birthday: '', packageName: 'Standard', price: 35,
@@ -330,7 +341,7 @@ export default function Home() {
   return (
     <main className="app-shell">
       <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
-        <div className="brand"><span className="brand-mark">P</span><span>PULSE</span></div>
+        <div className="brand"><PulseLogo /><span className="brand-word">PULSE</span></div>
         <button className="sidebar-close" aria-label="Zatvori meni" onClick={() => setMobileNav(false)}><X /></button>
         <nav aria-label="Glavna navigacija">
           {workspace === 'owner' ? <>
@@ -359,7 +370,7 @@ export default function Home() {
           <button className="mobile-menu" aria-label="Otvori meni" onClick={() => setMobileNav(true)}><Menu /></button>
           <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1><p>{viewMeta[view].subtitle}</p></div>
           <div className="top-actions">
-            <fieldset className="workspace-switch"><legend className="sr-only">Izaberite radni prostor</legend><button type="button" className={workspace === 'owner' ? 'active' : ''} onClick={() => switchWorkspace('owner')}><LayoutDashboard /> Vlasnik</button><button type="button" className={workspace === 'staff' ? 'active' : ''} onClick={() => switchWorkspace('staff')}><Users /> Tim</button></fieldset>
+            <fieldset className="workspace-switch"><legend className="sr-only">Izaberite radni prostor</legend><button type="button" aria-pressed={workspace === 'owner'} className={workspace === 'owner' ? 'active' : ''} onClick={() => switchWorkspace('owner')}><LayoutDashboard /> Vlasnik</button><button type="button" aria-pressed={workspace === 'staff'} className={workspace === 'staff' ? 'active' : ''} onClick={() => switchWorkspace('staff')}><Users /> Tim</button></fieldset>
             {view === 'members' && <Button variant="outline" className="dark-outline" onClick={() => fileInputRef.current?.click()}><Upload /> {t.actions.import}</Button>}
             {workspace === 'owner' && <Button className="lime-button" onClick={() => openMemberForm()}><Plus /> {t.actions.add}</Button>}
           </div>
@@ -440,7 +451,7 @@ export default function Home() {
 }
 
 function NavButton({ active, icon, label, count, onClick }: { active: boolean; icon: React.ReactNode; label: string; count?: number; onClick: () => void }) {
-  return <button className={`nav-item ${active ? 'active' : ''}`} onClick={onClick}>{icon}<span>{label}</span>{typeof count === 'number' && <b>{count}</b>}</button>;
+  return <button type="button" aria-label={label} title={label} aria-current={active ? 'page' : undefined} className={`nav-item ${active ? 'active' : ''}`} onClick={onClick}>{icon}<span>{label}</span>{typeof count === 'number' && <b>{count}</b>}</button>;
 }
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
@@ -471,6 +482,7 @@ function Dashboard({ metrics, highRiskMembers, members, onOpenMember, onNavigate
         <div className="risk-number">{euro(metrics.riskRevenue)}</div>
         <h2>prihoda je trenutno u riziku</h2>
         <p>{highRiskMembers.length} člana traže hitnu pažnju. Najbrži put do oporavka je lična poruka danas.</p>
+        <div className="hero-decision"><span>PRVI POTEZ</span><strong>Kontaktirajte {highRiskMembers[0]?.firstName ?? 'člana sa vrha liste'} danas</strong></div>
         <Button className="lime-button" onClick={() => onNavigate('radar')}>Otvori Churn Radar <ArrowRight /></Button>
       </article>
 
@@ -528,7 +540,7 @@ function Dashboard({ metrics, highRiskMembers, members, onOpenMember, onNavigate
         <div className="mini-recovered-list">{members.filter((member) => member.status === 'recovered').slice(-3).map((member) => <button key={member.id} onClick={() => onOpenMember(member)}><span className="avatar">{initials(member)}</span><span><strong>{fullName(member)}</strong><small>{euro(member.recoveredAmount ?? member.price)} · obnovljeno</small></span><Check /></button>)}</div>
       </section>
     </div>
-    <section className="pilot-cta panel-card"><div><span className="pilot-cta-mark">P</span><div><p className="eyebrow">SLJEDEĆI KORAK</p><h2>Pokrenite PULSE sa podacima vaše teretane.</h2><p>Jedan Excel ili CSV spisak je dovoljan da vidite ko je stvarno u riziku i koliko prihoda možete oporaviti.</p></div></div><Button className="lime-button" onClick={onPilot}>Pogledaj pilot proces <ArrowRight /></Button></section>
+    <section className="pilot-cta panel-card"><div><PulseLogo compact /><div><p className="eyebrow">SLJEDEĆI KORAK</p><h2>Pokrenite PULSE sa podacima vaše teretane.</h2><p>Jedan Excel ili CSV spisak je dovoljan da vidite ko je stvarno u riziku i koliko prihoda možete oporaviti.</p></div></div><Button className="lime-button" onClick={onPilot}>Pogledaj pilot proces <ArrowRight /></Button></section>
   </div>;
 }
 
@@ -581,11 +593,14 @@ function MembersScreen({ members, total, filter, search, onFilter, onSearch, onO
   return <div className="screen-stack">
     <section className="members-toolbar panel-card">
       <div className="search-box"><Search /><Input aria-label="Pretraži članove" placeholder="Pretraži ime, telefon ili e-mail…" value={search} onChange={(event) => onSearch(event.target.value)} />{search && <button aria-label="Obriši pretragu" onClick={() => onSearch('')}><X /></button>}</div>
-      <div className="filter-tabs" aria-label="Filtriraj članove">{filters.map((item) => <button className={filter === item.id ? 'active' : ''} key={item.id} onClick={() => onFilter(item.id)}>{item.label}</button>)}</div>
+      <div className="filter-tabs" aria-label="Filtriraj članove">{filters.map((item) => <button type="button" aria-pressed={filter === item.id} className={filter === item.id ? 'active' : ''} key={item.id} onClick={() => onFilter(item.id)}>{item.label}</button>)}</div>
       <span className="result-count">{members.length} od {total} članova</span>
     </section>
     <section className="panel-card table-card">
-      {members.length ? <div className="members-table-wrap"><table className="members-table"><thead><tr><th>Član</th><th>Status</th><th>Paket</th><th>Posljednji dolazak</th><th>Ističe</th><th>Rizik</th><th><span className="sr-only">Otvori</span></th></tr></thead><tbody>{members.map((member) => <tr key={member.id} onClick={() => onOpenMember(member)}><td><span className="avatar">{initials(member)}</span><span><strong>{fullName(member)}</strong><small>{member.phone}</small></span></td><td><span className={`status-pill ${statusClass(member.status)}`}>{t.statuses[member.status]}</span></td><td><strong>{member.packageName}</strong><small>{euro(member.price)} / mj.</small></td><td>{member.lastVisit === '—' ? '—' : prettyDate(member.lastVisit)}<small>{member.visitsThisMonth} posjeta ovog mj.</small></td><td>{prettyDate(member.endDate)}</td><td><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nizak'}</span></td><td><ChevronRight /></td></tr>)}</tbody></table></div> : <EmptyState icon={<Search />} title="Nema rezultata" text="Pokušajte drugi izraz ili uklonite aktivni filter." action="Uvezi članove iz CSV-a" onAction={onImport} />}
+      {members.length ? <>
+        <div className="members-table-wrap"><table className="members-table"><thead><tr><th>Član</th><th>Status</th><th>Paket</th><th>Posljednji dolazak</th><th>Ističe</th><th>Rizik</th><th><span className="sr-only">Otvori</span></th></tr></thead><tbody>{members.map((member) => <tr key={member.id} onClick={() => onOpenMember(member)}><td><span className="avatar">{initials(member)}</span><span><strong>{fullName(member)}</strong><small>{member.phone}</small></span></td><td><span className={`status-pill ${statusClass(member.status)}`}>{t.statuses[member.status]}</span></td><td><strong>{member.packageName}</strong><small>{euro(member.price)} / mj.</small></td><td>{member.lastVisit === '—' ? '—' : prettyDate(member.lastVisit)}<small>{member.visitsThisMonth} posjeta ovog mj.</small></td><td>{prettyDate(member.endDate)}</td><td><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nizak'}</span></td><td><button type="button" className="row-open-button" aria-label={`Otvori profil: ${fullName(member)}`} onClick={(event) => { event.stopPropagation(); onOpenMember(member); }}><ChevronRight /></button></td></tr>)}</tbody></table></div>
+        <div className="mobile-member-list">{members.map((member) => <button type="button" className="mobile-member-card" key={member.id} onClick={() => onOpenMember(member)}><span className="avatar">{initials(member)}</span><span className="mobile-member-main"><span><strong>{fullName(member)}</strong><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nizak'}</span></span><small>{member.packageName} · {euro(member.price)} mjesečno</small><span className="mobile-member-meta"><span><b>Status</b>{t.statuses[member.status]}</span><span><b>Ističe</b>{prettyDate(member.endDate)}</span><span><b>Posjete</b>{member.visitsThisMonth} ovaj mj.</span></span></span><ChevronRight /></button>)}</div>
+      </> : <EmptyState icon={<Search />} title="Nema rezultata" text="Pokušajte drugi izraz ili uklonite aktivni filter." action="Uvezi članove iz CSV-a" onAction={onImport} />}
     </section>
     <div className="csv-note"><FileSpreadsheet /><span><strong>CSV uvoz je spreman za demo.</strong> Koristite kolone: firstname, lastname, phone, email, status, price, startdate, enddate.</span></div>
   </div>;
