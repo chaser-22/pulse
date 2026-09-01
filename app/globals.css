@@ -229,6 +229,19 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .pilot-cta > button { flex: none; }
 
 /* Staff workspace */
+.reception-launchpad { display: grid; grid-template-columns: minmax(210px,.55fr) minmax(620px,1.45fr); align-items: center; gap: 24px; padding: 22px 24px; background: radial-gradient(circle at 0 50%,#c9ff3d0d,transparent 27%),linear-gradient(145deg,#171a15,#111310); }
+.reception-launchpad-copy h2 { margin: 0 0 5px; font-size: 20px; letter-spacing: -.04em; }
+.reception-launchpad-copy > p:last-child { margin: 0; color: #858d80; font-size: 10px; }
+.reception-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+.reception-actions button { position: relative; min-width: 0; min-height: 76px; display: grid; grid-template-columns: 34px minmax(0,1fr) 14px; grid-template-rows: auto auto; align-items: center; column-gap: 10px; padding: 12px; border: 1px solid #30362d; border-radius: 12px; color: #e4e8df; background: #11140f; text-align: left; transition: transform .18s ease,border-color .18s ease,background .18s ease; }
+.reception-actions button:hover { transform: translateY(-2px); border-color: #4a5540; background: #171c14; }
+.reception-actions button:nth-child(2) { border-color: #c9ff3d38; background: #c9ff3d09; }
+.reception-actions button > span { grid-row: 1 / 3; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; color: var(--primary); background: #c9ff3d0d; }
+.reception-actions button > span svg { width: 15px; }
+.reception-actions button > strong { align-self: end; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.reception-actions button > small { align-self: start; overflow: hidden; color: #7f887a; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.reception-actions button > svg { grid-column: 3; grid-row: 1 / 3; width: 13px; color: #66705f; }
+.reception-insight strong { color: #e7eae2; }
 .staff-briefing { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px; background: radial-gradient(circle at 8% 30%,#c7f9320d,transparent 28%),linear-gradient(145deg,#171915,#111310); }
 .briefing-main { display: flex; align-items: center; gap: 14px; }
 .briefing-main > span { flex: none; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; color: var(--primary); background: #c7f93210; }
@@ -593,7 +606,7 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
   .radar-rings { width: 115px; height: 115px; }
   .radar-rings > i:nth-of-type(1) { width: 110px; height: 110px; }.radar-rings > i:nth-of-type(2) { width: 78px; height: 78px; }.radar-rings > i:nth-of-type(3) { width: 47px; height: 47px; }
   .members-toolbar { grid-template-columns: 1fr auto; }.filter-tabs { grid-row: 2; grid-column: 1 / -1; overflow-x: auto; }.result-count { grid-column: 2; grid-row: 1; }
-  .weekly-proof { grid-template-columns: 1fr; }.staff-task { grid-template-columns: 22px 40px minmax(220px,1fr) minmax(170px,.8fr); }.task-actions { grid-column: 3 / -1; justify-content: flex-start; }.task-next { grid-column: 4; }
+  .weekly-proof { grid-template-columns: 1fr; }.reception-launchpad { grid-template-columns: 1fr; }.staff-task { grid-template-columns: 22px 40px minmax(220px,1fr) minmax(170px,.8fr); }.task-actions { grid-column: 3 / -1; justify-content: flex-start; }.task-next { grid-column: 4; }
 }
 @media (max-width: 900px) {
   .app-shell { grid-template-columns: 74px minmax(0,1fr); }
@@ -693,6 +706,9 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
   .mobile-member-card:hover { background: #ffffff04; }
   .mobile-member-card .avatar { width: 40px; height: 40px; }
   .staff-task { padding-block: 18px; }
+  .reception-launchpad { padding: 18px; }
+  .reception-actions { grid-template-columns: 1fr; }
+  .reception-actions button { min-height: 72px; }
   .task-person > p { overflow: visible; white-space: normal; line-height: 1.45; }
   .task-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); width: 100%; }
   .task-actions button { min-height: 44px; padding: 6px 9px; font-size: 9px; }

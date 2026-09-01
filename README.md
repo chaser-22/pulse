@@ -7,7 +7,7 @@ It identifies memberships and attendance patterns that indicate churn risk, expl
 The demo includes two focused workspaces:
 
 - **Owner:** revenue at risk, current earnings, weekly recovery impact, churn priorities, occupancy, and business trends.
-- **Team:** a simplified daily contact queue where staff can record replies, missed contacts, follow-ups, and renewals without exposing the full financial dashboard.
+- **Reception:** a simplified daily workspace for member search, check-ins, new registrations, contact outcomes, follow-ups, and renewals without exposing the full financial dashboard.
 
 The interface also includes a safe demo reset and a short pilot walkthrough for showing how a gym can start with an existing Excel or CSV member list.
 

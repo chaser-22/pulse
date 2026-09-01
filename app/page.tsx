@@ -44,7 +44,7 @@ const outcomeLabels: Record<RecoveryOutcome, string> = {
 
 const viewMeta: Record<View, { eyebrow: string; title: string; subtitle: string }> = {
   dashboard: { eyebrow: 'PONEDJELJAK, 31. AVGUST', title: 'Dobro jutro, Marko.', subtitle: 'Evo gdje je prihod u riziku i šta treba uraditi danas.' },
-  staff: { eyebrow: 'DNEVNI OPERATIVNI PLAN', title: 'Prioriteti za tim', subtitle: 'Jasan red poziva, poruka i praćenja koji treba završiti danas.' },
+  staff: { eyebrow: 'RADNI PROSTOR RECEPCIJE', title: 'Danas na recepciji', subtitle: 'Prijavite dolaske, dodajte članove i završite kontakte koji su prioritet danas.' },
   members: { eyebrow: 'BAZA ČLANOVA', title: 'Članovi', subtitle: 'Pronađite, ažurirajte i kontaktirajte svakog člana na jednom mjestu.' },
   radar: { eyebrow: 'RANI SIGNALI ODLASKA', title: 'Churn Radar', subtitle: 'Jasan prioritet, razlog rizika i sljedeći najbolji potez.' },
   automations: { eyebrow: 'DOSLJEDAN KONTAKT', title: 'Automatizacije', subtitle: 'Prave poruke u pravom trenutku — za sada samo u redu za slanje.' },
@@ -350,16 +350,16 @@ export default function Home() {
           <NavButton active={view === 'radar'} icon={<Radar />} label={t.nav.radar} count={riskMembers.length} onClick={() => goTo('radar')} />
           <NavButton active={view === 'automations'} icon={<Zap />} label={t.nav.automations} onClick={() => goTo('automations')} />
           </> : <>
-          <NavButton active={view === 'staff'} icon={<CheckCircle2 />} label="Dnevni zadaci" count={riskMembers.length} onClick={() => goTo('staff')} />
+          <NavButton active={view === 'staff'} icon={<CheckCircle2 />} label="Dnevni pregled" count={riskMembers.length} onClick={() => goTo('staff')} />
           <NavButton active={view === 'members'} icon={<Users />} label={t.nav.members} count={members.length} onClick={() => goTo('members')} />
           <NavButton active={view === 'radar'} icon={<Radar />} label="Signali rizika" count={riskMembers.length} onClick={() => goTo('radar')} />
           </>}
         </nav>
-        <div className="sidebar-insight">
+        <div className={`sidebar-insight ${workspace === 'staff' ? 'reception-insight' : ''}`}>
           <span className="pulse-dot" />
-          <div><strong>{euro(metrics.recoveredRevenue)}</strong><small>oporavljeno ovog mjeseca</small></div>
+          {workspace === 'owner' ? <div><strong>{euro(metrics.recoveredRevenue)}</strong><small>oporavljeno ovog mjeseca</small></div> : <div><strong>{riskMembers.filter((member) => !member.recoveryOutcome).length}</strong><small>zadataka preostalo danas</small></div>}
         </div>
-        <button className="demo-reset-button" onClick={() => setResetOpen(true)}><RotateCcw /> Resetuj demo</button>
+        {workspace === 'owner' && <button className="demo-reset-button" onClick={() => setResetOpen(true)}><RotateCcw /> Resetuj demo</button>}
         <div className="gym-card"><span className="gym-monogram">PD</span><span><strong>{t.gymName}</strong><small>{t.location} · Demo podaci</small></span><Settings2 /></div>
       </aside>
 
@@ -370,15 +370,15 @@ export default function Home() {
           <button className="mobile-menu" aria-label="Otvori meni" onClick={() => setMobileNav(true)}><Menu /></button>
           <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1><p>{viewMeta[view].subtitle}</p></div>
           <div className="top-actions">
-            <fieldset className="workspace-switch"><legend className="sr-only">Izaberite radni prostor</legend><button type="button" aria-pressed={workspace === 'owner'} className={workspace === 'owner' ? 'active' : ''} onClick={() => switchWorkspace('owner')}><LayoutDashboard /> Vlasnik</button><button type="button" aria-pressed={workspace === 'staff'} className={workspace === 'staff' ? 'active' : ''} onClick={() => switchWorkspace('staff')}><Users /> Tim</button></fieldset>
-            {view === 'members' && <Button variant="outline" className="dark-outline" onClick={() => fileInputRef.current?.click()}><Upload /> {t.actions.import}</Button>}
-            {workspace === 'owner' && <Button className="lime-button" onClick={() => openMemberForm()}><Plus /> {t.actions.add}</Button>}
+            <fieldset className="workspace-switch"><legend className="sr-only">Izaberite radni prostor</legend><button type="button" aria-pressed={workspace === 'owner'} className={workspace === 'owner' ? 'active' : ''} onClick={() => switchWorkspace('owner')}><LayoutDashboard /> Vlasnik</button><button type="button" aria-pressed={workspace === 'staff'} className={workspace === 'staff' ? 'active' : ''} onClick={() => switchWorkspace('staff')}><Users /> Recepcija</button></fieldset>
+            {workspace === 'owner' && view === 'members' && <Button variant="outline" className="dark-outline" onClick={() => fileInputRef.current?.click()}><Upload /> {t.actions.import}</Button>}
+            <Button className="lime-button" onClick={() => openMemberForm()}><Plus /> {t.actions.add}</Button>
           </div>
           <input ref={fileInputRef} hidden type="file" accept=".csv,text/csv" onChange={(event) => { const file = event.target.files?.[0]; if (file) importCsv(file); event.target.value = ''; }} />
         </header>
 
         {view === 'dashboard' && <Dashboard metrics={metrics} highRiskMembers={highRiskMembers} members={members} onOpenMember={openMember} onNavigate={goTo} onPilot={() => setPilotOpen(true)} />}
-        {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onOutcome={recordOutcome} />}
+        {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onOutcome={recordOutcome} onAddMember={() => openMemberForm()} onFindMember={() => goTo('members')} />}
         {view === 'members' && <MembersScreen members={filteredMembers} total={members.length} filter={filter} search={search} onFilter={setFilter} onSearch={setSearch} onOpenMember={openMember} onImport={() => fileInputRef.current?.click()} />}
         {view === 'radar' && <RadarScreen members={riskMembers} onOpenMember={openMember} />}
         {view === 'automations' && <AutomationsScreen automations={automations} onToggle={(id, enabled) => { setAutomations((current) => current.map((item) => item.id === id ? { ...item, enabled, lastActivity: enabled ? 'Uključeno upravo sada' : 'Pauzirano upravo sada' } : item)); setSuccess(enabled ? 'Automatizacija je uključena.' : 'Automatizacija je pauzirana.'); }} onPreview={setAutomationPreviewId} />}
@@ -544,15 +544,23 @@ function Dashboard({ metrics, highRiskMembers, members, onOpenMember, onNavigate
   </div>;
 }
 
-function StaffBoard({ members, onOpenMember, onOutcome }: { members: Member[]; onOpenMember: (member: Member) => void; onOutcome: (memberId: string, outcome: RecoveryOutcome) => void }) {
+function StaffBoard({ members, onOpenMember, onOutcome, onAddMember, onFindMember }: { members: Member[]; onOpenMember: (member: Member) => void; onOutcome: (memberId: string, outcome: RecoveryOutcome) => void; onAddMember: () => void; onFindMember: () => void }) {
   const completed = members.filter((member) => member.recoveryOutcome || member.queuedMessage).length;
   const followUps = members.filter((member) => member.recoveryOutcome === 'follow_up').length;
   return <div className="screen-stack staff-screen">
+    <section className="reception-launchpad panel-card" aria-label="Brze akcije recepcije">
+      <div className="reception-launchpad-copy"><p className="eyebrow">BRZE AKCIJE</p><h2>Šta želite da uradite?</h2><p>Najčešći poslovi recepcije dostupni su odmah.</p></div>
+      <div className="reception-actions">
+        <button type="button" onClick={onFindMember}><span><Search /></span><strong>Pronađi člana</strong><small>Pretraga i prijava dolaska</small><ChevronRight /></button>
+        <button type="button" onClick={onAddMember}><span><Plus /></span><strong>Dodaj novog člana</strong><small>Članarina i kontakt podaci</small><ChevronRight /></button>
+        <button type="button" onClick={() => document.getElementById('staff-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><span><MessageCircle /></span><strong>Današnji kontakti</strong><small>{members.length - completed} zadataka je preostalo</small><ChevronRight /></button>
+      </div>
+    </section>
     <section className="staff-briefing panel-card">
       <div className="briefing-main"><span><CheckCircle2 /></span><div><p className="eyebrow">JUTARNJI BRIEFING</p><h2>Danas prvo kontaktirajte {members.filter((member) => member.risk === 'high').length} visoko-rizična člana.</h2><p>Završite svaki red bilježenjem ishoda. Vlasnik odmah vidi rezultat na svom pregledu.</p></div></div>
       <div className="staff-stats"><div><strong>{members.length}</strong><small>ukupno zadataka</small></div><div><strong>{completed}</strong><small>završeno</small></div><div><strong>{followUps}</strong><small>praćenja</small></div></div>
     </section>
-    <section className="staff-queue panel-card">
+    <section className="staff-queue panel-card" id="staff-queue">
       <div className="section-heading"><div><p className="eyebrow">RED ZA DANAS</p><h2>Kontakt i ishod u jednom koraku</h2></div><Badge className="period-badge">{members.length - completed} PREOSTALO</Badge></div>
       <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${member.recoveryOutcome || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
         <span className="task-priority">{String(index + 1).padStart(2, '0')}</span><span className="avatar large">{initials(member)}</span>
@@ -563,7 +571,7 @@ function StaffBoard({ members, onOpenMember, onOutcome }: { members: Member[]; o
         </div>
       </article>)}</div>
     </section>
-    <div className="staff-boundary"><ShieldAlert /><span><strong>Tim vidi samo ono što treba da uradi.</strong>Finansijski pregled, trendovi i ukupni poslovni rezultat ostaju u vlasničkom radnom prostoru.</span></div>
+    <div className="staff-boundary"><ShieldAlert /><span><strong>Recepcija vidi samo ono što treba da uradi.</strong>Finansijski pregled, trendovi, automatizacije i ukupni poslovni rezultat ostaju u vlasničkom radnom prostoru.</span></div>
   </div>;
 }
 
