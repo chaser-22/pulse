@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import {
-  Activity, AlertTriangle, ArrowRight, Cake, CalendarClock, Check, CheckCircle2,
+  Activity, ArrowRight, Check, CheckCircle2,
   ChevronRight, CircleGauge, Clock3, CreditCard, FileSpreadsheet, History,
-  LayoutDashboard, LogIn, Mail, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
-  RotateCcw, Send, Settings2, ShieldAlert, Sparkles, Upload, UserX, Users, WalletCards, X, Zap,
+  LayoutDashboard, LogIn, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
+  RotateCcw, Send, Settings2, ShieldAlert, Sparkles, Upload, Users, X, Zap,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -615,8 +615,6 @@ function AutomationsScreen({ automations, onToggle, onPreview }: { automations: 
     <div className="demo-boundary"><ShieldAlert /><span><strong>Sigurna demo granica</strong>Poruke se samo stavljaju u lokalni red. WhatsApp, Viber i SMS integracije nijesu povezane.</span></div>
   </div>;
 }
-
-function RefreshArrow() { return <Activity />; }
 
 function EmptyState({ icon, title, text, action, onAction }: { icon: React.ReactNode; title: string; text: string; action?: string; onAction?: () => void }) {
   return <div className="empty-state"><span>{icon}</span><h3>{title}</h3><p>{text}</p>{action && <Button variant="outline" onClick={onAction}>{action}</Button>}</div>;

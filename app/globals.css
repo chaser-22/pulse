@@ -795,7 +795,7 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .rank { color: #737a73; font-size: 12px; font-variant-numeric: tabular-nums; }
 .avatar { font-size: 12px; }
 .member-copy strong { font-size: 14px; }
-.member-copy small { overflow: hidden; color: var(--muted-foreground); font-size: 12px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.member-copy small { overflow: visible; color: var(--muted-foreground); font-size: 12px; line-height: 1.35; white-space: normal; }
 .member-row > b { display: grid; gap: 1px; text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; }
 .member-row > b small { color: var(--muted-foreground); font-size: 12px; font-weight: 500; }
 .text-button { font-size: 13px; }
@@ -829,7 +829,8 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .pilot-footer strong { font-size: 14px; }
 .pilot-footer span { color: var(--muted-foreground); font-size: 12px; }
 
-@media (max-width: 1100px) {
+@media (max-width: 1280px) {
+  .hero-grid { grid-template-columns: 1fr; }
   .owner-metrics { grid-template-columns: repeat(3, 1fr); }
   .metric-line:nth-child(4) { border-left: 0; }
   .metric-line:nth-child(n + 4) { border-top: 1px solid var(--border); }
@@ -880,7 +881,7 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .task-person small { color: var(--muted-foreground); font-size: 12px; }
 .task-reason, .task-next { min-width: 0; padding-left: 14px; border-left: 1px solid var(--border); }
 .task-reason small, .task-next small { color: #7f867f; font-size: 12px; letter-spacing: .05em; }
-.task-reason p, .task-next p { display: -webkit-box; overflow: hidden; margin: 4px 0 0; color: #b3b8b2; font-size: 13px; line-height: 1.4; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.task-reason p, .task-next p { margin: 4px 0 0; color: #b3b8b2; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
 .task-actions { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
 .task-actions button { min-height: 32px; padding: 0 9px; border: 1px solid var(--border); border-radius: 5px; color: #c1c6c0; background: #171917; font-size: 12px; }
 .task-actions button.task-primary { color: var(--primary-foreground); border-color: var(--primary); background: var(--primary); font-weight: 750; }
@@ -910,7 +911,7 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .mobile-member-main > small, .mobile-member-meta > span { font-size: 12px; }
 .mobile-member-meta b { font-size: 12px; letter-spacing: 0; text-transform: none; }
 
-@media (max-width: 1180px) {
+@media (max-width: 1280px) {
   .reception-toolbar { align-items: stretch; flex-direction: column; }
   .staff-stats { align-self: flex-end; }
   .staff-task { grid-template-columns: 28px minmax(180px, .8fr) minmax(240px, 1.2fr) minmax(220px, 1fr); }
@@ -959,7 +960,7 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .risk-member-identity h3 { overflow: hidden; margin: 0; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .risk-reason, .risk-next { min-width: 0; padding-left: 14px; border-left: 1px solid var(--border); }
 .risk-reason small, .risk-next small, .risk-value small { color: #7f867f; font-size: 12px; letter-spacing: .04em; }
-.risk-reason p, .risk-next p { display: -webkit-box; overflow: hidden; margin: 4px 0 0; color: #b3b8b2; font-size: 13px; line-height: 1.4; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.risk-reason p, .risk-next p { margin: 4px 0 0; color: #b3b8b2; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
 .risk-value { display: grid; gap: 2px; text-align: right; }
 .risk-value strong { font-size: 16px; font-variant-numeric: tabular-nums; }
 .risk-member-card > button { min-height: 36px; padding-inline: 10px; }
