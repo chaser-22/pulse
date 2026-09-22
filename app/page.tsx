@@ -536,30 +536,26 @@ function StaffBoard({ members, onOpenMember, onOutcome, onAddMember, onFindMembe
   const completed = members.filter((member) => member.recoveryOutcome || member.queuedMessage).length;
   const followUps = members.filter((member) => member.recoveryOutcome === 'follow_up').length;
   return <div className="screen-stack staff-screen">
-    <section className="reception-launchpad panel-card" aria-label="Brze akcije recepcije">
-      <div className="reception-launchpad-copy"><p className="eyebrow">BRZE AKCIJE</p><h2>Šta želite da uradite?</h2><p>Najčešći poslovi recepcije dostupni su odmah.</p></div>
+    <section className="reception-toolbar panel-card" aria-label="Dnevne akcije recepcije">
       <div className="reception-actions">
-        <button type="button" onClick={onFindMember}><span><Search /></span><strong>Pronađi člana</strong><small>Pretraga i prijava dolaska</small><ChevronRight /></button>
-        <button type="button" onClick={onAddMember}><span><Plus /></span><strong>Dodaj novog člana</strong><small>Članarina i kontakt podaci</small><ChevronRight /></button>
-        <button type="button" onClick={() => document.getElementById('staff-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><span><MessageCircle /></span><strong>Današnji kontakti</strong><small>{members.length - completed} zadataka je preostalo</small><ChevronRight /></button>
+        <button type="button" className="reception-primary" onClick={onFindMember}><Search /><span><strong>Pronađi člana</strong><small>Pretraga i prijava dolaska</small></span></button>
+        <button type="button" onClick={onAddMember}><Plus /><span><strong>Dodaj člana</strong><small>Članarina i kontakt</small></span></button>
+        <button type="button" onClick={() => document.getElementById('staff-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><MessageCircle /><span><strong>Današnji kontakti</strong><small>Idi na red za rad</small></span></button>
       </div>
-    </section>
-    <section className="staff-briefing panel-card">
-      <div className="briefing-main"><span><CheckCircle2 /></span><div><p className="eyebrow">JUTARNJI BRIEFING</p><h2>Danas prvo kontaktirajte {members.filter((member) => member.risk === 'high').length} visoko-rizična člana.</h2><p>Završite svaki red bilježenjem ishoda. Vlasnik odmah vidi rezultat na svom pregledu.</p></div></div>
-      <div className="staff-stats"><div><strong>{members.length}</strong><small>ukupno zadataka</small></div><div><strong>{completed}</strong><small>završeno</small></div><div><strong>{followUps}</strong><small>praćenja</small></div></div>
+      <dl className="staff-stats"><div><dt>Preostalo</dt><dd>{members.length - completed}</dd></div><div><dt>Završeno</dt><dd>{completed}</dd></div><div><dt>Praćenja</dt><dd>{followUps}</dd></div></dl>
     </section>
     <section className="staff-queue panel-card" id="staff-queue">
-      <div className="section-heading"><div><p className="eyebrow">RED ZA DANAS</p><h2>Kontakt i ishod u jednom koraku</h2></div><Badge className="period-badge">{members.length - completed} PREOSTALO</Badge></div>
+      <div className="section-heading"><div><p className="eyebrow">RED ZA DANAS</p><h2>Kontakti po prioritetu</h2></div><span className="summary-count">{members.length - completed} preostalo</span></div>
       <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${member.recoveryOutcome || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
-        <span className="task-priority">{String(index + 1).padStart(2, '0')}</span><span className="avatar large">{initials(member)}</span>
-        <div className="task-person"><div><h3>{fullName(member)}</h3><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : 'Srednji'}</span></div><p>{member.riskReason}</p><small><MessageCircle /> {member.preferredChannel} <i /> {euro(member.price)} u riziku</small></div>
+        <span className="task-priority">{String(index + 1).padStart(2, '0')}</span>
+        <div className="task-person"><span className="avatar large">{initials(member)}</span><span><span className="task-name"><h3>{fullName(member)}</h3><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : 'Srednji'}</span></span><small><MessageCircle /> {member.preferredChannel} · {member.packageName}</small></span></div>
+        <div className="task-reason"><small>RAZLOG RIZIKA</small><p>{member.riskReason}</p></div>
         <div className="task-next"><small>PREPORUČENI POTEZ</small><p>{member.nextAction}</p></div>
         <div className="task-actions">
           {member.status === 'recovered' ? <span className="task-done"><CheckCircle2 /> Obnovljeno</span> : member.recoveryOutcome ? <><span className={`outcome-badge outcome-${member.recoveryOutcome}`}><Check /> {outcomeLabels[member.recoveryOutcome]}</span><button onClick={() => onOpenMember(member)}>Otvori profil</button></> : <><button onClick={() => onOutcome(member.id, 'no_answer')}><Phone /> Bez odgovora</button><button onClick={() => onOutcome(member.id, 'replied')}><MessageCircle /> Odgovorio/la</button><button onClick={() => onOutcome(member.id, 'follow_up')}><Clock3 /> Prati sjutra</button><button className="task-primary" onClick={() => onOpenMember(member)}><CheckCircle2 /> Evidentiraj obnovu</button></>}
         </div>
       </article>)}</div>
     </section>
-    <div className="staff-boundary"><ShieldAlert /><span><strong>Recepcija vidi samo ono što treba da uradi.</strong>Finansijski pregled, trendovi, automatizacije i ukupni poslovni rezultat ostaju u vlasničkom radnom prostoru.</span></div>
   </div>;
 }
 
