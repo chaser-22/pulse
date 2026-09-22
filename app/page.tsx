@@ -69,7 +69,7 @@ function fullName(member: Member) {
 }
 
 function newMessage(member: Member) {
-  if (member.status === 'expired') return `Zdravo ${member.firstName}, primijetili smo da je tvoja članarina istekla. Ako želiš da nastaviš, javi nam i pripremićemo obnovu prije tvog sljedećeg dolaska. 💪`;
+  if (member.status === 'expired') return `Zdravo ${member.firstName}, primijetili smo da je tvoja članarina istekla. Ako želiš da nastaviš, javi nam i pripremićemo obnovu prije tvog sljedećeg dolaska.`;
   if (member.status === 'expiring') return `Zdravo ${member.firstName}, samo mali podsjetnik: tvoja članarina ističe ${prettyDate(member.endDate)} Javi nam ako želiš da je produžimo. — PULSE Demo Gym`;
   return `Zdravo ${member.firstName}, nedostaješ nam u teretani. Da li ti raspored treninga i dalje odgovara? Tu smo da pomognemo da se vratiš u ritam.`;
 }
