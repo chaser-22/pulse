@@ -558,12 +558,9 @@ function StaffBoard({ members, onOpenMember, onOutcome, onAddMember, onFindMembe
   const completed = members.filter((member) => member.recoveryOutcome || member.queuedMessage).length;
   const followUps = members.filter((member) => member.recoveryOutcome === 'follow_up').length;
   return <div className="screen-stack staff-screen">
-    <section className="reception-toolbar panel-card" aria-label="Dnevne akcije recepcije">
-      <div className="reception-actions">
-        <button type="button" className="reception-primary" onClick={onFindMember}><Search /><span><strong>Pronađi člana</strong><small>Pretraga i prijava dolaska</small></span></button>
-        <button type="button" onClick={onAddMember}><Plus /><span><strong>Dodaj člana</strong><small>Članarina i kontakt</small></span></button>
-        <button type="button" onClick={() => document.getElementById('staff-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><MessageCircle /><span><strong>Današnji kontakti</strong><small>Idi na red za rad</small></span></button>
-      </div>
+    <section className="reception-search-shell" aria-labelledby="reception-search-title">
+      <button type="button" className="reception-search" onClick={onFindMember}><Search /><span><small>NAJBRŽA AKCIJA</small><strong id="reception-search-title">Pronađi člana</strong><em>Ime, telefon ili e-mail</em></span><ArrowRight /></button>
+      <button type="button" className="reception-secondary" onClick={onAddMember}><Plus /> Dodaj člana</button>
       <dl className="staff-stats"><div><dt>Preostalo</dt><dd>{members.length - completed}</dd></div><div><dt>Završeno</dt><dd>{completed}</dd></div><div><dt>Praćenja</dt><dd>{followUps}</dd></div></dl>
     </section>
     <section className="staff-queue panel-card" id="staff-queue">
@@ -574,7 +571,7 @@ function StaffBoard({ members, onOpenMember, onOutcome, onAddMember, onFindMembe
         <div className="task-reason"><small>RAZLOG RIZIKA</small><p>{member.riskReason}</p></div>
         <div className="task-next"><small>PREPORUČENI POTEZ</small><p>{member.nextAction}</p></div>
         <div className="task-actions">
-          {member.status === 'recovered' ? <span className="task-done"><CheckCircle2 /> Obnovljeno</span> : member.recoveryOutcome ? <><span className={`outcome-badge outcome-${member.recoveryOutcome}`}><Check /> {outcomeLabels[member.recoveryOutcome]}</span><button onClick={() => onOpenMember(member)}>Otvori profil</button></> : <><button onClick={() => onOutcome(member.id, 'no_answer')}><Phone /> Bez odgovora</button><button onClick={() => onOutcome(member.id, 'replied')}><MessageCircle /> Odgovorio/la</button><button onClick={() => onOutcome(member.id, 'follow_up')}><Clock3 /> Prati sjutra</button><button className="task-primary" onClick={() => onOpenMember(member)}><CheckCircle2 /> Evidentiraj obnovu</button></>}
+          {member.status === 'recovered' ? <span className="task-done"><CheckCircle2 /> Obnovljeno</span> : member.recoveryOutcome ? <><span className={`outcome-badge outcome-${member.recoveryOutcome}`}><Check /> {outcomeLabels[member.recoveryOutcome]}</span><button onClick={() => onOpenMember(member)}>Nastavi <ArrowRight /></button></> : <><button className="task-primary" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button><button onClick={() => onOutcome(member.id, 'no_answer')}><Phone /> Bez odgovora</button><button onClick={() => onOutcome(member.id, 'replied')}><MessageCircle /> Odgovorio/la</button><button onClick={() => onOutcome(member.id, 'follow_up')}><Clock3 /> Prati sjutra</button></>}
         </div>
       </article>)}</div>
     </section>
@@ -651,8 +648,15 @@ function MemberProfile({ member, channel, message, renewing, renewalAmount, onCh
     <div className="profile-main">
       <DialogHeader className="profile-header"><div className="avatar profile-avatar">{initials(member)}</div><div><div className="profile-badges"><span className={`status-pill ${statusClass(member.status)}`}>{t.statuses[member.status]}</span><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki rizik' : member.risk === 'medium' ? 'Srednji rizik' : 'Nizak rizik'}</span></div><DialogTitle>{fullName(member)}</DialogTitle><DialogDescription>{member.packageName} · {euro(member.price)} mjesečno</DialogDescription></div></DialogHeader>
       <div className="profile-quick-actions"><Button variant="outline" onClick={onCheckin}><LogIn /> {t.actions.checkin}</Button><Button variant="outline" onClick={onEdit}><Pencil /> Uredi podatke</Button></div>
-      <section className={`risk-explanation ${riskClass(member.risk)}`}><div><p className="eyebrow">PULSE OBJAŠNJENJE RIZIKA</p><h3>{member.risk === 'high' ? 'Potrebna je akcija danas' : member.risk === 'medium' ? 'Kontaktirajte prije isteka' : 'Nema hitnog rizika'}</h3><p>{member.riskReason}</p><div><span><strong>Preporučeni potez</strong>{member.nextAction}</span></div></div></section>
     </div>
+    <section className="profile-context">
+      <section className={`profile-risk ${riskClass(member.risk)}`}>
+        <div><p className="eyebrow">PULSE SIGNAL</p><h3>{member.risk === 'high' ? 'Potrebna je akcija danas' : member.risk === 'medium' ? 'Kontaktirajte prije isteka' : 'Nema hitnog rizika'}</h3></div>
+        <details open={member.risk === 'high' ? true : undefined}><summary>Zašto?</summary><p>{member.riskReason}</p><dl><div><dt>Ističe</dt><dd>{prettyDate(member.endDate)}</dd></div><div><dt>Posljednji dolazak</dt><dd>{member.lastVisit === '—' ? 'Nije evidentiran' : prettyDate(member.lastVisit)}</dd></div></dl><span><strong>Preporučeni potez</strong>{member.nextAction}</span></details>
+      </section>
+      <section className="member-recovery-path" aria-labelledby="member-recovery-title"><p className="eyebrow" id="member-recovery-title">TOK OPORAVKA</p><RecoveryLifecycle member={member} /></section>
+      <div className="profile-info-grid"><section><h3>Članarina i aktivnost</h3><dl className="profile-info-list"><Detail label="Paket" value={`${member.packageName} · ${euro(member.price)}`} sub={`${prettyDate(member.startDate)} — ${prettyDate(member.endDate)}`} /><Detail label="Posljednji dolazak" value={member.lastVisit === '—' ? 'Nema dolazaka' : prettyDate(member.lastVisit)} sub={`${member.visitsThisMonth} posjeta ovog mjeseca`} /></dl></section><section><h3>Kontakt podaci</h3><dl className="profile-info-list"><Detail label="Telefon" value={member.phone} sub={member.preferredChannel} /><Detail label="E-mail" value={member.email} sub={member.birthday ? `Rođendan ${prettyDate(member.birthday)}` : 'Datum rođenja nije unijet'} /></dl></section></div>
+    </section>
     <aside className="recovery-panel">
       <div className="recovery-panel-title"><span><MessageCircle /></span><div><p className="eyebrow">RECOVERY AKCIJA</p><h2>Pripremi poruku</h2></div></div>
       <p className="panel-copy">Personalizujte prijedlog. Poruka će biti samo stavljena u lokalni red.</p>
@@ -665,7 +669,6 @@ function MemberProfile({ member, channel, message, renewing, renewalAmount, onCh
       <div className="recovery-divider"><span>NAKON OBNOVE</span></div>
       {!renewing ? <Button variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}><CheckCircle2 /> {member.status === 'recovered' ? 'Već je oporavljen' : t.actions.renew}</Button> : <form className="renew-form" onSubmit={onMarkRenewed}><div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div><p>Ovo će odmah povećati broj oporavljenih članova i prihod.</p><div><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div></form>}
     </aside>
-    <div className="profile-info-grid"><section><h3>Članarina i aktivnost</h3><dl className="profile-info-list"><Detail label="Paket" value={`${member.packageName} · ${euro(member.price)}`} sub={`${prettyDate(member.startDate)} — ${prettyDate(member.endDate)}`} /><Detail label="Posljednji dolazak" value={member.lastVisit === '—' ? 'Nema dolazaka' : prettyDate(member.lastVisit)} sub={`${member.visitsThisMonth} posjeta ovog mjeseca`} /></dl></section><section><h3>Kontakt podaci</h3><dl className="profile-info-list"><Detail label="Telefon" value={member.phone} sub={member.preferredChannel} /><Detail label="E-mail" value={member.email} sub={member.birthday ? `Rođendan ${prettyDate(member.birthday)}` : 'Datum rođenja nije unijet'} /></dl></section></div>
     <div className="profile-history-grid"><section><div className="subsection-title"><Activity /><h3>Istorija dolazaka</h3></div>{member.attendance.length ? <div className="timeline">{member.attendance.slice(0, 5).map((visit, index) => <div key={`${visit.date}-${index}`}><i /><span><strong>{prettyDate(visit.date)}</strong><small>{visit.time}</small></span></div>)}</div> : <p className="muted-empty">Još nema evidentiranih dolazaka.</p>}</section><section><div className="subsection-title"><CreditCard /><h3>Istorija plaćanja</h3></div>{member.payments.length ? <div className="payment-list">{member.payments.slice(0, 4).map((payment, index) => <div key={`${payment.date}-${index}`}><span><strong>{euro(payment.amount)}</strong><small>{prettyDate(payment.date)} · {payment.method}</small></span><CheckCircle2 /></div>)}</div> : <p className="muted-empty">Još nema evidentiranih uplata.</p>}</section></div>
   </div>;
 }
