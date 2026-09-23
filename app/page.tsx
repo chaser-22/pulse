@@ -22,6 +22,7 @@ import {
 import {
   getPulseMetrics,
   getRecoveryActivity,
+  getRecoveryLifecycle,
   getRiskMembers,
   type RecoveryActivity,
 } from '@/lib/pulse-logic';
@@ -131,6 +132,7 @@ export default function Home() {
   const [resetOpen, setResetOpen] = useState(false);
   const [pilotOpen, setPilotOpen] = useState(false);
   const [success, setSuccess] = useState('');
+  const [recoveryPulse, _setRecoveryPulse] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -373,7 +375,7 @@ export default function Home() {
           <input ref={fileInputRef} hidden type="file" accept=".csv,text/csv" onChange={(event) => { const file = event.target.files?.[0]; if (file) importCsv(file); event.target.value = ''; }} />
         </header>
 
-        {view === 'dashboard' && <Dashboard metrics={metrics} recoveryActivity={recoveryActivity} highRiskMembers={highRiskMembers} members={members} onOpenMember={openMember} onNavigate={goTo} onPilot={() => setPilotOpen(true)} />}
+        {view === 'dashboard' && <Dashboard metrics={metrics} recoveryActivity={recoveryActivity} highRiskMembers={highRiskMembers} members={members} recoveryPulse={recoveryPulse} onOpenMember={openMember} onNavigate={goTo} onPilot={() => setPilotOpen(true)} />}
         {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onOutcome={recordOutcome} onAddMember={() => openMemberForm()} onFindMember={() => goTo('members')} />}
         {view === 'members' && <MembersScreen members={filteredMembers} total={members.length} filter={filter} search={search} onFilter={setFilter} onSearch={setSearch} onOpenMember={openMember} onImport={() => fileInputRef.current?.click()} />}
         {view === 'radar' && <RadarScreen members={riskMembers} onOpenMember={openMember} />}
@@ -458,38 +460,60 @@ function LoadingState() {
   return <main className="loading-shell"><aside><div className="skeleton logo" />{[1,2,3,4].map((item) => <div className="skeleton nav" key={item} />)}</aside><section><div className="skeleton title" /><div className="loading-grid"><div className="skeleton large" /><div className="skeleton large" /></div><div className="loading-stats">{[1,2,3,4].map((item) => <div className="skeleton stat" key={item} />)}</div></section><div className="loading-label"><span className="loader-ring" />Učitavanje PULSE podataka…</div></main>;
 }
 
-function Dashboard({ metrics, highRiskMembers, members, onOpenMember, onNavigate, onPilot }: {
+function RecoveryLifecycle({ member }: { member: Member }) {
+  const current = getRecoveryLifecycle(member);
+  const steps = [['detected', 'Otkriveno'], ['contacted', 'Kontaktirano'], ['renewed', 'Obnovljeno']] as const;
+  const currentIndex = steps.findIndex(([id]) => id === current);
+  return <ol className="recovery-lifecycle" aria-label="Status oporavka">{steps.map(([id, label], index) => <li className={index <= currentIndex ? 'complete' : ''} aria-current={id === current ? 'step' : undefined} key={id}><i />{label}</li>)}</ol>;
+}
+
+function Dashboard({ metrics, recoveryActivity, highRiskMembers, onOpenMember, onNavigate, onPilot }: {
   metrics: ReturnType<typeof getPulseMetrics>;
   recoveryActivity: RecoveryActivity;
-  highRiskMembers: Member[]; members: Member[]; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void; onPilot: () => void;
+  highRiskMembers: Member[]; members: Member[]; recoveryPulse: number; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void; onPilot: () => void;
 }) {
   const collectedRevenue = 10320 + metrics.recoveredRevenue;
   const monthlyTarget = 12500;
   const targetProgress = Math.min(100, (collectedRevenue / monthlyTarget) * 100);
-  const completedActions = members.filter((member) => member.queuedMessage || member.recoveryOutcome).length;
   return <div className="screen-stack dashboard-screen">
-    <div className="hero-grid">
-      <section className="recovery-summary panel-card" aria-labelledby="recovery-summary-title">
-        <div className="recovery-summary-main">
-          <p className="eyebrow">OPORAVAK PRIHODA · AVGUST 2026.</p>
-          <h2 id="recovery-summary-title"><strong className="risk-number">{euro(metrics.riskRevenue)}</strong><span>prihoda u riziku</span></h2>
-          <p>{highRiskMembers.length} člana zahtijevaju pažnju danas. Lični kontakt je najbrži sljedeći korak.</p>
-        </div>
-        <dl className="recovery-support">
-          <div><dt>Oporavljeno ovog mjeseca</dt><dd>{euro(metrics.recoveredRevenue)}</dd></div>
-          <div><dt>Aktivnost tima</dt><dd>{completedActions}<small>zabilježenih akcija</small></dd></div>
+    <section className="owner-hero" aria-labelledby="owner-risk-title">
+      <div className="owner-hero-copy">
+        <p className="eyebrow">PRIHOD U RIZIKU</p>
+        <h2 id="owner-risk-title">{euro(metrics.riskRevenue)}</h2>
+        <p className="hero-statement">zahtijeva tvoju pažnju</p>
+        <p className="actionable-copy">Od toga je <strong>{euro(metrics.actionableRevenue)}</strong> vezano za članove visokog prioriteta koje možeš kontaktirati danas.</p>
+        <button type="button" className="hero-link" onClick={() => onNavigate('radar')}>Pogledaj članove <ArrowRight /></button>
+        <dl className="hero-outcomes">
+          <div><dt>Oporavljeno</dt><dd>{euro(metrics.recoveredRevenue)}</dd></div>
+          <div><dt>Obnovljeni članovi</dt><dd>{metrics.recoveredCount}</dd></div>
         </dl>
-        <Button className="pulse-button" onClick={() => onNavigate('radar')}>Otvori Churn Radar <ArrowRight /></Button>
-      </section>
+      </div>
+      <div className="signal-stage" aria-hidden="true"><div className="signal-static" /></div>
+    </section>
 
-      <section className="today-card panel-card">
-        <div className="section-heading"><div><p className="eyebrow">PRIORITET DANAS</p><h2>Članovi koji traže pažnju</h2></div><span className="summary-count">{highRiskMembers.length} visoki rizik</span></div>
-        <div className="member-list">
-          {highRiskMembers.slice(0, 4).map((member, index) => <button className="member-row" key={member.id} onClick={() => onOpenMember(member)}><span className="rank">0{index + 1}</span><span className="avatar">{initials(member)}</span><span className="member-copy"><strong>{fullName(member)}</strong><small>{member.riskReason}</small></span><b>{euro(member.price)}<small>mjesečno</small></b><ChevronRight /></button>)}
-        </div>
-        <button className="text-button" onClick={() => onNavigate('radar')}>Prikaži sve rizične članove <ArrowRight /></button>
-      </section>
-    </div>
+    <section className="priority-queue" aria-labelledby="priority-title">
+      <div className="section-heading"><div><p className="eyebrow">DANAS</p><h2 id="priority-title">Danas — članovi koji trebaju pažnju</h2></div><span className="summary-count">{highRiskMembers.length} visoki prioritet</span></div>
+      {highRiskMembers.length ? <div className="priority-list">{highRiskMembers.map((member) => <article className="priority-row" key={member.id}>
+        <div className="priority-person"><span className="avatar">{initials(member)}</span><span><strong>{fullName(member)}</strong><small>{member.packageName}</small></span></div>
+        <span className={`risk-label ${riskClass(member.risk)}`}>{member.risk === 'high' ? 'Visok rizik' : 'Srednji rizik'}</span>
+        <p className="priority-reason">{member.riskReason}</p>
+        <strong className="priority-value">{euro(member.price)}</strong>
+        <button type="button" className="priority-action" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button>
+        <details className="risk-disclosure"><summary>Zašto?</summary><div><p>{member.riskReason}</p><span><strong>Preporučeni potez</strong>{member.nextAction}</span><span><strong>Članarina ističe</strong>{prettyDate(member.endDate)}</span></div></details>
+        <RecoveryLifecycle member={member} />
+      </article>)}</div> : <div className="priority-empty"><CheckCircle2 /><span><strong>Danas nema članova visokog prioriteta.</strong><small>Pregledajte sve aktivne signale u Churn Radaru.</small></span></div>}
+      <button type="button" className="text-button" onClick={() => onNavigate('radar')}>Prikaži sve rizične članove <ArrowRight /></button>
+    </section>
+
+    <section className="recovery-activity" aria-labelledby="activity-title">
+      <div><p className="eyebrow">AKTIVNOST OPORAVKA</p><h2 id="activity-title">Šta se promijenilo u ovom pregledu?</h2></div>
+      <dl>
+        <div><dt>Kontaktirano</dt><dd>{recoveryActivity.contacted}</dd></div>
+        <div><dt>Za praćenje</dt><dd>{recoveryActivity.followUps}</dd></div>
+        <div><dt>Obnovljeno</dt><dd>{recoveryActivity.renewed}</dd></div>
+        <div className="positive"><dt>Oporavljeni iznos</dt><dd>{euro(recoveryActivity.recoveredAmount)}</dd></div>
+      </dl>
+    </section>
 
     <section className="owner-metrics panel-card" aria-label="Ključne operativne metrike">
       <Metric label="Aktivni članovi" value={String(metrics.active)} hint="+8 ovog mjeseca" />
