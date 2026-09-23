@@ -368,7 +368,7 @@ export default function Home() {
           <div className="top-actions">
             <fieldset className="workspace-switch"><legend className="sr-only">Izaberite radni prostor</legend><button type="button" aria-pressed={workspace === 'owner'} className={workspace === 'owner' ? 'active' : ''} onClick={() => switchWorkspace('owner')}><LayoutDashboard /> Vlasnik</button><button type="button" aria-pressed={workspace === 'staff'} className={workspace === 'staff' ? 'active' : ''} onClick={() => switchWorkspace('staff')}><Users /> Recepcija</button></fieldset>
             {workspace === 'owner' && view === 'members' && <Button variant="outline" className="dark-outline" onClick={() => fileInputRef.current?.click()}><Upload /> {t.actions.import}</Button>}
-            <Button className="lime-button" onClick={() => openMemberForm()}><Plus /> {t.actions.add}</Button>
+            <Button className="pulse-button" onClick={() => openMemberForm()}><Plus /> {t.actions.add}</Button>
           </div>
           <input ref={fileInputRef} hidden type="file" accept=".csv,text/csv" onChange={(event) => { const file = event.target.files?.[0]; if (file) importCsv(file); event.target.value = ''; }} />
         </header>
@@ -409,7 +409,7 @@ export default function Home() {
               <Field label="Status"><select className="select-input" value={memberForm.status} onChange={(e) => setMemberForm({ ...memberForm, status: e.target.value as MemberStatus })}>{Object.entries(t.statuses).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></Field>
               <Field label="Preferirani kanal"><select className="select-input" value={memberForm.preferredChannel} onChange={(e) => setMemberForm({ ...memberForm, preferredChannel: e.target.value as Channel })}><option>WhatsApp</option><option>Viber</option><option>SMS</option></select></Field>
             </div>
-            <DialogFooter className="form-footer"><Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Odustani</Button><Button type="submit" className="lime-button">{editingId ? 'Sačuvaj izmjene' : 'Dodaj člana'}</Button></DialogFooter>
+            <DialogFooter className="form-footer"><Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Odustani</Button><Button type="submit" className="pulse-button">{editingId ? 'Sačuvaj izmjene' : 'Dodaj člana'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
@@ -420,7 +420,7 @@ export default function Home() {
             <DialogHeader><DialogTitle>{automation.title}</DialogTitle><DialogDescription>{automation.trigger} · {automation.audience}</DialogDescription></DialogHeader>
             <div className="preview-phone"><div className="preview-phone-top"><span>{automation.channel}</span><span>10:42</span></div><div className="message-bubble">{automation.message.replace('{{ime}}', 'Miloš').replace('{{datum}}', '03.09.2026.')}</div><small>Pregled — poruka neće biti stvarno poslata</small></div>
             <div className="activity-note"><History /><span><strong>Posljednja aktivnost</strong>{automation.lastActivity}</span></div>
-            <DialogFooter><Button onClick={() => { setAutomationPreviewId(null); setSuccess('Pregled zatvoren. Nijedna poruka nije poslata.'); }} className="lime-button">U redu</Button></DialogFooter>
+            <DialogFooter><Button onClick={() => { setAutomationPreviewId(null); setSuccess('Pregled zatvoren. Nijedna poruka nije poslata.'); }} className="pulse-button">U redu</Button></DialogFooter>
           </>; })()}
         </DialogContent>
       </Dialog>
@@ -428,7 +428,7 @@ export default function Home() {
       <Dialog open={resetOpen} onOpenChange={setResetOpen}>
         <DialogContent className="confirm-dialog">
           <DialogHeader><span className="confirm-icon"><RotateCcw /></span><DialogTitle>Resetovati demo?</DialogTitle><DialogDescription>Sve probne poruke, ishodi, dolasci i obnove biće vraćeni na početno stanje. Ovo utiče samo na podatke u ovom pregledaču.</DialogDescription></DialogHeader>
-          <DialogFooter><Button variant="outline" onClick={() => setResetOpen(false)}>Odustani</Button><Button className="lime-button" onClick={resetDemo}>Resetuj i pripremi demo</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setResetOpen(false)}>Odustani</Button><Button className="pulse-button" onClick={resetDemo}>Resetuj i pripremi demo</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -437,7 +437,7 @@ export default function Home() {
           <DialogHeader><Badge className="pilot-badge">PILOT SA VAŠIM PODACIMA</Badge><DialogTitle>Provjerite koliko prihoda PULSE može vratiti vašoj teretani.</DialogTitle><DialogDescription>Za početak je dovoljan jednostavan Excel ili CSV spisak. Nije potrebna promjena postojećeg sistema.</DialogDescription></DialogHeader>
           <div className="pilot-steps"><div><span>01</span><p><strong>Uvezemo članove</strong>Ime, datum isteka, posljednji dolazak i cijena članarine.</p></div><div><span>02</span><p><strong>PULSE označava rizik</strong>Dobijate prioritetnu listu i jasan razlog za svakog člana.</p></div><div><span>03</span><p><strong>Mjerimo rezultat</strong>Pratimo kontakt, odgovor, obnovu i stvarno oporavljeni prihod.</p></div></div>
           <div className="pilot-note"><ShieldAlert /><span><strong>Vaši podaci ostaju pod vašom kontrolom.</strong>Za demonstraciju nijesu potrebne stvarne poruke niti integracije.</span></div>
-          <DialogFooter><Button variant="outline" onClick={() => setPilotOpen(false)}>Zatvori</Button><Button className="lime-button" onClick={() => { setPilotOpen(false); setView('members'); setWorkspace('owner'); setSuccess('Otvoren je ekran za uvoz članova iz CSV-a.'); }}><Upload /> Pogledaj kako izgleda uvoz</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setPilotOpen(false)}>Zatvori</Button><Button className="pulse-button" onClick={() => { setPilotOpen(false); setView('members'); setWorkspace('owner'); setSuccess('Otvoren je ekran za uvoz članova iz CSV-a.'); }}><Upload /> Pogledaj kako izgleda uvoz</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -479,7 +479,7 @@ function Dashboard({ metrics, highRiskMembers, members, onOpenMember, onNavigate
           <div><dt>Oporavljeno ovog mjeseca</dt><dd>{euro(metrics.recoveredRevenue)}</dd></div>
           <div><dt>Aktivnost tima</dt><dd>{completedActions}<small>zabilježenih akcija</small></dd></div>
         </dl>
-        <Button className="lime-button" onClick={() => onNavigate('radar')}>Otvori Churn Radar <ArrowRight /></Button>
+        <Button className="pulse-button" onClick={() => onNavigate('radar')}>Otvori Churn Radar <ArrowRight /></Button>
       </section>
 
       <section className="today-card panel-card">
@@ -635,10 +635,10 @@ function MemberProfile({ member, channel, message, renewing, renewalAmount, onCh
       <label className="message-field"><span>PORUKA ZA {member.firstName.toLocaleUpperCase('me')}</span><Textarea value={message} onChange={(event) => onMessage(event.target.value)} rows={7} /></label>
       <div className="message-meta"><span>{message.length} znakova</span><span><Sparkles /> PULSE prijedlog</span></div>
       {member.queuedMessage && <div className="queued-state"><CheckCircle2 /><span><strong>Poruka je u redu</strong>{member.queuedMessage.channel} · {member.queuedMessage.queuedAt}</span></div>}
-      <Button className="lime-button queue-button" onClick={onQueue} disabled={!message.trim()}><Send /> Stavi poruku u red</Button>
+      <Button className="pulse-button queue-button" onClick={onQueue} disabled={!message.trim()}><Send /> Stavi poruku u red</Button>
       <div className="fake-service-note"><ShieldAlert /> Integracije nijesu povezane; slanje je simulirano.</div>
       <div className="recovery-divider"><span>NAKON OBNOVE</span></div>
-      {!renewing ? <Button variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}><CheckCircle2 /> {member.status === 'recovered' ? 'Već je oporavljen' : t.actions.renew}</Button> : <form className="renew-form" onSubmit={onMarkRenewed}><div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div><p>Ovo će odmah povećati broj oporavljenih članova i prihod.</p><div><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="lime-button"><Check /> Potvrdi obnovu</Button></div></form>}
+      {!renewing ? <Button variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}><CheckCircle2 /> {member.status === 'recovered' ? 'Već je oporavljen' : t.actions.renew}</Button> : <form className="renew-form" onSubmit={onMarkRenewed}><div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div><p>Ovo će odmah povećati broj oporavljenih članova i prihod.</p><div><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div></form>}
     </aside>
     <div className="profile-info-grid"><section><h3>Članarina i aktivnost</h3><dl className="profile-info-list"><Detail label="Paket" value={`${member.packageName} · ${euro(member.price)}`} sub={`${prettyDate(member.startDate)} — ${prettyDate(member.endDate)}`} /><Detail label="Posljednji dolazak" value={member.lastVisit === '—' ? 'Nema dolazaka' : prettyDate(member.lastVisit)} sub={`${member.visitsThisMonth} posjeta ovog mjeseca`} /></dl></section><section><h3>Kontakt podaci</h3><dl className="profile-info-list"><Detail label="Telefon" value={member.phone} sub={member.preferredChannel} /><Detail label="E-mail" value={member.email} sub={member.birthday ? `Rođendan ${prettyDate(member.birthday)}` : 'Datum rođenja nije unijet'} /></dl></section></div>
     <div className="profile-history-grid"><section><div className="subsection-title"><Activity /><h3>Istorija dolazaka</h3></div>{member.attendance.length ? <div className="timeline">{member.attendance.slice(0, 5).map((visit, index) => <div key={`${visit.date}-${index}`}><i /><span><strong>{prettyDate(visit.date)}</strong><small>{visit.time}</small></span></div>)}</div> : <p className="muted-empty">Još nema evidentiranih dolazaka.</p>}</section><section><div className="subsection-title"><CreditCard /><h3>Istorija plaćanja</h3></div>{member.payments.length ? <div className="payment-list">{member.payments.slice(0, 4).map((payment, index) => <div key={`${payment.date}-${index}`}><span><strong>{euro(payment.amount)}</strong><small>{prettyDate(payment.date)} · {payment.method}</small></span><CheckCircle2 /></div>)}</div> : <p className="muted-empty">Još nema evidentiranih uplata.</p>}</section></div>
