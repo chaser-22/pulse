@@ -133,7 +133,7 @@ export default function Home() {
   const [resetOpen, setResetOpen] = useState(false);
   const [pilotOpen, setPilotOpen] = useState(false);
   const [success, setSuccess] = useState('');
-  const [recoveryPulse, _setRecoveryPulse] = useState(0);
+  const [recoveryPulse, setRecoveryPulse] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -214,6 +214,7 @@ export default function Home() {
     setSelectedMemberId(null);
     setFilter('all');
     setSearch('');
+    setRecoveryPulse(0);
     setResetOpen(false);
     setSuccess('Demo je vraćen na početne podatke i spreman je za novu prezentaciju.');
   }
@@ -247,6 +248,7 @@ export default function Home() {
       nextAction: 'Pozdravite člana pri sljedećem dolasku i pratite aktivnost naredne dvije sedmice.',
       payments: [{ date: today, amount, method: 'Evidentirano u PULSE', note: 'Obnovljena članarina' }, ...member.payments],
     } : member));
+    setRecoveryPulse((current) => current + 1);
     setSuccess(`${memberName} je oporavljen. ${euro(amount)} je dodato oporavljenom prihodu.`);
     setSelectedMemberId(null);
     setRenewing(false);
@@ -444,7 +446,7 @@ export default function Home() {
         </DialogContent>
       </Dialog>
 
-      {success && <output className="success-toast" aria-live="polite"><CheckCircle2 /><span>{success}</span></output>}
+      {success && <output className={`success-toast ${success.includes('oporavljen') ? 'is-recovery' : ''}`} aria-live="polite"><CheckCircle2 /><span>{success}</span></output>}
     </main>
   );
 }
@@ -485,7 +487,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
         <p className="actionable-copy">Od toga je <strong>{euro(metrics.actionableRevenue)}</strong> vezano za članove visokog prioriteta koje možeš kontaktirati danas.</p>
         <button type="button" className="hero-link" onClick={() => onNavigate('radar')}>Pogledaj članove <ArrowRight /></button>
         <dl className="hero-outcomes">
-          <div><dt>Oporavljeno</dt><dd>{euro(metrics.recoveredRevenue)}</dd></div>
+          <div><dt>Oporavljeno</dt><dd className="number-shift" key={metrics.recoveredRevenue}>{euro(metrics.recoveredRevenue)}</dd></div>
           <div><dt>Obnovljeni članovi</dt><dd>{metrics.recoveredCount}</dd></div>
         </dl>
       </div>
@@ -543,11 +545,11 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
       </section>
       <section className="panel-card occupancy-card">
         <div className="section-heading"><div><p className="eyebrow">DANAS</p><h2>Popunjenost teretane po satu</h2></div><span className="chart-legend"><i /> Broj dolazaka</span></div>
+        <p className="occupancy-insight"><strong>Najveća gužva je danas od 18:00–20:00.</strong> Pojačajte recepciju i članovima preporučite mirniji termin prije 16:00.</p>
         <div className="chart-wrap">
           <div className="chart-y"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div>
-          <div className="bar-chart">{occupancy.map((item, index) => <div className={`bar-slot ${item.value > 78 ? 'peak' : ''}`} key={item.hour}><div className="bar" style={{ height: `${item.value}%`, animationDelay: `${index * 38}ms` }}><span>{item.value}</span></div><small>{item.hour}</small></div>)}</div>
+          <div className="bar-chart">{occupancy.map((item) => <div className={`bar-slot ${item.value > 78 ? 'peak' : ''}`} key={item.hour}><div className="bar" style={{ height: `${item.value}%` }}><span>{item.value}</span></div><small>{item.hour}</small></div>)}</div>
         </div>
-        <div className="peak-note"><span><strong>Najveća gužva: 18:00–19:00</strong>Pojačajte recepciju i preporučite mirniji termin prije 16:00.</span></div>
       </section>
     </div>
     <section className="pilot-footer"><div><strong>Spremni za pilot sa stvarnim podacima?</strong><span>Za početak je dovoljan Excel ili CSV spisak članova.</span></div><Button variant="outline" onClick={onPilot}>Pogledaj pilot proces <ArrowRight /></Button></section>
