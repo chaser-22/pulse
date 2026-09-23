@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { RevenueSignal } from '@/components/revenue-signal';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -467,7 +468,7 @@ function RecoveryLifecycle({ member }: { member: Member }) {
   return <ol className="recovery-lifecycle" aria-label="Status oporavka">{steps.map(([id, label], index) => <li className={index <= currentIndex ? 'complete' : ''} aria-current={id === current ? 'step' : undefined} key={id}><i />{label}</li>)}</ol>;
 }
 
-function Dashboard({ metrics, recoveryActivity, highRiskMembers, onOpenMember, onNavigate, onPilot }: {
+function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, onOpenMember, onNavigate, onPilot }: {
   metrics: ReturnType<typeof getPulseMetrics>;
   recoveryActivity: RecoveryActivity;
   highRiskMembers: Member[]; members: Member[]; recoveryPulse: number; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void; onPilot: () => void;
@@ -488,7 +489,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, onOpenMember, o
           <div><dt>Obnovljeni članovi</dt><dd>{metrics.recoveredCount}</dd></div>
         </dl>
       </div>
-      <div className="signal-stage" aria-hidden="true"><div className="signal-static" /></div>
+      <div className="signal-stage" aria-hidden="true"><RevenueSignal pulse={recoveryPulse} /></div>
     </section>
 
     <section className="priority-queue" aria-labelledby="priority-title">
