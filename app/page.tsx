@@ -5,7 +5,7 @@ import {
   Activity, ArrowRight, Check, CheckCircle2,
   ChevronRight, CircleGauge, Clock3, CreditCard, FileSpreadsheet, History,
   LayoutDashboard, LogIn, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
-  RotateCcw, Send, Settings2, ShieldAlert, Sparkles, Upload, Users, X, Zap,
+  Moon, RotateCcw, Send, Settings2, ShieldAlert, Sparkles, Sun, Upload, Users, X, Zap,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ import {
   memberMatchesSearch,
   type RecoveryActivity,
 } from '@/lib/pulse-logic';
+import { getThemeClassName, getThemeColor, nextTheme, THEME_STORAGE_KEY, type Theme } from '@/lib/theme';
 
 type View = 'dashboard' | 'staff' | 'members' | 'radar' | 'automations';
 type Workspace = 'owner' | 'staff';
@@ -135,7 +136,19 @@ export default function Home() {
   const [pilotOpen, setPilotOpen] = useState(false);
   const [success, setSuccess] = useState('');
   const [recoveryPulse, setRecoveryPulse] = useState(0);
+  const [theme, setTheme] = useState<Theme>(() => document.documentElement.classList.contains('light') ? 'light' : 'dark');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function toggleTheme() {
+    const next = nextTheme(theme);
+    const root = document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(getThemeClassName(next));
+    root.style.colorScheme = next;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', getThemeColor(next));
+    localStorage.setItem(THEME_STORAGE_KEY, next);
+    setTheme(next);
+  }
 
   useEffect(() => {
     let storedMembers: Member[] | undefined;
@@ -370,6 +383,9 @@ export default function Home() {
           <button className="mobile-menu" aria-label="Otvori meni" onClick={() => setMobileNav(true)}><Menu /></button>
           <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1><p>{viewMeta[view].subtitle}</p></div>
           <div className="top-actions">
+            <button type="button" className="theme-toggle" aria-label={theme === 'dark' ? 'Uključi svijetlu temu' : 'Uključi tamnu temu'} title={theme === 'dark' ? 'Svijetla tema' : 'Tamna tema'} aria-pressed={theme === 'light'} onClick={toggleTheme}>
+              <span className="theme-toggle-glow" aria-hidden="true" /><Sun className="theme-sun" aria-hidden="true" /><Moon className="theme-moon" aria-hidden="true" />
+            </button>
             <fieldset className="workspace-switch"><legend className="sr-only">Izaberite radni prostor</legend><button type="button" aria-pressed={workspace === 'owner'} className={workspace === 'owner' ? 'active' : ''} onClick={() => switchWorkspace('owner')}><LayoutDashboard /> Vlasnik</button><button type="button" aria-pressed={workspace === 'staff'} className={workspace === 'staff' ? 'active' : ''} onClick={() => switchWorkspace('staff')}><Users /> Recepcija</button></fieldset>
             {workspace === 'owner' && view === 'members' && <Button variant="outline" className="dark-outline" onClick={() => fileInputRef.current?.click()}><Upload /> {t.actions.import}</Button>}
             <Button className="pulse-button" onClick={() => openMemberForm()}><Plus /> {t.actions.add}</Button>

@@ -1,9 +1,26 @@
 <!doctype html>
-<html lang="sr-Latn-ME" class="dark">
+<html lang="sr-Latn-ME">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#080a08" />
+    <meta id="theme-color" name="theme-color" content="#0e0f10" />
+    <script>
+      (() => {
+        const key = 'pulse-color-theme';
+        let theme = 'dark';
+        try {
+          const stored = localStorage.getItem(key);
+          theme = stored === 'light' || stored === 'dark'
+            ? stored
+            : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        } catch {
+          theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.classList.add(theme);
+        document.documentElement.style.colorScheme = theme;
+        document.querySelector('#theme-color')?.setAttribute('content', theme === 'dark' ? '#0e0f10' : '#f5f3ef');
+      })();
+    </script>
     <meta name="description" content="PULSE prepoznaje članove koje teretana može izgubiti i pomaže da se prihod oporavi na vrijeme." />
     <meta property="og:title" content="PULSE — Revenue Recovery" />
     <meta property="og:description" content="Prepoznaj rizik. Vrati člana. Sačuvaj prihod teretane." />
