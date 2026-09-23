@@ -19,6 +19,12 @@ import {
   copy, initialAutomations, initialMembers, occupancy,
   type Automation, type Channel, type Member, type MemberStatus, type RecoveryOutcome, type RiskLevel,
 } from '@/lib/pulse-data';
+import {
+  getPulseMetrics,
+  getRecoveryActivity,
+  getRiskMembers,
+  type RecoveryActivity,
+} from '@/lib/pulse-logic';
 
 type View = 'dashboard' | 'staff' | 'members' | 'radar' | 'automations';
 type Workspace = 'owner' | 'staff';
@@ -161,20 +167,10 @@ export default function Home() {
 
   const selectedMember = members.find((member) => member.id === selectedMemberId) ?? null;
 
-  const riskMembers = useMemo(() => members.filter((member) => member.risk !== 'low' && member.status !== 'recovered'), [members]);
+  const riskMembers = useMemo(() => getRiskMembers(members), [members]);
   const highRiskMembers = useMemo(() => riskMembers.filter((member) => member.risk === 'high'), [riskMembers]);
-  const metrics = useMemo(() => {
-    const recovered = members.filter((member) => member.status === 'recovered');
-    return {
-      active: BASE_METRICS.active + members.filter((member) => member.status !== 'expired').length,
-      expiring: BASE_METRICS.expiring + members.filter((member) => member.status === 'expiring').length,
-      absent: BASE_METRICS.absent + members.filter((member) => member.status === 'absent').length,
-      highRisk: highRiskMembers.length,
-      riskRevenue: riskMembers.reduce((sum, member) => sum + member.price, 0),
-      recoveredCount: BASE_METRICS.recoveredCount + recovered.length,
-      recoveredRevenue: BASE_METRICS.recoveredRevenue + recovered.reduce((sum, member) => sum + (member.recoveredAmount ?? 0), 0),
-    };
-  }, [members, riskMembers, highRiskMembers]);
+  const metrics = useMemo(() => getPulseMetrics(members, BASE_METRICS), [members]);
+  const recoveryActivity = useMemo(() => getRecoveryActivity(members), [members]);
 
   const filteredMembers = useMemo(() => {
     const normalized = search.toLocaleLowerCase('me');
@@ -377,7 +373,7 @@ export default function Home() {
           <input ref={fileInputRef} hidden type="file" accept=".csv,text/csv" onChange={(event) => { const file = event.target.files?.[0]; if (file) importCsv(file); event.target.value = ''; }} />
         </header>
 
-        {view === 'dashboard' && <Dashboard metrics={metrics} highRiskMembers={highRiskMembers} members={members} onOpenMember={openMember} onNavigate={goTo} onPilot={() => setPilotOpen(true)} />}
+        {view === 'dashboard' && <Dashboard metrics={metrics} recoveryActivity={recoveryActivity} highRiskMembers={highRiskMembers} members={members} onOpenMember={openMember} onNavigate={goTo} onPilot={() => setPilotOpen(true)} />}
         {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onOutcome={recordOutcome} onAddMember={() => openMemberForm()} onFindMember={() => goTo('members')} />}
         {view === 'members' && <MembersScreen members={filteredMembers} total={members.length} filter={filter} search={search} onFilter={setFilter} onSearch={setSearch} onOpenMember={openMember} onImport={() => fileInputRef.current?.click()} />}
         {view === 'radar' && <RadarScreen members={riskMembers} onOpenMember={openMember} />}
@@ -463,7 +459,8 @@ function LoadingState() {
 }
 
 function Dashboard({ metrics, highRiskMembers, members, onOpenMember, onNavigate, onPilot }: {
-  metrics: { active: number; expiring: number; absent: number; highRisk: number; riskRevenue: number; recoveredCount: number; recoveredRevenue: number };
+  metrics: ReturnType<typeof getPulseMetrics>;
+  recoveryActivity: RecoveryActivity;
   highRiskMembers: Member[]; members: Member[]; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void; onPilot: () => void;
 }) {
   const collectedRevenue = 10320 + metrics.recoveredRevenue;
