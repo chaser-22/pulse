@@ -25,6 +25,7 @@ import {
   getRecoveryActivity,
   getRecoveryLifecycle,
   getRiskMembers,
+  memberMatchesSearch,
   type RecoveryActivity,
 } from '@/lib/pulse-logic';
 
@@ -176,11 +177,9 @@ export default function Home() {
   const recoveryActivity = useMemo(() => getRecoveryActivity(members), [members]);
 
   const filteredMembers = useMemo(() => {
-    const normalized = search.toLocaleLowerCase('me');
     return members.filter((member) => {
       const matchesFilter = filter === 'all' || member.status === filter;
-      const haystack = `${fullName(member)} ${member.phone} ${member.email}`.toLocaleLowerCase('me');
-      return matchesFilter && haystack.includes(normalized);
+      return matchesFilter && memberMatchesSearch(member, search);
     });
   }, [members, filter, search]);
 

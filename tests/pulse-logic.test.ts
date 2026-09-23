@@ -7,6 +7,7 @@ import {
   getRecoveryActivity,
   getRecoveryLifecycle,
   getRiskMembers,
+  memberMatchesSearch,
 } from '../lib/pulse-logic.ts';
 
 const base = { active: 270, expiring: 13, absent: 23, recoveredCount: 12, recoveredRevenue: 445 };
@@ -49,4 +50,13 @@ test('renewal updates the derived financial picture', () => {
   assert.equal(after.riskRevenue, before.riskRevenue - 35);
   assert.equal(after.actionableRevenue, before.actionableRevenue - 35);
   assert.equal(after.recoveredRevenue, before.recoveredRevenue + 35);
+});
+
+test('member search accepts local and international phone formats', () => {
+  const jelena = initialMembers.find((member) => member.id === 'jelena-popovic');
+  assert.ok(jelena);
+  assert.equal(memberMatchesSearch(jelena, '069 331 507'), true);
+  assert.equal(memberMatchesSearch(jelena, '+38269331507'), true);
+  assert.equal(memberMatchesSearch(jelena, 'Jelena'), true);
+  assert.equal(memberMatchesSearch(jelena, 'jelena.p@example.test'), true);
 });

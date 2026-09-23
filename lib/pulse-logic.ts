@@ -19,6 +19,20 @@ export function getRiskMembers(members: Member[]) {
   return members.filter((member) => member.risk !== 'low' && member.status !== 'recovered');
 }
 
+export function memberMatchesSearch(member: Member, search: string) {
+  const normalized = search.trim().toLocaleLowerCase('me');
+  if (!normalized) return true;
+
+  const text = `${member.firstName} ${member.lastName} ${member.email}`.toLocaleLowerCase('me');
+  if (text.includes(normalized)) return true;
+
+  const queryDigits = normalized.replace(/\D/g, '');
+  if (queryDigits.length < 5) return false;
+  const memberDigits = member.phone.replace(/\D/g, '');
+  const localDigits = memberDigits.startsWith('382') ? `0${memberDigits.slice(3)}` : memberDigits;
+  return memberDigits.includes(queryDigits) || localDigits.includes(queryDigits);
+}
+
 export function getActionableRevenue(members: Member[]) {
   return members
     .filter((member) => member.risk === 'high' && member.status !== 'recovered')
