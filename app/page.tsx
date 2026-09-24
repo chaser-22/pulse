@@ -379,7 +379,7 @@ export default function Home() {
       {mobileNav && <button className="nav-backdrop" aria-label="Zatvori meni" onClick={() => setMobileNav(false)} />}
 
       <section className="main-panel">
-        {view !== 'dashboard' && <PageAtmosphere view={view} workspace={workspace} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} />}
+        <PageAtmosphere view={view} workspace={workspace} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} />
         <header className="topbar">
           <button className="mobile-menu" aria-label="Otvori meni" onClick={() => setMobileNav(true)}><Menu /></button>
           <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1><p>{viewMeta[view].subtitle}</p></div>
