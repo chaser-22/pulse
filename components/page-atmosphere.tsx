@@ -8,6 +8,7 @@ type Props = {
   workspace: Workspace;
   recoveryPulse?: number;
   signalCount?: number;
+  surface?: 'ambient' | 'hero';
 };
 
 export function PageAtmosphere({
@@ -15,6 +16,7 @@ export function PageAtmosphere({
   workspace,
   recoveryPulse = 0,
   signalCount = 0,
+  surface = 'hero',
 }: Props) {
   const [reducedMotion, setReducedMotion] = useState(() =>
     window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -36,6 +38,7 @@ export function PageAtmosphere({
         workspace={workspace}
         recoveryPulse={recoveryPulse}
         signalCount={signalCount}
+        surface={surface}
       />
     </Suspense>
   );

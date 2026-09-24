@@ -12,6 +12,7 @@ type Props = {
   workspace: Workspace;
   recoveryPulse: number;
   signalCount: number;
+  surface: 'ambient' | 'hero';
 };
 
 const COLORS = {
@@ -32,13 +33,14 @@ export default function PageAtmosphereScene({
   workspace,
   recoveryPulse,
   signalCount,
+  surface,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const latestRef = useRef({ view, workspace, recoveryPulse, signalCount });
+  const latestRef = useRef({ view, workspace, recoveryPulse, signalCount, surface });
 
   useEffect(() => {
-    latestRef.current = { view, workspace, recoveryPulse, signalCount };
-  }, [view, workspace, recoveryPulse, signalCount]);
+    latestRef.current = { view, workspace, recoveryPulse, signalCount, surface };
+  }, [view, workspace, recoveryPulse, signalCount, surface]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -62,6 +64,46 @@ export default function PageAtmosphereScene({
 
     const group = new THREE.Group();
     scene.add(group);
+
+    const ambientGroup = new THREE.Group();
+    group.add(ambientGroup);
+
+    const ambientMaterial = new THREE.LineBasicMaterial({
+      color: COLORS.mint,
+      transparent: true,
+      opacity: 0.22,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const ambientAccentMaterial = new THREE.LineBasicMaterial({
+      color: COLORS.coralSoft,
+      transparent: true,
+      opacity: 0.16,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const ambientLines = Array.from({ length: 7 }, (_, lineIndex) => {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(72 * 3), 3));
+      const line = new THREE.Line(geometry, lineIndex % 3 === 0 ? ambientAccentMaterial : ambientMaterial);
+      line.userData.offset = seeded(lineIndex, 31);
+      line.userData.lane = lineIndex - 3;
+      ambientGroup.add(line);
+      return line;
+    });
+    const ambientPointGeometry = new THREE.BufferGeometry();
+    const ambientPointPositions = new Float32Array(42 * 3);
+    ambientPointGeometry.setAttribute('position', new THREE.BufferAttribute(ambientPointPositions, 3));
+    const ambientPointMaterial = new THREE.PointsMaterial({
+      color: COLORS.teal,
+      size: 0.05,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0.48,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    ambientGroup.add(new THREE.Points(ambientPointGeometry, ambientPointMaterial));
 
     const boardGroup = new THREE.Group();
     boardGroup.rotation.x = -0.14;
@@ -188,10 +230,49 @@ export default function PageAtmosphereScene({
       const motion = getAtmosphereFrame(preset, now - startedAt, Math.min(current.recoveryPulse, 1));
       const signalWeight = Math.min(1, Math.max(0.42, current.signalCount / 18));
       const laneMode = preset === 'task-lane' || preset === 'message-flow';
+      const ambient = current.surface === 'ambient';
 
-      group.rotation.y = laneMode ? Math.sin(motion.phase * 0.45) * 0.06 : Math.sin(motion.phase * 0.38) * 0.12;
-      group.rotation.x = Math.sin(motion.phase * 0.25) * 0.035;
+      boardGroup.visible = !ambient;
+      ambientGroup.visible = ambient;
+      group.rotation.y = ambient ? Math.sin(motion.phase * 0.22) * 0.04 : laneMode ? Math.sin(motion.phase * 0.45) * 0.06 : Math.sin(motion.phase * 0.38) * 0.12;
+      group.rotation.x = ambient ? Math.sin(motion.phase * 0.18) * 0.025 : Math.sin(motion.phase * 0.25) * 0.035;
       boardGroup.scale.setScalar(preset === 'member-field' ? 0.92 : 1);
+
+      if (ambient) {
+        ambientLines.forEach((line) => {
+          const positions = line.geometry.attributes.position;
+          const lane = Number(line.userData.lane);
+          const offset = Number(line.userData.offset);
+          for (let pointIndex = 0; pointIndex < positions.count; pointIndex += 1) {
+            const progress = pointIndex / (positions.count - 1);
+            const x = -4.5 + progress * 9;
+            const currentFlow = (progress + motion.flow + offset) % 1;
+            const y = lane * 0.36 + Math.sin(progress * Math.PI * 2 + motion.wave + offset * 4) * 0.18;
+            const z = -0.65 + Math.sin(currentFlow * Math.PI) * 0.62;
+            positions.setXYZ(pointIndex, x, y, z);
+          }
+          positions.needsUpdate = true;
+        });
+        const ambientPositions = ambientPointGeometry.attributes.position;
+        for (let index = 0; index < ambientPositions.count; index += 1) {
+          const lane = (index % 7) - 3;
+          const progress = (seeded(index, 41) + motion.flow + index * 0.013) % 1;
+          ambientPositions.setXYZ(
+            index,
+            -4.35 + progress * 8.7,
+            lane * 0.35 + Math.sin(motion.wave + index * 0.7) * 0.12,
+            -0.2 + seeded(index, 43) * 0.9,
+          );
+        }
+        ambientPositions.needsUpdate = true;
+        ambientMaterial.opacity = 0.12 + motion.signal * 0.1;
+        ambientAccentMaterial.opacity = 0.08 + motion.energy * 0.1;
+        ambientPointMaterial.opacity = 0.28 + motion.energy * 0.16;
+
+        renderer.render(scene, camera);
+        frame = requestAnimationFrame(render);
+        return;
+      }
 
       panels.forEach((panel, index) => {
         const material = panel.material as THREE.MeshBasicMaterial;
@@ -267,6 +348,11 @@ export default function PageAtmosphereScene({
       observer.disconnect();
       resizeObserver.disconnect();
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      ambientLines.forEach((line) => line.geometry.dispose());
+      ambientMaterial.dispose();
+      ambientAccentMaterial.dispose();
+      ambientPointGeometry.dispose();
+      ambientPointMaterial.dispose();
       panelGeometry.dispose();
       panelMaterials.forEach((material) => material.dispose());
       gridLines.forEach((line) => line.geometry.dispose());
@@ -286,5 +372,5 @@ export default function PageAtmosphereScene({
   }, []);
 
   const preset = getAtmospherePreset(view, workspace);
-  return <div ref={hostRef} className={`page-atmosphere page-atmosphere--${preset}`} aria-hidden="true" />;
+  return <div ref={hostRef} className={`page-atmosphere page-atmosphere--${preset} page-atmosphere--${surface}`} aria-hidden="true" />;
 }

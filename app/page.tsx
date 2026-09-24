@@ -379,7 +379,7 @@ export default function Home() {
       {mobileNav && <button className="nav-backdrop" aria-label="Zatvori meni" onClick={() => setMobileNav(false)} />}
 
       <section className="main-panel">
-        <PageAtmosphere view={view} workspace={workspace} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} />
+        <PageAtmosphere view={view} workspace={workspace} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} surface="ambient" />
         <header className="topbar">
           <button className="mobile-menu" aria-label="Otvori meni" onClick={() => setMobileNav(true)}><Menu /></button>
           <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1><p>{viewMeta[view].subtitle}</p></div>
@@ -507,7 +507,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
           <div><dt>Obnovljeni članovi</dt><dd>{metrics.recoveredCount}</dd></div>
         </dl>
       </div>
-      <div className="signal-stage"><PageAtmosphere view="dashboard" workspace="owner" recoveryPulse={recoveryPulse} signalCount={signalCount} /></div>
+      <div className="signal-stage"><PageAtmosphere view="dashboard" workspace="owner" recoveryPulse={recoveryPulse} signalCount={signalCount} surface="hero" /></div>
     </section>
 
     <section className="priority-queue" aria-labelledby="priority-title">
