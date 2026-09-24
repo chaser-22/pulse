@@ -106,15 +106,15 @@ export default function PageAtmosphereScene({
     ambientGroup.add(new THREE.Points(ambientPointGeometry, ambientPointMaterial));
 
     const boardGroup = new THREE.Group();
-    boardGroup.rotation.x = -0.14;
+    boardGroup.rotation.x = -0.08;
     group.add(boardGroup);
 
-    const panelGeometry = new THREE.PlaneGeometry(1.08, 2.35);
-    const panelMaterials = [COLORS.coral, COLORS.teal, COLORS.amber, COLORS.mint].map((color, index) => (
+    const panelGeometry = new THREE.CircleGeometry(0.92, 48);
+    const panelMaterials = [COLORS.coral, COLORS.amber, COLORS.teal].map((color) => (
       new THREE.MeshBasicMaterial({
         color,
         transparent: true,
-        opacity: index === 0 ? 0.14 : 0.1,
+        opacity: 0.12,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         side: THREE.DoubleSide,
@@ -122,7 +122,8 @@ export default function PageAtmosphereScene({
     ));
     const panels = panelMaterials.map((material, index) => {
       const panel = new THREE.Mesh(panelGeometry, material);
-      panel.position.set((index - 1.5) * 1.22, 0, -0.32 - index * 0.03);
+      panel.position.set(-1.38 + index * 1.38, 0, -0.38 - index * 0.03);
+      panel.scale.set(0.92, 1.42, 1);
       boardGroup.add(panel);
       return panel;
     });
@@ -130,45 +131,24 @@ export default function PageAtmosphereScene({
     const gridMaterial = new THREE.LineBasicMaterial({
       color: COLORS.mint,
       transparent: true,
-      opacity: 0.16,
+      opacity: 0.2,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
-    const gridLines = Array.from({ length: 9 }, (_, index) => {
-      const horizontal = index % 2 === 0;
+    const gridLines = Array.from({ length: 6 }, (_, index) => {
       const geometry = new THREE.BufferGeometry();
-      const span = horizontal ? 5.25 : 2.5;
-      const offset = (Math.floor(index / 2) - 2) * (horizontal ? 0.48 : 1.15);
-      const points = horizontal
-        ? [new THREE.Vector3(-2.75, offset, -0.24), new THREE.Vector3(2.75, offset, -0.24)]
-        : [new THREE.Vector3(offset, -1.35, -0.23), new THREE.Vector3(offset, 1.35, -0.23)];
-      geometry.setFromPoints(points.map((point) => {
-        if (!horizontal) point.x = Math.max(-span, Math.min(span, point.x));
-        return point;
-      }));
+      const lane = index - 2.5;
+      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(64 * 3), 3));
       const line = new THREE.Line(geometry, gridMaterial);
+      line.userData.lane = lane;
       boardGroup.add(line);
       return line;
-    });
-
-    const barGeometry = new THREE.BoxGeometry(0.2, 1, 0.08);
-    const barMaterials = [
-      new THREE.MeshBasicMaterial({ color: COLORS.coral, transparent: true, opacity: 0.62, blending: THREE.AdditiveBlending, depthWrite: false }),
-      new THREE.MeshBasicMaterial({ color: COLORS.teal, transparent: true, opacity: 0.54, blending: THREE.AdditiveBlending, depthWrite: false }),
-    ];
-    const bars = Array.from({ length: 14 }, (_, index) => {
-      const bar = new THREE.Mesh(barGeometry, barMaterials[index % barMaterials.length]);
-      bar.position.set(-2.42 + index * 0.37, -1.05, 0.06);
-      bar.userData.height = 0.18 + seeded(index, 7) * 0.94;
-      bar.userData.delay = seeded(index, 11);
-      boardGroup.add(bar);
-      return bar;
     });
 
     const scanMaterial = new THREE.LineBasicMaterial({
       color: COLORS.coralSoft,
       transparent: true,
-      opacity: 0.64,
+      opacity: 0.4,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
@@ -195,11 +175,12 @@ export default function PageAtmosphereScene({
       return line;
     });
 
-    const nodeGeometry = new THREE.SphereGeometry(0.07, 12, 8);
+    const nodeGeometry = new THREE.SphereGeometry(0.075, 14, 10);
     const riskMaterial = new THREE.MeshBasicMaterial({ color: COLORS.coral, transparent: true, opacity: 0.68, blending: THREE.AdditiveBlending, depthWrite: false });
     const recoveredMaterial = new THREE.MeshBasicMaterial({ color: COLORS.mint, transparent: true, opacity: 0.72, blending: THREE.AdditiveBlending, depthWrite: false });
-    const nodes = Array.from({ length: 18 }, (_, index) => {
-      const node = new THREE.Mesh(nodeGeometry, index % 3 === 0 ? riskMaterial : recoveredMaterial);
+    const transitionMaterial = new THREE.MeshBasicMaterial({ color: COLORS.teal, transparent: true, opacity: 0.66, blending: THREE.AdditiveBlending, depthWrite: false });
+    const nodes = Array.from({ length: 22 }, (_, index) => {
+      const node = new THREE.Mesh(nodeGeometry, riskMaterial);
       node.userData.offset = seeded(index, 17);
       node.userData.lane = index % 5;
       node.userData.depth = seeded(index, 23);
@@ -228,7 +209,6 @@ export default function PageAtmosphereScene({
       const current = latestRef.current;
       const preset = getAtmospherePreset(current.view, current.workspace);
       const motion = getAtmosphereFrame(preset, now - startedAt, Math.min(current.recoveryPulse, 1));
-      const signalWeight = Math.min(1, Math.max(0.42, current.signalCount / 18));
       const laneMode = preset === 'task-lane' || preset === 'message-flow';
       const ambient = current.surface === 'ambient';
 
@@ -276,21 +256,25 @@ export default function PageAtmosphereScene({
 
       panels.forEach((panel, index) => {
         const material = panel.material as THREE.MeshBasicMaterial;
-        material.opacity = (0.08 + motion.energy * 0.12) * (index === 0 ? 1.1 : 0.82);
-        panel.position.z = -0.36 + Math.sin(motion.phase + index * 0.7) * 0.035;
-      });
-
-      bars.forEach((bar, index) => {
-        const baseHeight = Number(bar.userData.height);
-        const delay = Number(bar.userData.delay);
-        const lift = 0.72 + Math.sin(motion.wave + delay * Math.PI * 2) * 0.18 + motion.energy * 0.24;
-        const height = baseHeight * lift * (index % 4 === 0 ? 1 + signalWeight * 0.25 : 1);
-        bar.scale.set(1, Math.max(0.1, height), 1);
-        bar.position.y = -1.22 + height * 0.5;
+        material.opacity = (0.06 + motion.energy * 0.1) * (index === 1 ? 1.15 : 0.9);
+        panel.position.z = -0.42 + Math.sin(motion.phase + index * 0.9) * 0.045;
+        panel.rotation.z = motion.phase * (index === 1 ? -0.05 : 0.04);
       });
 
       scanLine.position.x = -2.58 + motion.flow * 5.16;
-      scanMaterial.opacity = 0.36 + motion.signal * 0.34;
+      scanMaterial.opacity = 0.18 + motion.signal * 0.18;
+
+      gridLines.forEach((line) => {
+        const positions = line.geometry.attributes.position;
+        const lane = Number(line.userData.lane);
+        for (let pointIndex = 0; pointIndex < positions.count; pointIndex += 1) {
+          const progress = pointIndex / (positions.count - 1);
+          const x = -2.78 + progress * 5.56;
+          const y = lane * 0.22 + Math.sin(progress * Math.PI * 2 + motion.wave) * 0.045;
+          positions.setXYZ(pointIndex, x, y, Math.sin(progress * Math.PI) * 0.18 - 0.14);
+        }
+        positions.needsUpdate = true;
+      });
 
       streamLines.forEach((line, lineIndex) => {
         const positions = line.geometry.attributes.position;
@@ -298,12 +282,10 @@ export default function PageAtmosphereScene({
         const flow = (motion.flow + Number(line.userData.offset)) % 1;
         for (let pointIndex = 0; pointIndex < positions.count; pointIndex += 1) {
           const progress = pointIndex / (positions.count - 1);
-          const x = -2.55 + progress * 5.1;
-          const wave = Math.sin(progress * Math.PI * 2 + motion.wave + lane) * 0.12;
-          const y = laneMode
-            ? lane * 0.36 + wave
-            : Math.sin((progress + flow) * Math.PI) * 0.78 + lane * 0.18 - 0.16;
-          positions.setXYZ(pointIndex, x, y, Math.sin((progress + flow) * Math.PI) * 0.24);
+          const x = -2.75 + progress * 5.5;
+          const eased = Math.sin(progress * Math.PI);
+          const y = lane * 0.3 + eased * 0.56 + Math.sin(progress * Math.PI * 2 + motion.wave + lane) * 0.08;
+          positions.setXYZ(pointIndex, x, y, 0.04 + eased * 0.36 + Math.sin(flow * Math.PI) * 0.08);
         }
         positions.needsUpdate = true;
       });
@@ -313,13 +295,16 @@ export default function PageAtmosphereScene({
         const offset = Number(node.userData.offset);
         const lane = Number(node.userData.lane) - 2;
         const progress = (motion.flow + offset) % 1;
-        const yBase = laneMode ? lane * 0.28 : Math.sin(progress * Math.PI) * 0.72 + lane * 0.08;
+        const yBase = Math.sin(progress * Math.PI) * 0.72 + lane * 0.12;
+        if (progress < 0.38) node.material = riskMaterial;
+        else if (progress < 0.64) node.material = transitionMaterial;
+        else node.material = recoveredMaterial;
         node.position.set(
-          -2.46 + progress * 4.92,
+          -2.72 + progress * 5.44,
           yBase + Math.sin(motion.wave + offset * 6) * 0.05,
-          0.22 + Number(node.userData.depth) * 0.32,
+          0.18 + Number(node.userData.depth) * 0.28 + Math.sin(progress * Math.PI) * 0.18,
         );
-        node.scale.setScalar(0.72 + motion.energy * 0.38 + Math.sin(motion.wave + offset * 5) * 0.12);
+        node.scale.setScalar(0.62 + progress * 0.42 + motion.energy * 0.18 + Math.sin(motion.wave + offset * 5) * 0.08);
       });
 
       renderer.render(scene, camera);
@@ -357,14 +342,13 @@ export default function PageAtmosphereScene({
       panelMaterials.forEach((material) => material.dispose());
       gridLines.forEach((line) => line.geometry.dispose());
       gridMaterial.dispose();
-      barGeometry.dispose();
-      barMaterials.forEach((material) => material.dispose());
       scanGeometry.dispose();
       scanMaterial.dispose();
       streamLines.forEach((line) => line.geometry.dispose());
       streamMaterial.dispose();
       nodeGeometry.dispose();
       riskMaterial.dispose();
+      transitionMaterial.dispose();
       recoveredMaterial.dispose();
       renderer.dispose();
       renderer.domElement.remove();
