@@ -119,6 +119,22 @@ export default function PageAtmosphereScene({
     sweep.visible = false;
     group.add(sweep);
 
+    const signalGroup = new THREE.Group();
+    const signalMaterials = [
+      new THREE.LineBasicMaterial({ color: COLORS.teal, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false }),
+      new THREE.LineBasicMaterial({ color: COLORS.coral, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false }),
+    ];
+    const signalLines = Array.from({ length: 4 }, (_, lineIndex) => {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(84 * 3), 3));
+      const line = new THREE.Line(geometry, signalMaterials[lineIndex % signalMaterials.length]);
+      line.rotation.z = (lineIndex - 1.5) * 0.08;
+      signalGroup.add(line);
+      return line;
+    });
+    signalGroup.position.z = -0.35;
+    group.add(signalGroup);
+
     const resize = () => {
       const width = Math.max(host.clientWidth, 1);
       const height = Math.max(host.clientHeight, 1);
@@ -173,6 +189,30 @@ export default function PageAtmosphereScene({
       halo.rotation.z = -motion.phase * 0.62;
       sweep.visible = preset === 'radar-sweep';
       sweep.rotation.z = -motion.sweep;
+      signalGroup.visible = preset !== 'radar-sweep';
+      signalGroup.rotation.z = preset === 'constellation' ? motion.phase * 0.1 : 0;
+      signalGroup.scale.setScalar(0.86 + motion.signal * 0.16);
+      signalLines.forEach((line, lineIndex) => {
+        const linePositions = line.geometry.attributes.position;
+        const strandOffset = lineIndex - (signalLines.length - 1) / 2;
+        const isLane = preset === 'task-lane' || preset === 'message-flow';
+        for (let pointIndex = 0; pointIndex < linePositions.count; pointIndex += 1) {
+          const progress = pointIndex / (linePositions.count - 1);
+          const sweepPhase = progress * Math.PI * 2 + motion.wave + lineIndex * 0.9;
+          const laneY = strandOffset * 0.34 + Math.sin(sweepPhase) * 0.14 * motion.signal;
+          const arc = (progress - 0.5) * Math.PI;
+          linePositions.setXYZ(
+            pointIndex,
+            isLane ? -3.55 + progress * 7.1 : Math.cos(arc) * (2.55 + strandOffset * 0.16),
+            isLane ? laneY : Math.sin(arc) * 1.02 + strandOffset * 0.22 + Math.sin(sweepPhase) * 0.1,
+            Math.cos(sweepPhase) * (isLane ? 0.18 : 0.34) * motion.signal,
+          );
+        }
+        linePositions.needsUpdate = true;
+      });
+      signalMaterials.forEach((material, index) => {
+        material.opacity = (index === 0 ? 0.26 : 0.18) * motion.signal;
+      });
       group.rotation.y = Math.sin(motion.phase * 0.52) * 0.13;
 
       renderer.render(scene, camera);
@@ -213,6 +253,8 @@ export default function PageAtmosphereScene({
       (halo.material as THREE.Material).dispose();
       (sweep.geometry as THREE.BufferGeometry).dispose();
       (sweep.material as THREE.Material).dispose();
+      signalLines.forEach((line) => line.geometry.dispose());
+      signalMaterials.forEach((material) => material.dispose());
       renderer.dispose();
       renderer.domElement.remove();
     };
