@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RevenueSignal } from '@/components/revenue-signal';
+import { PageAtmosphere } from '@/components/page-atmosphere';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -379,6 +379,7 @@ export default function Home() {
       {mobileNav && <button className="nav-backdrop" aria-label="Zatvori meni" onClick={() => setMobileNav(false)} />}
 
       <section className="main-panel">
+        {view !== 'dashboard' && <PageAtmosphere view={view} workspace={workspace} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} />}
         <header className="topbar">
           <button className="mobile-menu" aria-label="Otvori meni" onClick={() => setMobileNav(true)}><Menu /></button>
           <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1><p>{viewMeta[view].subtitle}</p></div>
@@ -393,7 +394,7 @@ export default function Home() {
           <input ref={fileInputRef} hidden type="file" accept=".csv,text/csv" onChange={(event) => { const file = event.target.files?.[0]; if (file) importCsv(file); event.target.value = ''; }} />
         </header>
 
-        {view === 'dashboard' && <Dashboard metrics={metrics} recoveryActivity={recoveryActivity} highRiskMembers={highRiskMembers} members={members} recoveryPulse={recoveryPulse} onOpenMember={openMember} onNavigate={goTo} onPilot={() => setPilotOpen(true)} />}
+        {view === 'dashboard' && <Dashboard metrics={metrics} recoveryActivity={recoveryActivity} highRiskMembers={highRiskMembers} members={members} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} onOpenMember={openMember} onNavigate={goTo} onPilot={() => setPilotOpen(true)} />}
         {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onOutcome={recordOutcome} onAddMember={() => openMemberForm()} onFindMember={() => goTo('members')} />}
         {view === 'members' && <MembersScreen members={filteredMembers} total={members.length} filter={filter} search={search} onFilter={setFilter} onSearch={setSearch} onOpenMember={openMember} onImport={() => fileInputRef.current?.click()} />}
         {view === 'radar' && <RadarScreen members={riskMembers} onOpenMember={openMember} />}
@@ -485,10 +486,10 @@ function RecoveryLifecycle({ member }: { member: Member }) {
   return <ol className="recovery-lifecycle" aria-label="Status oporavka">{steps.map(([id, label], index) => <li className={index <= currentIndex ? 'complete' : ''} aria-current={id === current ? 'step' : undefined} key={id}><i />{label}</li>)}</ol>;
 }
 
-function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, onOpenMember, onNavigate, onPilot }: {
+function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, signalCount, onOpenMember, onNavigate, onPilot }: {
   metrics: ReturnType<typeof getPulseMetrics>;
   recoveryActivity: RecoveryActivity;
-  highRiskMembers: Member[]; members: Member[]; recoveryPulse: number; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void; onPilot: () => void;
+  highRiskMembers: Member[]; members: Member[]; recoveryPulse: number; signalCount: number; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void; onPilot: () => void;
 }) {
   const collectedRevenue = 10320 + metrics.recoveredRevenue;
   const monthlyTarget = 12500;
@@ -506,7 +507,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
           <div><dt>Obnovljeni članovi</dt><dd>{metrics.recoveredCount}</dd></div>
         </dl>
       </div>
-      <div className="signal-stage" aria-hidden="true"><RevenueSignal pulse={recoveryPulse} /></div>
+      <div className="signal-stage"><PageAtmosphere view="dashboard" workspace="owner" recoveryPulse={recoveryPulse} signalCount={signalCount} /></div>
     </section>
 
     <section className="priority-queue" aria-labelledby="priority-title">
