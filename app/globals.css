@@ -976,7 +976,7 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .risk-queue { padding: 22px; }
 .sorted-label { display: inline-flex; align-items: center; gap: 6px; color: var(--muted-foreground); font-size: 12px; }
 .risk-cards { margin-top: 14px; }
-.risk-member-card { position: relative; display: grid; grid-template-columns: 28px minmax(150px, .8fr) minmax(180px, 1.25fr) minmax(170px, 1fr) 72px 118px; align-items: center; gap: 10px; min-height: 84px; padding: 13px 2px 13px 8px; border-top: 1px solid var(--border); border-radius: 0; background: transparent; }
+.risk-member-card { position: relative; display: grid; grid-template-columns: 28px minmax(150px, .8fr) minmax(180px, 1.25fr) minmax(170px, 1fr) minmax(96px, .4fr) minmax(112px, max-content); align-items: center; gap: 10px; min-height: 84px; padding: 13px 2px 13px 8px; border-top: 1px solid var(--border); border-radius: 0; background: transparent; }
 .risk-member-card.is-high::before { content: ''; position: absolute; left: 0; top: 16px; bottom: 16px; width: 3px; border-radius: 2px; background: var(--danger); }
 .risk-order { color: #737a73; font-size: 12px; font-variant-numeric: tabular-nums; }
 .risk-member-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -985,7 +985,7 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .risk-reason, .risk-next { min-width: 0; padding-left: 14px; border-left: 1px solid var(--border); }
 .risk-reason small, .risk-next small, .risk-value small { color: #7f867f; font-size: 12px; letter-spacing: .04em; }
 .risk-reason p, .risk-next p { margin: 4px 0 0; color: #b3b8b2; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
-.risk-value { display: grid; gap: 2px; text-align: right; }
+.risk-value { min-width: 0; display: grid; gap: 2px; text-align: right; }
 .risk-value strong { font-size: 16px; font-variant-numeric: tabular-nums; }
 .risk-member-card > button { min-height: 36px; padding-inline: 10px; }
 .automation-overview { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 20px 22px; }
@@ -1052,8 +1052,10 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .success-toast { border-radius: 7px;  font-size: 13px; }
 
 @media (max-width: 1100px) {
-  .risk-member-card { grid-template-columns: 28px minmax(180px, .8fr) minmax(250px, 1.2fr) 80px auto; }
-  .risk-next { grid-column: 3; }
+  .risk-member-card { grid-template-columns: 28px minmax(150px, .75fr) minmax(200px, 1.2fr) minmax(96px, .4fr) minmax(112px, max-content); }
+  .risk-next { grid-column: 3; grid-row: 2; }
+  .risk-value { grid-column: 4; grid-row: 1 / span 2; }
+  .risk-member-card > button { grid-column: 5; grid-row: 1 / span 2; }
   .automation-row { grid-template-columns: minmax(200px, .8fr) minmax(300px, 1.2fr) auto; }
   .automation-row > button { grid-column: 3; }
 }
