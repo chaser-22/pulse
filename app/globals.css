@@ -1094,9 +1094,9 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 
 /* Dark Premium owner composition */
 .dashboard-screen { gap: 0; padding-top: 0; }
-.owner-hero { position: relative; min-height: 460px; display: grid; grid-template-columns: minmax(0, .95fr) minmax(420px, 1.05fr); overflow: hidden; border-bottom: 1px solid var(--border-strong); }
+.owner-hero { position: relative; min-height: 460px; display: grid; place-items: center; overflow: hidden; border-bottom: 1px solid var(--border-strong); }
 .owner-hero::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 52%, #ff6a5e0d, transparent 44%); }
-.owner-hero-copy { position: relative; z-index: 2; align-self: center; justify-self: center; width: min(620px, 100%); padding: clamp(40px, 5vw, 74px) clamp(10px, 2.6vw, 42px); text-align: center; }
+.owner-hero-copy { position: relative; z-index: 2; width: min(720px, 100%); padding: clamp(46px, 5vw, 78px) clamp(18px, 4vw, 56px); text-align: center; }
 .owner-hero h2 { margin: 12px 0 0; color: var(--foreground); font-size: clamp(64px, 8vw, 116px); font-weight: 760; line-height: .88; letter-spacing: -.075em; font-variant-numeric: tabular-nums; }
 .hero-statement { margin: 14px 0 28px; color: var(--secondary); font-size: clamp(18px, 2vw, 25px); letter-spacing: -.025em; }
 .actionable-copy { max-width: 540px; margin: 0 auto; color: var(--secondary); font-size: 16px; line-height: 1.6; }

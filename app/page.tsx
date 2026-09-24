@@ -507,7 +507,6 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
           <div><dt>Obnovljeni članovi</dt><dd>{metrics.recoveredCount}</dd></div>
         </dl>
       </div>
-      <div className="signal-stage"><PageAtmosphere view="dashboard" workspace="owner" recoveryPulse={recoveryPulse} signalCount={signalCount} surface="hero" /></div>
     </section>
 
     <section className="priority-queue" aria-labelledby="priority-title">
