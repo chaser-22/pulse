@@ -24,6 +24,7 @@ test('atmosphere frames advance predictably and amplify a recovery pulse', () =>
     phase: 0,
     drift: 0,
     energy: 0.38,
+    flow: 0,
     signal: 0,
     sweep: 0,
     wave: 0,
@@ -38,4 +39,15 @@ test('constellation motion exposes a pulsing signal wave for the Three.js mesh',
   assert.ok(later.signal > idle.signal);
   assert.notEqual(later.wave, idle.wave);
   assert.ok(later.energy <= 1);
+});
+
+test('recovery flow advances risk signals toward the recovered side', () => {
+  const idle = getAtmosphereFrame('constellation', 0, 0);
+  const later = getAtmosphereFrame('constellation', 1_000, 1);
+  const radar = getAtmosphereFrame('radar-sweep', 1_000, 1);
+
+  assert.equal(idle.flow, 0);
+  assert.ok(later.flow > idle.flow);
+  assert.ok(later.flow < 1);
+  assert.ok(radar.flow < later.flow);
 });

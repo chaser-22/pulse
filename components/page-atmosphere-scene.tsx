@@ -18,6 +18,7 @@ const COLORS = {
   coral: new THREE.Color(0xff6a5e),
   teal: new THREE.Color(0x2ecc9d),
   amber: new THREE.Color(0xf8bd62),
+  mint: new THREE.Color(0x7be7c8),
   ink: new THREE.Color(0x19211d),
 };
 
@@ -135,6 +136,40 @@ export default function PageAtmosphereScene({
     signalGroup.position.z = -0.35;
     group.add(signalGroup);
 
+    const recoveryGroup = new THREE.Group();
+    const recoveryRailMaterial = new THREE.LineBasicMaterial({
+      color: COLORS.mint,
+      transparent: true,
+      opacity: 0.18,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const recoveryRails = Array.from({ length: 3 }, (_, railIndex) => {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(72 * 3), 3));
+      const rail = new THREE.Line(geometry, recoveryRailMaterial);
+      rail.rotation.z = (railIndex - 1) * 0.1;
+      recoveryGroup.add(rail);
+      return rail;
+    });
+    const beadGeometry = new THREE.SphereGeometry(0.065, 12, 8);
+    const beadMaterial = new THREE.MeshBasicMaterial({
+      color: COLORS.mint,
+      transparent: true,
+      opacity: 0.64,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const recoveryBeads = Array.from({ length: 9 }, (_, beadIndex) => {
+      const bead = new THREE.Mesh(beadGeometry, beadMaterial);
+      bead.userData.offset = beadIndex / 9;
+      bead.userData.lane = beadIndex % recoveryRails.length;
+      recoveryGroup.add(bead);
+      return bead;
+    });
+    recoveryGroup.position.z = 0.18;
+    group.add(recoveryGroup);
+
     const resize = () => {
       const width = Math.max(host.clientWidth, 1);
       const height = Math.max(host.clientHeight, 1);
@@ -213,6 +248,33 @@ export default function PageAtmosphereScene({
       signalMaterials.forEach((material, index) => {
         material.opacity = (index === 0 ? 0.26 : 0.18) * motion.signal;
       });
+      recoveryGroup.visible = preset !== 'radar-sweep';
+      recoveryGroup.rotation.z = preset === 'constellation' ? -motion.phase * 0.06 : 0;
+      recoveryRails.forEach((rail, railIndex) => {
+        const railPositions = rail.geometry.attributes.position;
+        const lane = railIndex - 1;
+        for (let pointIndex = 0; pointIndex < railPositions.count; pointIndex += 1) {
+          const progress = pointIndex / (railPositions.count - 1);
+          const bend = Math.sin(progress * Math.PI) * (preset === 'constellation' ? 0.72 : 0.24);
+          const x = -2.7 + progress * 5.4;
+          const y = lane * 0.34 + bend * 0.32 + Math.sin(progress * Math.PI * 2 + motion.wave) * 0.035;
+          railPositions.setXYZ(pointIndex, x, y, Math.sin(progress * Math.PI) * 0.38);
+        }
+        railPositions.needsUpdate = true;
+      });
+      recoveryBeads.forEach((bead) => {
+        const lane = Number(bead.userData.lane) - 1;
+        const progress = (motion.flow + Number(bead.userData.offset)) % 1;
+        const pulseScale = 0.78 + Math.sin((progress + motion.flow) * Math.PI * 2) * 0.22 + motion.energy * 0.2;
+        bead.position.set(
+          -2.7 + progress * 5.4,
+          lane * 0.34 + Math.sin(progress * Math.PI) * (preset === 'constellation' ? 0.32 : 0.16),
+          0.2 + Math.sin(progress * Math.PI) * 0.48,
+        );
+        bead.scale.setScalar(pulseScale);
+      });
+      recoveryRailMaterial.opacity = 0.1 + motion.energy * 0.14;
+      beadMaterial.opacity = 0.34 + motion.energy * 0.36;
       group.rotation.y = Math.sin(motion.phase * 0.52) * 0.13;
 
       renderer.render(scene, camera);
@@ -255,6 +317,10 @@ export default function PageAtmosphereScene({
       (sweep.material as THREE.Material).dispose();
       signalLines.forEach((line) => line.geometry.dispose());
       signalMaterials.forEach((material) => material.dispose());
+      recoveryRails.forEach((rail) => rail.geometry.dispose());
+      recoveryRailMaterial.dispose();
+      beadGeometry.dispose();
+      beadMaterial.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     };
