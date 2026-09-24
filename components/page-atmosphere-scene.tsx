@@ -16,9 +16,10 @@ type Props = {
 
 const COLORS = {
   coral: new THREE.Color(0xff6a5e),
+  coralSoft: new THREE.Color(0xff9a8f),
   teal: new THREE.Color(0x2ecc9d),
-  amber: new THREE.Color(0xf8bd62),
   mint: new THREE.Color(0x7be7c8),
+  amber: new THREE.Color(0xf8bd62),
   ink: new THREE.Color(0x19211d),
 };
 
@@ -52,8 +53,8 @@ export default function PageAtmosphereScene({
     }
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-    camera.position.set(0, 0, 8.5);
+    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+    camera.position.set(0, 0, 8.2);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setClearColor(0x000000, 0);
@@ -61,114 +62,108 @@ export default function PageAtmosphereScene({
 
     const group = new THREE.Group();
     scene.add(group);
-    const pointCount = 88;
-    const basePositions = new Float32Array(pointCount * 3);
-    const pointPositions = new Float32Array(pointCount * 3);
-    for (let index = 0; index < pointCount; index += 1) {
-      const angle = seeded(index, 1) * Math.PI * 2;
-      const radius = 0.45 + seeded(index, 2) * 3.35;
-      basePositions[index * 3] = Math.cos(angle) * radius;
-      basePositions[index * 3 + 1] = Math.sin(angle) * radius * 0.52;
-      basePositions[index * 3 + 2] = (seeded(index, 3) - 0.5) * 1.8;
-    }
-    pointPositions.set(basePositions);
-    const pointsGeometry = new THREE.BufferGeometry();
-    pointsGeometry.setAttribute('position', new THREE.BufferAttribute(pointPositions, 3));
-    const pointsMaterial = new THREE.PointsMaterial({
-      color: COLORS.coral,
-      size: 0.058,
-      sizeAttenuation: true,
+
+    const boardGroup = new THREE.Group();
+    boardGroup.rotation.x = -0.14;
+    group.add(boardGroup);
+
+    const panelGeometry = new THREE.PlaneGeometry(1.08, 2.35);
+    const panelMaterials = [COLORS.coral, COLORS.teal, COLORS.amber, COLORS.mint].map((color, index) => (
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: index === 0 ? 0.14 : 0.1,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      })
+    ));
+    const panels = panelMaterials.map((material, index) => {
+      const panel = new THREE.Mesh(panelGeometry, material);
+      panel.position.set((index - 1.5) * 1.22, 0, -0.32 - index * 0.03);
+      boardGroup.add(panel);
+      return panel;
+    });
+
+    const gridMaterial = new THREE.LineBasicMaterial({
+      color: COLORS.mint,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.16,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
-    group.add(new THREE.Points(pointsGeometry, pointsMaterial));
-
-    const orbitGroup = new THREE.Group();
-    group.add(orbitGroup);
-    const orbitMaterial = new THREE.LineBasicMaterial({
-      color: COLORS.coral,
-      transparent: true,
-      opacity: 0.18,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-    [1.25, 2.05, 2.9].forEach((radius, index) => {
-      const orbit = new THREE.LineLoop(new THREE.RingGeometry(radius, radius, 56).deleteAttribute('normal'), orbitMaterial);
-      orbit.scale.y = 0.52 + index * 0.08;
-      orbit.rotation.x = index * 0.22;
-      orbitGroup.add(orbit);
-    });
-
-    const core = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(0.38, 2),
-      new THREE.MeshBasicMaterial({ color: COLORS.coral, transparent: true, opacity: 0.72, blending: THREE.AdditiveBlending, depthWrite: false }),
-    );
-    group.add(core);
-    const halo = new THREE.Mesh(
-      new THREE.TorusGeometry(0.64, 0.015, 8, 64),
-      new THREE.MeshBasicMaterial({ color: COLORS.teal, transparent: true, opacity: 0.42, blending: THREE.AdditiveBlending, depthWrite: false }),
-    );
-    group.add(halo);
-
-    const sweep = new THREE.Mesh(
-      new THREE.CircleGeometry(3.6, 64, 0, Math.PI / 10),
-      new THREE.MeshBasicMaterial({ color: COLORS.coral, transparent: true, opacity: 0.08, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }),
-    );
-    sweep.position.z = -0.65;
-    sweep.visible = false;
-    group.add(sweep);
-
-    const signalGroup = new THREE.Group();
-    const signalMaterials = [
-      new THREE.LineBasicMaterial({ color: COLORS.teal, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false }),
-      new THREE.LineBasicMaterial({ color: COLORS.coral, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false }),
-    ];
-    const signalLines = Array.from({ length: 4 }, (_, lineIndex) => {
+    const gridLines = Array.from({ length: 9 }, (_, index) => {
+      const horizontal = index % 2 === 0;
       const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(84 * 3), 3));
-      const line = new THREE.Line(geometry, signalMaterials[lineIndex % signalMaterials.length]);
-      line.rotation.z = (lineIndex - 1.5) * 0.08;
-      signalGroup.add(line);
+      const span = horizontal ? 5.25 : 2.5;
+      const offset = (Math.floor(index / 2) - 2) * (horizontal ? 0.48 : 1.15);
+      const points = horizontal
+        ? [new THREE.Vector3(-2.75, offset, -0.24), new THREE.Vector3(2.75, offset, -0.24)]
+        : [new THREE.Vector3(offset, -1.35, -0.23), new THREE.Vector3(offset, 1.35, -0.23)];
+      geometry.setFromPoints(points.map((point) => {
+        if (!horizontal) point.x = Math.max(-span, Math.min(span, point.x));
+        return point;
+      }));
+      const line = new THREE.Line(geometry, gridMaterial);
+      boardGroup.add(line);
       return line;
     });
-    signalGroup.position.z = -0.35;
-    group.add(signalGroup);
 
-    const recoveryGroup = new THREE.Group();
-    const recoveryRailMaterial = new THREE.LineBasicMaterial({
-      color: COLORS.mint,
-      transparent: true,
-      opacity: 0.18,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
+    const barGeometry = new THREE.BoxGeometry(0.2, 1, 0.08);
+    const barMaterials = [
+      new THREE.MeshBasicMaterial({ color: COLORS.coral, transparent: true, opacity: 0.62, blending: THREE.AdditiveBlending, depthWrite: false }),
+      new THREE.MeshBasicMaterial({ color: COLORS.teal, transparent: true, opacity: 0.54, blending: THREE.AdditiveBlending, depthWrite: false }),
+    ];
+    const bars = Array.from({ length: 14 }, (_, index) => {
+      const bar = new THREE.Mesh(barGeometry, barMaterials[index % barMaterials.length]);
+      bar.position.set(-2.42 + index * 0.37, -1.05, 0.06);
+      bar.userData.height = 0.18 + seeded(index, 7) * 0.94;
+      bar.userData.delay = seeded(index, 11);
+      boardGroup.add(bar);
+      return bar;
     });
-    const recoveryRails = Array.from({ length: 3 }, (_, railIndex) => {
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(72 * 3), 3));
-      const rail = new THREE.Line(geometry, recoveryRailMaterial);
-      rail.rotation.z = (railIndex - 1) * 0.1;
-      recoveryGroup.add(rail);
-      return rail;
-    });
-    const beadGeometry = new THREE.SphereGeometry(0.065, 12, 8);
-    const beadMaterial = new THREE.MeshBasicMaterial({
-      color: COLORS.mint,
+
+    const scanMaterial = new THREE.LineBasicMaterial({
+      color: COLORS.coralSoft,
       transparent: true,
       opacity: 0.64,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
-    const recoveryBeads = Array.from({ length: 9 }, (_, beadIndex) => {
-      const bead = new THREE.Mesh(beadGeometry, beadMaterial);
-      bead.userData.offset = beadIndex / 9;
-      bead.userData.lane = beadIndex % recoveryRails.length;
-      recoveryGroup.add(bead);
-      return bead;
+    const scanGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, -1.46, 0.16),
+      new THREE.Vector3(0, 1.46, 0.16),
+    ]);
+    const scanLine = new THREE.Line(scanGeometry, scanMaterial);
+    boardGroup.add(scanLine);
+
+    const streamMaterial = new THREE.LineBasicMaterial({
+      color: COLORS.teal,
+      transparent: true,
+      opacity: 0.22,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
     });
-    recoveryGroup.position.z = 0.18;
-    group.add(recoveryGroup);
+    const streamLines = Array.from({ length: 4 }, (_, lineIndex) => {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(56 * 3), 3));
+      const line = new THREE.Line(geometry, streamMaterial);
+      line.userData.offset = lineIndex / 4;
+      boardGroup.add(line);
+      return line;
+    });
+
+    const nodeGeometry = new THREE.SphereGeometry(0.07, 12, 8);
+    const riskMaterial = new THREE.MeshBasicMaterial({ color: COLORS.coral, transparent: true, opacity: 0.68, blending: THREE.AdditiveBlending, depthWrite: false });
+    const recoveredMaterial = new THREE.MeshBasicMaterial({ color: COLORS.mint, transparent: true, opacity: 0.72, blending: THREE.AdditiveBlending, depthWrite: false });
+    const nodes = Array.from({ length: 18 }, (_, index) => {
+      const node = new THREE.Mesh(nodeGeometry, index % 3 === 0 ? riskMaterial : recoveredMaterial);
+      node.userData.offset = seeded(index, 17);
+      node.userData.lane = index % 5;
+      node.userData.depth = seeded(index, 23);
+      boardGroup.add(node);
+      return node;
+    });
 
     const resize = () => {
       const width = Math.max(host.clientWidth, 1);
@@ -184,7 +179,6 @@ export default function PageAtmosphereScene({
     let frame: number | null = null;
     let visible = true;
     const startedAt = performance.now();
-    const activeColor = new THREE.Color();
     const render = (now: number) => {
       frame = null;
       if (!visible || document.hidden) return;
@@ -192,90 +186,60 @@ export default function PageAtmosphereScene({
       const current = latestRef.current;
       const preset = getAtmospherePreset(current.view, current.workspace);
       const motion = getAtmosphereFrame(preset, now - startedAt, Math.min(current.recoveryPulse, 1));
-      const positions = pointsGeometry.attributes.position;
-      const countMultiplier = Math.min(1, Math.max(0.46, current.signalCount / 20));
-      for (let index = 0; index < pointCount; index += 1) {
-        const x = basePositions[index * 3];
-        const y = basePositions[index * 3 + 1];
-        const z = basePositions[index * 3 + 2];
-        const angle = motion.phase + index * 0.17;
-        const isLane = preset === 'task-lane' || preset === 'message-flow';
-        const laneX = -3.5 + ((index / (pointCount - 1) + motion.drift * 0.08) % 1) * 7;
-        positions.setXYZ(
-          index,
-          isLane ? laneX : x + Math.cos(angle) * 0.08,
-          isLane ? Math.sin(index * 0.7 + motion.phase) * 0.7 + (index % 3 - 1) * 0.32 : y + Math.sin(angle * 1.3) * 0.08,
-          isLane ? z * 0.26 : z + Math.sin(angle * 0.6) * 0.16,
-        );
-      }
-      positions.needsUpdate = true;
+      const signalWeight = Math.min(1, Math.max(0.42, current.signalCount / 18));
+      const laneMode = preset === 'task-lane' || preset === 'message-flow';
 
-      activeColor.lerpColors(COLORS.coral, preset === 'radar-sweep' ? COLORS.amber : COLORS.teal, preset === 'constellation' ? motion.energy - 0.5 : 0.35);
-      pointsMaterial.color.copy(activeColor);
-      pointsMaterial.opacity = Math.min(0.78, motion.energy * countMultiplier);
-      pointsMaterial.size = preset === 'member-field' ? 0.045 : 0.058;
-      orbitGroup.visible = preset === 'constellation' || preset === 'radar-sweep';
-      orbitGroup.rotation.z = motion.phase * (preset === 'constellation' ? 0.45 : 0.12);
-      orbitMaterial.opacity = preset === 'constellation' ? 0.24 * motion.energy : 0.14;
-      core.visible = preset !== 'member-field';
-      core.scale.setScalar(0.75 + motion.energy * 0.55 + Math.sin(motion.phase * 2.3) * 0.08);
-      core.rotation.set(motion.phase * 0.38, motion.phase * 0.57, 0);
-      halo.visible = preset === 'constellation' || preset === 'radar-sweep';
-      halo.rotation.z = -motion.phase * 0.62;
-      sweep.visible = preset === 'radar-sweep';
-      sweep.rotation.z = -motion.sweep;
-      signalGroup.visible = preset !== 'radar-sweep';
-      signalGroup.rotation.z = preset === 'constellation' ? motion.phase * 0.1 : 0;
-      signalGroup.scale.setScalar(0.86 + motion.signal * 0.16);
-      signalLines.forEach((line, lineIndex) => {
-        const linePositions = line.geometry.attributes.position;
-        const strandOffset = lineIndex - (signalLines.length - 1) / 2;
-        const isLane = preset === 'task-lane' || preset === 'message-flow';
-        for (let pointIndex = 0; pointIndex < linePositions.count; pointIndex += 1) {
-          const progress = pointIndex / (linePositions.count - 1);
-          const sweepPhase = progress * Math.PI * 2 + motion.wave + lineIndex * 0.9;
-          const laneY = strandOffset * 0.34 + Math.sin(sweepPhase) * 0.14 * motion.signal;
-          const arc = (progress - 0.5) * Math.PI;
-          linePositions.setXYZ(
-            pointIndex,
-            isLane ? -3.55 + progress * 7.1 : Math.cos(arc) * (2.55 + strandOffset * 0.16),
-            isLane ? laneY : Math.sin(arc) * 1.02 + strandOffset * 0.22 + Math.sin(sweepPhase) * 0.1,
-            Math.cos(sweepPhase) * (isLane ? 0.18 : 0.34) * motion.signal,
-          );
+      group.rotation.y = laneMode ? Math.sin(motion.phase * 0.45) * 0.06 : Math.sin(motion.phase * 0.38) * 0.12;
+      group.rotation.x = Math.sin(motion.phase * 0.25) * 0.035;
+      boardGroup.scale.setScalar(preset === 'member-field' ? 0.92 : 1);
+
+      panels.forEach((panel, index) => {
+        const material = panel.material as THREE.MeshBasicMaterial;
+        material.opacity = (0.08 + motion.energy * 0.12) * (index === 0 ? 1.1 : 0.82);
+        panel.position.z = -0.36 + Math.sin(motion.phase + index * 0.7) * 0.035;
+      });
+
+      bars.forEach((bar, index) => {
+        const baseHeight = Number(bar.userData.height);
+        const delay = Number(bar.userData.delay);
+        const lift = 0.72 + Math.sin(motion.wave + delay * Math.PI * 2) * 0.18 + motion.energy * 0.24;
+        const height = baseHeight * lift * (index % 4 === 0 ? 1 + signalWeight * 0.25 : 1);
+        bar.scale.set(1, Math.max(0.1, height), 1);
+        bar.position.y = -1.22 + height * 0.5;
+      });
+
+      scanLine.position.x = -2.58 + motion.flow * 5.16;
+      scanMaterial.opacity = 0.36 + motion.signal * 0.34;
+
+      streamLines.forEach((line, lineIndex) => {
+        const positions = line.geometry.attributes.position;
+        const lane = lineIndex - 1.5;
+        const flow = (motion.flow + Number(line.userData.offset)) % 1;
+        for (let pointIndex = 0; pointIndex < positions.count; pointIndex += 1) {
+          const progress = pointIndex / (positions.count - 1);
+          const x = -2.55 + progress * 5.1;
+          const wave = Math.sin(progress * Math.PI * 2 + motion.wave + lane) * 0.12;
+          const y = laneMode
+            ? lane * 0.36 + wave
+            : Math.sin((progress + flow) * Math.PI) * 0.78 + lane * 0.18 - 0.16;
+          positions.setXYZ(pointIndex, x, y, Math.sin((progress + flow) * Math.PI) * 0.24);
         }
-        linePositions.needsUpdate = true;
+        positions.needsUpdate = true;
       });
-      signalMaterials.forEach((material, index) => {
-        material.opacity = (index === 0 ? 0.26 : 0.18) * motion.signal;
-      });
-      recoveryGroup.visible = preset !== 'radar-sweep';
-      recoveryGroup.rotation.z = preset === 'constellation' ? -motion.phase * 0.06 : 0;
-      recoveryRails.forEach((rail, railIndex) => {
-        const railPositions = rail.geometry.attributes.position;
-        const lane = railIndex - 1;
-        for (let pointIndex = 0; pointIndex < railPositions.count; pointIndex += 1) {
-          const progress = pointIndex / (railPositions.count - 1);
-          const bend = Math.sin(progress * Math.PI) * (preset === 'constellation' ? 0.72 : 0.24);
-          const x = -2.7 + progress * 5.4;
-          const y = lane * 0.34 + bend * 0.32 + Math.sin(progress * Math.PI * 2 + motion.wave) * 0.035;
-          railPositions.setXYZ(pointIndex, x, y, Math.sin(progress * Math.PI) * 0.38);
-        }
-        railPositions.needsUpdate = true;
-      });
-      recoveryBeads.forEach((bead) => {
-        const lane = Number(bead.userData.lane) - 1;
-        const progress = (motion.flow + Number(bead.userData.offset)) % 1;
-        const pulseScale = 0.78 + Math.sin((progress + motion.flow) * Math.PI * 2) * 0.22 + motion.energy * 0.2;
-        bead.position.set(
-          -2.7 + progress * 5.4,
-          lane * 0.34 + Math.sin(progress * Math.PI) * (preset === 'constellation' ? 0.32 : 0.16),
-          0.2 + Math.sin(progress * Math.PI) * 0.48,
+      streamMaterial.opacity = 0.12 + motion.signal * 0.2;
+
+      nodes.forEach((node) => {
+        const offset = Number(node.userData.offset);
+        const lane = Number(node.userData.lane) - 2;
+        const progress = (motion.flow + offset) % 1;
+        const yBase = laneMode ? lane * 0.28 : Math.sin(progress * Math.PI) * 0.72 + lane * 0.08;
+        node.position.set(
+          -2.46 + progress * 4.92,
+          yBase + Math.sin(motion.wave + offset * 6) * 0.05,
+          0.22 + Number(node.userData.depth) * 0.32,
         );
-        bead.scale.setScalar(pulseScale);
+        node.scale.setScalar(0.72 + motion.energy * 0.38 + Math.sin(motion.wave + offset * 5) * 0.12);
       });
-      recoveryRailMaterial.opacity = 0.1 + motion.energy * 0.14;
-      beadMaterial.opacity = 0.34 + motion.energy * 0.36;
-      group.rotation.y = Math.sin(motion.phase * 0.52) * 0.13;
 
       renderer.render(scene, camera);
       frame = requestAnimationFrame(render);
@@ -303,24 +267,19 @@ export default function PageAtmosphereScene({
       observer.disconnect();
       resizeObserver.disconnect();
       document.removeEventListener('visibilitychange', onVisibilityChange);
-      pointsGeometry.dispose();
-      pointsMaterial.dispose();
-      orbitGroup.traverse((child) => {
-        if (child instanceof THREE.Line) child.geometry.dispose();
-      });
-      orbitMaterial.dispose();
-      (core.geometry as THREE.BufferGeometry).dispose();
-      (core.material as THREE.Material).dispose();
-      (halo.geometry as THREE.BufferGeometry).dispose();
-      (halo.material as THREE.Material).dispose();
-      (sweep.geometry as THREE.BufferGeometry).dispose();
-      (sweep.material as THREE.Material).dispose();
-      signalLines.forEach((line) => line.geometry.dispose());
-      signalMaterials.forEach((material) => material.dispose());
-      recoveryRails.forEach((rail) => rail.geometry.dispose());
-      recoveryRailMaterial.dispose();
-      beadGeometry.dispose();
-      beadMaterial.dispose();
+      panelGeometry.dispose();
+      panelMaterials.forEach((material) => material.dispose());
+      gridLines.forEach((line) => line.geometry.dispose());
+      gridMaterial.dispose();
+      barGeometry.dispose();
+      barMaterials.forEach((material) => material.dispose());
+      scanGeometry.dispose();
+      scanMaterial.dispose();
+      streamLines.forEach((line) => line.geometry.dispose());
+      streamMaterial.dispose();
+      nodeGeometry.dispose();
+      riskMaterial.dispose();
+      recoveredMaterial.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     };
