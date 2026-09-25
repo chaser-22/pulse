@@ -216,25 +216,8 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .proof-metrics span { color: #858b80; font-size: 12px; }
 .proof-metrics .proof-revenue { padding: 11px 13px; border: 1px solid #ff6a5e2b; border-radius: 10px; background: #ff6a5e08; }
 .proof-metrics .proof-revenue strong { color: var(--primary); }
-.lower-grid { display: grid; grid-template-columns: minmax(0,1.55fr) minmax(300px,.68fr); gap: 16px; }
-.occupancy-card { padding: 24px; }
-.chart-legend { color: #757c70; font-size: 12px; }
-.chart-legend i { display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--primary); }
-.chart-wrap { display: grid; grid-template-columns: 27px 1fr; height: 205px; margin-top: 18px; }
-.chart-y { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; padding: 0 5px 19px 0; color: #5e645a; font-size: 12px; }
-.bar-chart { display: grid; grid-template-columns: repeat(16,1fr); gap: clamp(3px,.7vw,8px); align-items: end; border-bottom: 1px solid #2c3028; background: #141614; }
-.bar-slot { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 7px; }
-.bar { position: relative; width: 100%; min-width: 5px; max-width: 18px; border-radius: 3px 3px 0 0; background: #657247; transition: background .15s; }
-@keyframes bar-rise { from { transform: scaleY(0); opacity: .25; } to { transform: scaleY(1); opacity: 1; } }
-.bar:hover { filter: brightness(1.3); }
-.bar-slot.peak .bar { background: var(--primary); }
-.bar span { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); opacity: 0; color: var(--primary); font-size: 12px; }
-.bar:hover span { opacity: 1; }
-.bar-slot small { color: #666c62; font-size: 12px; }
-.peak-note { display: flex; gap: 10px; margin-top: 18px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 10px; background: #ff6a5e08; }
-.peak-note > svg { width: 15px; color: var(--primary); }
-.peak-note span { display: grid; color: #7f857a; font-size: 12px; line-height: 1.45; }
-.peak-note strong { color: #dfe2d9; }
+.lower-grid { display: grid; grid-template-columns: minmax(0,1fr); gap: 16px; }
+.lower-grid--simple .revenue-overview { max-width: 980px; width: 100%; margin-inline: auto; }
 .recovery-card { padding: 23px; overflow: hidden; }
 .recovery-orbit { position: relative; width: 114px; height: 114px; margin: 2px auto 22px; display: grid; place-items: center; border: 1px solid #ff6a5e55; border-radius: 50%;   }
 .recovery-orbit::before, .recovery-orbit::after { content: ''; position: absolute; border: 1px solid #ff6a5e1b; border-radius: 50%; }
@@ -604,7 +587,6 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .metric-card small { font-size: 12px; }
 .weekly-proof-intro h2 { font-size: 18px; }.weekly-proof-intro p:last-child { font-size: 12px; }
 .proof-metrics small { font-size: 12px; }.proof-metrics strong { font-size: 24px; }.proof-metrics span { font-size: 12px; }
-.chart-legend, .peak-note span { font-size: 12px; }.chart-y, .bar-slot small { font-size: 12px; }
 .recovery-card h2 { font-size: 21px; }.recovery-card > p:not(.eyebrow) { font-size: 12px; line-height: 1.5; }.mini-recovered-list strong { font-size: 12px; }.mini-recovered-list small { font-size: 12px; }
 .pilot-cta-mark { display: none; }.pilot-cta h2 { font-size: 21px; }.pilot-cta p:last-child { font-size: 12px; }
 .briefing-main h2 { font-size: 22px; }.briefing-main p:last-child { font-size: 12px; }.staff-stats small { font-size: 12px; }
@@ -673,7 +655,7 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
   .metric-grid { grid-template-columns: repeat(2,1fr); }.metric-card { min-height: 100px; }
   .weekly-proof { padding: 18px; }.proof-metrics { grid-template-columns: repeat(2,1fr); gap: 12px; }.proof-metrics > svg { display: none; }.proof-metrics > div { padding: 9px; border-radius: 9px; background: #0f110e; }.proof-metrics .proof-revenue { padding: 9px; }
   .revenue-overview { grid-template-columns: 1fr; }.revenue-total, .revenue-trend { border-right: 0; border-bottom: 1px solid #292c26; }.revenue-breakdown { grid-column: auto; grid-template-columns: 1fr; border-top: 0; }.revenue-total, .revenue-trend, .revenue-breakdown { padding: 18px; }
-  .lower-grid { grid-template-columns: 1fr; }.occupancy-card { padding: 18px; overflow: hidden; }.chart-wrap { height: 175px; overflow-x: auto; }.bar-chart { min-width: 540px; }
+  .lower-grid { grid-template-columns: 1fr; }
   .members-toolbar { display: flex; flex-wrap: wrap; }.search-box { width: 100%; max-width: none; }.filter-tabs { width: 100%; justify-content: flex-start; overflow-x: auto; }.filter-tabs button { flex: none; }.result-count { margin-left: auto; }
   .radar-summary { grid-template-columns: 1fr; }.radar-visual { grid-column: auto; padding: 19px; }.radar-rings { width: 105px; height: 105px; }.risk-summary-card { padding: 16px; }
   .risk-queue { padding: 18px; }.risk-member-card { grid-template-columns: 22px 37px 1fr; }.risk-member-main { grid-column: 3; }.risk-value { grid-column: 3; justify-items: start; grid-template-columns: 1fr auto; align-items: center; width: 100%; }.risk-value small { display: none; }.risk-value button { margin: 0; }
@@ -762,7 +744,7 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
   .top-actions > .pulse-button:only-of-type { grid-column: 1 / -1; }
   .risk-hero { padding: 22px 20px; }
   .risk-number { font-size: clamp(51px,17vw,60px); }
-  .today-card, .occupancy-card, .risk-queue, .staff-queue { padding: 17px 15px; }
+  .today-card, .risk-queue, .staff-queue { padding: 17px 15px; }
   .member-row { grid-template-columns: 18px 34px minmax(0,1fr) 14px; gap: 8px; }
   .member-copy small { max-width: 47vw; }
   .metric-card { min-height: 112px; padding: 15px 12px; }
@@ -846,12 +828,7 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .revenue-breakdown p { justify-content: flex-start; }
 .revenue-breakdown small { font-size: 12px; letter-spacing: 0; text-transform: none; }
 .revenue-breakdown strong { margin-left: auto; font-size: 13px; font-variant-numeric: tabular-nums; }
-.trend-heading, .trend-months, .chart-legend, .chart-y, .bar-slot small { font-size: 12px; }
-.bar-chart { background: #141614; }
-.bar { border-radius: 3px 3px 0 0; background: #657247; }
-.bar-slot.peak .bar { background: var(--primary);  }
-.peak-note { padding: 12px 0 0; border: 0; border-top: 1px solid var(--border); border-radius: 0; background: transparent; }
-.peak-note span { color: var(--muted-foreground); font-size: 12px; }
+.trend-heading, .trend-months { font-size: 12px; }
 .pilot-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 0; border-top: 1px solid var(--border); }
 .pilot-footer > div { display: grid; gap: 2px; }
 .pilot-footer strong { font-size: 14px; }
@@ -1289,10 +1266,6 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .success-toast.is-recovery svg { color: var(--success); }
 .number-shift { animation: number-shift 240ms ease-out both; }
 @keyframes number-shift { from { opacity: .45; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-.occupancy-insight { margin: 14px 0 4px; padding: 13px 0; border-top: 1px solid var(--border); color: var(--secondary); font-size: 13px; line-height: 1.5; }
-.occupancy-insight strong { display: block; color: var(--foreground); font-weight: 680; }
-.bar { background: var(--border-strong); }
-.bar-slot.peak .bar { background: var(--primary); }
 .status-recovered, .task-done, .positive { color: var(--success); }
 .risk-high { color: var(--primary); }
 .risk-medium { color: var(--warning); }
@@ -1320,7 +1293,7 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .light .nav-item.active b { background: #e8524918; }
 .light .demo-reset-button:hover { color: var(--foreground); background: var(--surface-subtle); }
 .light .gym-card { background: #ffffff8f; box-shadow: inset 0 1px 0 #fff; }
-.light :is(.page-title > p:last-child, .eyebrow, .risk-hero > p:not(.eyebrow), .member-copy small, .revenue-total > p, .revenue-progress-copy, .trend-heading, .trend-months, .metric-card p, .metric-card small, .weekly-proof-intro p:last-child, .proof-metrics small, .proof-metrics span, .chart-legend, .chart-y, .peak-note span, .recovery-orbit small, .recovery-card > p:not(.eyebrow), .mini-recovered-list small, .pilot-cta p:last-child, .reception-launchpad-copy > p:last-child, .reception-actions button > small, .briefing-main p:last-child, .staff-stats small, .task-priority, .task-person > p, .task-person > small, .task-reason small, .task-next small, .task-next p, .result-count, .members-table th, .members-table td small, .csv-note, .demo-boundary, .empty-state p, .radar-visual > div:last-child > p:last-child, .risk-summary-card small, .risk-summary-card p, .sorted-label, .risk-order, .risk-member-main > p, .risk-reason small, .risk-next small, .risk-value small, .automation-overview p:not(.eyebrow), .overview-stats small, .automation-head p, .switch-label, .automation-meta small, .automation-footer > span, .risk-explanation > div > p:not(.eyebrow), .detail-item small, .detail-item p, .timeline small, .payment-list small, .muted-empty, .panel-copy, .message-field > span, .message-meta, .queued-state span, .fake-service-note, .recovery-divider, .renew-form p, .field > span, .preview-phone-top, .preview-phone > small, .activity-note span, .pilot-steps p, .pilot-note span) { color: var(--muted-foreground); }
+.light :is(.page-title > p:last-child, .eyebrow, .risk-hero > p:not(.eyebrow), .member-copy small, .revenue-total > p, .revenue-progress-copy, .trend-heading, .trend-months, .metric-card p, .metric-card small, .weekly-proof-intro p:last-child, .proof-metrics small, .proof-metrics span, .recovery-orbit small, .recovery-card > p:not(.eyebrow), .mini-recovered-list small, .pilot-cta p:last-child, .reception-launchpad-copy > p:last-child, .reception-actions button > small, .briefing-main p:last-child, .staff-stats small, .task-priority, .task-person > p, .task-person > small, .task-reason small, .task-next small, .task-next p, .result-count, .members-table th, .members-table td small, .csv-note, .demo-boundary, .empty-state p, .radar-visual > div:last-child > p:last-child, .risk-summary-card small, .risk-summary-card p, .sorted-label, .risk-order, .risk-member-main > p, .risk-reason small, .risk-next small, .risk-value small, .automation-overview p:not(.eyebrow), .overview-stats small, .automation-head p, .switch-label, .automation-meta small, .automation-footer > span, .risk-explanation > div > p:not(.eyebrow), .detail-item small, .detail-item p, .timeline small, .payment-list small, .muted-empty, .panel-copy, .message-field > span, .message-meta, .queued-state span, .fake-service-note, .recovery-divider, .renew-form p, .field > span, .preview-phone-top, .preview-phone > small, .activity-note span, .pilot-steps p, .pilot-note span) { color: var(--muted-foreground); }
 .light :is(.hero-decision strong, .reception-actions button, .reception-insight strong, .task-actions button, .staff-boundary strong, .members-table td, .csv-note strong, .demo-boundary strong, .risk-member-main p strong, .risk-value button, .automation-body > span, .automation-footer button, .risk-explanation h3, .risk-explanation > div > div span, .queued-state strong, .renew-form .renew-label, .activity-note strong, .pilot-steps strong, .pilot-note strong) { color: var(--foreground); }
 .light .members-table th { background: #f0ede8; }
 .light .members-table tbody tr:hover { background: #e9e5df; }
@@ -1332,8 +1305,6 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .light .select-input option { background: #fffdfa; }
 .light .preview-phone { background: #e8e5df; }
 .light .message-bubble { color: #174b3b; background: #d9eee5; }
-.light .bar-chart { border-color: var(--border); background: #f1eee9; }
-.light .bar { background: #a9afa7; }
 .light .revenue-progress { background: #ddd8d1; }
 .light .signal-stage { background: radial-gradient(circle at 72% 48%, #ff6a5e18, transparent 52%); }
 
@@ -1371,8 +1342,7 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .automation-head p,
 .automation-body small,
 .profile-risk details > p,
-.risk-explanation > div > p:not(.eyebrow),
-.occupancy-insight {
+.risk-explanation > div > p:not(.eyebrow) {
   line-height: 1.55;
 }
 

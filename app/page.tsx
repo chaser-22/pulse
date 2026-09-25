@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  copy, initialAutomations, initialMembers, occupancy,
+  copy, initialAutomations, initialMembers,
   type Automation, type Channel, type Member, type MemberStatus, type RecoveryOutcome, type RiskLevel,
 } from '@/lib/pulse-data';
 import {
@@ -56,8 +56,8 @@ const viewMeta: Record<View, { eyebrow: string; title: string; subtitle: string 
   dashboard: { eyebrow: 'PONEDJELJAK, 31. AVGUST', title: 'Dobro jutro, Marko.', subtitle: 'Evo gdje je prihod u riziku i šta treba uraditi danas.' },
   staff: { eyebrow: 'RADNI PROSTOR RECEPCIJE', title: 'Danas na recepciji', subtitle: 'Prijavite dolaske, dodajte članove i završite kontakte koji su prioritet danas.' },
   members: { eyebrow: 'BAZA ČLANOVA', title: 'Članovi', subtitle: 'Pronađite, ažurirajte i kontaktirajte svakog člana na jednom mjestu.' },
-  radar: { eyebrow: 'RANI SIGNALI ODLASKA', title: 'Churn Radar', subtitle: 'Jasan prioritet, razlog rizika i sljedeći najbolji potez.' },
-  automations: { eyebrow: 'DOSLJEDAN KONTAKT', title: 'Automatizacije', subtitle: 'Prave poruke u pravom trenutku — za sada samo u redu za slanje.' },
+  radar: { eyebrow: 'JEDNOSTAVNI SIGNALI', title: 'Signali rizika', subtitle: 'Članovi su označeni po isteku, odsustvu i ručno unesenim podacima.' },
+  automations: { eyebrow: 'PORUKE ZA TIM', title: 'Predlošci poruka', subtitle: 'Pripremite poruke koje osoblje pregleda i šalje ručno.' },
 };
 
 function euro(value: number) {
@@ -398,7 +398,7 @@ export default function Home() {
         {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onOutcome={recordOutcome} onAddMember={() => openMemberForm()} onFindMember={() => goTo('members')} />}
         {view === 'members' && <MembersScreen members={filteredMembers} total={members.length} filter={filter} search={search} onFilter={setFilter} onSearch={setSearch} onOpenMember={openMember} onImport={() => fileInputRef.current?.click()} />}
         {view === 'radar' && <RadarScreen members={riskMembers} onOpenMember={openMember} />}
-        {view === 'automations' && <AutomationsScreen automations={automations} onToggle={(id, enabled) => { setAutomations((current) => current.map((item) => item.id === id ? { ...item, enabled, lastActivity: enabled ? 'Uključeno upravo sada' : 'Pauzirano upravo sada' } : item)); setSuccess(enabled ? 'Automatizacija je uključena.' : 'Automatizacija je pauzirana.'); }} onPreview={setAutomationPreviewId} />}
+        {view === 'automations' && <AutomationsScreen automations={automations} onToggle={(id, enabled) => { setAutomations((current) => current.map((item) => item.id === id ? { ...item, enabled, lastActivity: enabled ? 'Aktivan predložak' : 'Pauzirano' } : item)); setSuccess(enabled ? 'Predložak je aktivan.' : 'Predložak je pauziran.'); }} onPreview={setAutomationPreviewId} />}
       </section>
 
       <Dialog open={Boolean(selectedMember)} onOpenChange={(open) => { if (!open) setSelectedMemberId(null); }}>
@@ -440,7 +440,7 @@ export default function Home() {
           {(() => { const automation = automations.find((item) => item.id === automationPreviewId); if (!automation) return null; return <>
             <DialogHeader><DialogTitle>{automation.title}</DialogTitle><DialogDescription>{automation.trigger} · {automation.audience}</DialogDescription></DialogHeader>
             <div className="preview-phone"><div className="preview-phone-top"><span>{automation.channel}</span><span>10:42</span></div><div className="message-bubble">{automation.message.replace('{{ime}}', 'Miloš').replace('{{datum}}', '03.09.2026.')}</div><small>Pregled — poruka neće biti stvarno poslata</small></div>
-            <div className="activity-note"><History /><span><strong>Posljednja aktivnost</strong>{automation.lastActivity}</span></div>
+          <div className="activity-note"><History /><span><strong>Status predloška</strong>{automation.lastActivity}</span></div>
             <DialogFooter><Button onClick={() => { setAutomationPreviewId(null); setSuccess('Pregled zatvoren. Nijedna poruka nije poslata.'); }} className="pulse-button">U redu</Button></DialogFooter>
           </>; })()}
         </DialogContent>
@@ -456,8 +456,8 @@ export default function Home() {
       <Dialog open={pilotOpen} onOpenChange={setPilotOpen}>
         <DialogContent className="pilot-dialog">
           <DialogHeader><Badge className="pilot-badge">PILOT SA VAŠIM PODACIMA</Badge><DialogTitle>Provjerite koliko prihoda PULSE može vratiti vašoj teretani.</DialogTitle><DialogDescription>Za početak je dovoljan jednostavan Excel ili CSV spisak. Nije potrebna promjena postojećeg sistema.</DialogDescription></DialogHeader>
-          <div className="pilot-steps"><div><span>01</span><p><strong>Uvezemo članove</strong>Ime, datum isteka, posljednji dolazak i cijena članarine.</p></div><div><span>02</span><p><strong>PULSE označava rizik</strong>Dobijate prioritetnu listu i jasan razlog za svakog člana.</p></div><div><span>03</span><p><strong>Mjerimo rezultat</strong>Pratimo kontakt, odgovor, obnovu i stvarno oporavljeni prihod.</p></div></div>
-          <div className="pilot-note"><ShieldAlert /><span><strong>Vaši podaci ostaju pod vašom kontrolom.</strong>Za demonstraciju nijesu potrebne stvarne poruke niti integracije.</span></div>
+          <div className="pilot-steps"><div><span>01</span><p><strong>Uvezemo članove</strong>Ime, datum isteka, posljednji dolazak ako postoji i cijena članarine.</p></div><div><span>02</span><p><strong>PULSE označava osnovne signale</strong>Dobijate listu članova kojima je istekla članarina, uskoro ističe ili su dugo odsutni.</p></div><div><span>03</span><p><strong>Tim prati rezultat</strong>Ručno bilježite kontakt, odgovor, obnovu i oporavljeni prihod.</p></div></div>
+          <div className="pilot-note"><ShieldAlert /><span><strong>Vaši podaci ostaju pod vašom kontrolom.</strong>Pilot radi i bez naprednih integracija; dovoljni su članovi i datumi isteka.</span></div>
           <DialogFooter><Button variant="outline" onClick={() => setPilotOpen(false)}>Zatvori</Button><Button className="pulse-button" onClick={() => { setPilotOpen(false); setView('members'); setWorkspace('owner'); setSuccess('Otvoren je ekran za uvoz članova iz CSV-a.'); }}><Upload /> Pogledaj kako izgleda uvoz</Button></DialogFooter>
         </DialogContent>
       </Dialog>
@@ -519,7 +519,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
         <button type="button" className="priority-action" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button>
         <details className="risk-disclosure"><summary>Zašto?</summary><div><p>{member.riskReason}</p><span><strong>Preporučeni potez</strong>{member.nextAction}</span><span><strong>Članarina ističe</strong>{prettyDate(member.endDate)}</span></div></details>
         <RecoveryLifecycle member={member} />
-      </article>)}</div> : <div className="priority-empty"><CheckCircle2 /><span><strong>Danas nema članova visokog prioriteta.</strong><small>Pregledajte sve aktivne signale u Churn Radaru.</small></span></div>}
+      </article>)}</div> : <div className="priority-empty"><CheckCircle2 /><span><strong>Danas nema članova visokog prioriteta.</strong><small>Pregledajte sve aktivne signale rizika.</small></span></div>}
       <button type="button" className="text-button" onClick={() => onNavigate('radar')}>Prikaži sve rizične članove <ArrowRight /></button>
     </section>
 
@@ -536,13 +536,13 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
     <section className="owner-metrics panel-card" aria-label="Ključne operativne metrike">
       <Metric label="Aktivni članovi" value={String(metrics.active)} hint="+8 ovog mjeseca" />
       <Metric label="Ističe za 7 dana" value={String(metrics.expiring)} hint="6 nije kontaktirano" tone="warning" />
-      <Metric label="Odsutni 14+ dana" value={String(metrics.absent)} hint="4 nova signala" tone="warning" />
+      <Metric label="Odsutni 14+ dana" value={String(metrics.absent)} hint="ako postoji dolazak" tone="warning" />
       <Metric label="Visoki rizik" value={String(metrics.highRisk)} hint="akcija danas" tone="danger" />
       <Metric label="Obnovljeni" value={String(metrics.recoveredCount)} hint="ovog mjeseca" tone="success" />
       <Metric label="Oporavljen prihod" value={euro(metrics.recoveredRevenue)} hint="ovog mjeseca" tone="success" />
     </section>
 
-    <div className="lower-grid">
+    <div className="lower-grid lower-grid--simple">
       <section className="revenue-overview panel-card" aria-label="Finansijski pregled ovog mjeseca">
         <div className="revenue-total">
           <div className="revenue-title-row"><p className="eyebrow">NAPLAĆENO OVOG MJESECA</p><span className="period-label">Avgust 2026.</span></div>
@@ -556,14 +556,6 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
           <div><span className="breakdown-dot memberships" /><p><small>Redovne članarine</small><strong>{euro(9500)}</strong></p></div>
           <div><span className="breakdown-dot recovered" /><p><small>PULSE oporavak</small><strong>{euro(metrics.recoveredRevenue)}</strong></p></div>
           <div><span className="breakdown-dot other" /><p><small>Dnevne karte i ostalo</small><strong>{euro(820)}</strong></p></div>
-        </div>
-      </section>
-      <section className="panel-card occupancy-card">
-        <div className="section-heading"><div><p className="eyebrow">DANAS</p><h2>Popunjenost teretane po satu</h2></div><span className="chart-legend"><i /> Broj dolazaka</span></div>
-        <p className="occupancy-insight"><strong>Najveća gužva je danas od 18:00–20:00.</strong> Pojačajte recepciju i članovima preporučite mirniji termin prije 16:00.</p>
-        <div className="chart-wrap">
-          <div className="chart-y"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div>
-          <div className="bar-chart">{occupancy.map((item) => <div className={`bar-slot ${item.value > 78 ? 'peak' : ''}`} key={item.hour}><div className="bar" style={{ height: `${item.value}%` }}><span>{item.value}</span></div><small>{item.hour}</small></div>)}</div>
         </div>
       </section>
     </div>
@@ -581,12 +573,12 @@ function StaffBoard({ members, onOpenMember, onOutcome, onAddMember, onFindMembe
       <dl className="staff-stats"><div><dt>Preostalo</dt><dd>{members.length - completed}</dd></div><div><dt>Završeno</dt><dd>{completed}</dd></div><div><dt>Praćenja</dt><dd>{followUps}</dd></div></dl>
     </section>
     <section className="staff-queue panel-card" id="staff-queue">
-      <div className="section-heading"><div><p className="eyebrow">RED ZA DANAS</p><h2>Kontakti po prioritetu</h2></div><span className="summary-count">{members.length - completed} preostalo</span></div>
+      <div className="section-heading"><div><p className="eyebrow">RED ZA DANAS</p><h2>Kontakti po osnovnim signalima</h2></div><span className="summary-count">{members.length - completed} preostalo</span></div>
       <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${member.recoveryOutcome || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
         <span className="task-priority">{String(index + 1).padStart(2, '0')}</span>
         <div className="task-person"><span className="avatar large">{initials(member)}</span><span><span className="task-name"><h3>{fullName(member)}</h3><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : 'Srednji'}</span></span><small><MessageCircle /> {member.preferredChannel} · {member.packageName}</small></span></div>
         <div className="task-reason"><small>RAZLOG RIZIKA</small><p>{member.riskReason}</p></div>
-        <div className="task-next"><small>PREPORUČENI POTEZ</small><p>{member.nextAction}</p></div>
+        <div className="task-next"><small>PREDLOG PORUKE</small><p>{member.nextAction}</p></div>
         <div className="task-actions">
           {member.status === 'recovered' ? <span className="task-done"><CheckCircle2 /> Obnovljeno</span> : member.recoveryOutcome ? <><span className={`outcome-badge outcome-${member.recoveryOutcome}`}><Check /> {outcomeLabels[member.recoveryOutcome]}</span><button onClick={() => onOpenMember(member)}>Nastavi <ArrowRight /></button></> : <><button className="task-primary" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button><button onClick={() => onOutcome(member.id, 'no_answer')}><Phone /> Bez odgovora</button><button onClick={() => onOutcome(member.id, 'replied')}><MessageCircle /> Odgovorio/la</button><button onClick={() => onOutcome(member.id, 'follow_up')}><Clock3 /> Prati sjutra</button></>}
         </div>
@@ -635,10 +627,10 @@ function RadarScreen({ members, onOpenMember }: { members: Member[]; onOpenMembe
   const high = members.filter((member) => member.risk === 'high');
   const medium = members.filter((member) => member.risk === 'medium');
   return <div className="screen-stack radar-screen">
-    <section className="radar-summary panel-card" aria-label="Sažetak rizika"><div><p className="eyebrow">RED ZA AKCIJU</p><h2>Prioriteti za zadržavanje članova</h2><p>Lista je sortirana po nivou rizika i hitnosti sljedećeg poteza.</p></div><dl><div><dt>Ukupno</dt><dd>{members.length}</dd></div><div className="high"><dt>Visoki rizik</dt><dd>{high.length}</dd></div><div className="medium"><dt>Srednji rizik</dt><dd>{medium.length}</dd></div></dl></section>
+    <section className="radar-summary panel-card" aria-label="Sažetak rizika"><div><p className="eyebrow">RED ZA AKCIJU</p><h2>Članovi sa jednostavnim signalima</h2><p>Lista koristi samo podatke koje gym može lako dati: status članarine, datum isteka i posljednji dolazak ako postoji.</p></div><dl><div><dt>Ukupno</dt><dd>{members.length}</dd></div><div className="high"><dt>Hitno</dt><dd>{high.length}</dd></div><div className="medium"><dt>Za praćenje</dt><dd>{medium.length}</dd></div></dl></section>
     <section className="risk-queue panel-card">
-      <div className="section-heading"><div><p className="eyebrow">PRIORITETNA LISTA</p><h2>{members.length} članova traži pažnju</h2></div><span className="sorted-label"><CircleGauge /> Sortirano po riziku</span></div>
-      {members.length ? <div className="risk-cards">{members.map((member, index) => <article className={`risk-member-card ${member.risk === 'high' ? 'is-high' : ''}`} key={member.id}><span className="risk-order">{String(index + 1).padStart(2, '0')}</span><div className="risk-member-identity"><span className="avatar large">{initials(member)}</span><span><h3>{fullName(member)}</h3><span className={`status-pill ${statusClass(member.status)}`}>{t.statuses[member.status]}</span></span></div><div className="risk-reason"><small>RAZLOG RIZIKA</small><p>{member.riskReason}</p></div><div className="risk-next"><small>SLJEDEĆI POTEZ</small><p>{member.nextAction}</p></div><div className="risk-value"><small>ČLANARINA</small><strong>{euro(member.price)}</strong></div><Button variant="outline" onClick={() => onOpenMember(member)}>Otvori profil <ChevronRight /></Button></article>)}</div> : <EmptyState icon={<CheckCircle2 />} title="Radar je čist" text="Nijedan član trenutno nema aktivan signal rizika." />}
+      <div className="section-heading"><div><p className="eyebrow">LISTA ZA TIM</p><h2>{members.length} članova za provjeru</h2></div><span className="sorted-label"><CircleGauge /> Osnovni signali</span></div>
+      {members.length ? <div className="risk-cards">{members.map((member, index) => <article className={`risk-member-card ${member.risk === 'high' ? 'is-high' : ''}`} key={member.id}><span className="risk-order">{String(index + 1).padStart(2, '0')}</span><div className="risk-member-identity"><span className="avatar large">{initials(member)}</span><span><h3>{fullName(member)}</h3><span className={`status-pill ${statusClass(member.status)}`}>{t.statuses[member.status]}</span></span></div><div className="risk-reason"><small>SIGNAL</small><p>{member.riskReason}</p></div><div className="risk-next"><small>PREDLOG PORUKE</small><p>{member.nextAction}</p></div><div className="risk-value"><small>ČLANARINA</small><strong>{euro(member.price)}</strong></div><Button variant="outline" onClick={() => onOpenMember(member)}>Otvori profil <ChevronRight /></Button></article>)}</div> : <EmptyState icon={<CheckCircle2 />} title="Lista je čista" text="Nijedan član trenutno nema aktivan signal." />}
     </section>
   </div>;
 }
@@ -646,9 +638,9 @@ function RadarScreen({ members, onOpenMember }: { members: Member[]; onOpenMembe
 function AutomationsScreen({ automations, onToggle, onPreview }: { automations: Automation[]; onToggle: (id: string, enabled: boolean) => void; onPreview: (id: string) => void }) {
   const queued = automations.reduce((sum, item) => sum + item.sentThisMonth, 0);
   return <div className="screen-stack automation-screen">
-    <section className="automation-overview panel-card"><div><p className="eyebrow">OVAJ MJESEC</p><h2>{queued} poruka pripremljeno</h2><p>Nijedna poruka se ne šalje stvarno u ovom prototipu.</p></div><dl className="overview-stats"><div><dt>Aktivne</dt><dd>{automations.filter((item) => item.enabled).length}</dd></div><div><dt>Pauzirane</dt><dd>{automations.length - automations.filter((item) => item.enabled).length}</dd></div></dl></section>
-    <section className="automations-list panel-card">{automations.map((automation) => <article className={`automation-row ${automation.enabled ? '' : 'disabled'}`} key={automation.id}><div className="automation-main"><h3>{automation.title}</h3><p>{automation.trigger}</p></div><div className="automation-meta"><span><small>PUBLIKA</small>{automation.audience}</span><span><small>KANAL</small>{automation.channel}</span><span><small>AKTIVNOST</small>{automation.lastActivity}</span></div><label className="switch-label"><Switch checked={automation.enabled} onCheckedChange={(checked) => onToggle(automation.id, checked)} /><span>{automation.enabled ? 'Uključena' : 'Pauzirana'}</span></label><Button variant="outline" onClick={() => onPreview(automation.id)}><MessageCircle /> Pregled poruke</Button></article>)}</section>
-    <div className="demo-boundary"><ShieldAlert /><span><strong>Sigurna demo granica</strong>Poruke se samo stavljaju u lokalni red. WhatsApp, Viber i SMS integracije nijesu povezane.</span></div>
+    <section className="automation-overview panel-card"><div><p className="eyebrow">OVAJ MJESEC</p><h2>{queued} nacrta poruka</h2><p>Ovo su predlošci koje tim može pregledati, kopirati i poslati ručno.</p></div><dl className="overview-stats"><div><dt>Aktivni</dt><dd>{automations.filter((item) => item.enabled).length}</dd></div><div><dt>Pauzirani</dt><dd>{automations.length - automations.filter((item) => item.enabled).length}</dd></div></dl></section>
+    <section className="automations-list panel-card">{automations.map((automation) => <article className={`automation-row ${automation.enabled ? '' : 'disabled'}`} key={automation.id}><div className="automation-main"><h3>{automation.title}</h3><p>{automation.trigger}</p></div><div className="automation-meta"><span><small>KOME</small>{automation.audience}</span><span><small>KANAL</small>{automation.channel}</span><span><small>STATUS</small>{automation.lastActivity}</span></div><label className="switch-label"><Switch checked={automation.enabled} onCheckedChange={(checked) => onToggle(automation.id, checked)} /><span>{automation.enabled ? 'Aktivan' : 'Pauziran'}</span></label><Button variant="outline" onClick={() => onPreview(automation.id)}><MessageCircle /> Pregled poruke</Button></article>)}</section>
+    <div className="demo-boundary"><ShieldAlert /><span><strong>Realna pilot granica</strong>PULSE priprema tekst i evidenciju. Stvarno slanje ostaje ručni korak tima.</span></div>
   </div>;
 }
 
@@ -668,7 +660,7 @@ function MemberProfile({ member, channel, message, renewing, renewalAmount, onCh
     </div>
     <section className="profile-context">
       <section className={`profile-risk ${riskClass(member.risk)}`}>
-        <div><p className="eyebrow">PULSE SIGNAL</p><h3>{member.risk === 'high' ? 'Potrebna je akcija danas' : member.risk === 'medium' ? 'Kontaktirajte prije isteka' : 'Nema hitnog rizika'}</h3></div>
+        <div><p className="eyebrow">PULSE SIGNAL</p><h3>{member.risk === 'high' ? 'Potrebna je provjera danas' : member.risk === 'medium' ? 'Kontaktirajte prije isteka' : 'Nema hitnog signala'}</h3></div>
         <details open={member.risk === 'high' ? true : undefined}><summary>Zašto?</summary><p>{member.riskReason}</p><dl><div><dt>Ističe</dt><dd>{prettyDate(member.endDate)}</dd></div><div><dt>Posljednji dolazak</dt><dd>{member.lastVisit === '—' ? 'Nije evidentiran' : prettyDate(member.lastVisit)}</dd></div></dl><span><strong>Preporučeni potez</strong>{member.nextAction}</span></details>
       </section>
       <section className="member-recovery-path" aria-labelledby="member-recovery-title"><p className="eyebrow" id="member-recovery-title">TOK OPORAVKA</p><RecoveryLifecycle member={member} /></section>
@@ -682,7 +674,7 @@ function MemberProfile({ member, channel, message, renewing, renewalAmount, onCh
       <div className="message-meta"><span>{message.length} znakova</span><span><Sparkles /> PULSE prijedlog</span></div>
       {member.queuedMessage && <div className="queued-state"><CheckCircle2 /><span><strong>Poruka je u redu</strong>{member.queuedMessage.channel} · {member.queuedMessage.queuedAt}</span></div>}
       <Button className="pulse-button queue-button" onClick={onQueue} disabled={!message.trim()}><Send /> Stavi poruku u red</Button>
-      <div className="fake-service-note"><ShieldAlert /> Integracije nijesu povezane; slanje je simulirano.</div>
+      <div className="fake-service-note"><ShieldAlert /> Ovo je nacrt poruke. Tim je šalje ručno iz izabranog kanala.</div>
       <div className="recovery-divider"><span>NAKON OBNOVE</span></div>
       {!renewing ? <Button variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}><CheckCircle2 /> {member.status === 'recovered' ? 'Već je oporavljen' : t.actions.renew}</Button> : <form className="renew-form" onSubmit={onMarkRenewed}><div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div><p>Ovo će odmah povećati broj oporavljenih članova i prihod.</p><div><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div></form>}
     </aside>
