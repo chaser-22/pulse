@@ -1,5 +1,6 @@
 import type { Member } from './pulse-data';
 
+export type GymDataMode = 'basic' | 'attendance';
 export type RecoveryLifecycle = 'detected' | 'contacted' | 'renewed';
 export type RecoveryActivity = {
   contacted: number;
@@ -15,8 +16,30 @@ export type BaseMetrics = {
   recoveredRevenue: number;
 };
 
-export function getRiskMembers(members: Member[]) {
-  return members.filter((member) => member.risk !== 'low' && member.status !== 'recovered');
+export function getDataModeProfile(mode: GymDataMode) {
+  return mode === 'attendance' ? {
+    label: 'Kartice',
+    title: 'Članarine + dolasci',
+    description: 'Za gymove koji imaju kartice, QR ili izvoz dolazaka. PULSE koristi i odsustvo kao signal.',
+    riskBasis: 'Članarina, istek i dolasci',
+    usesAttendance: true,
+  } : {
+    label: 'Basic',
+    title: 'Članarine bez kartica',
+    description: 'Za gymove koji vode članove u Excelu ili ručno. PULSE koristi datume isteka i status članarine.',
+    riskBasis: 'Članarina i datum isteka',
+    usesAttendance: false,
+  };
+}
+
+function isVisibleRisk(member: Member, mode: GymDataMode) {
+  if (member.risk === 'low' || member.status === 'recovered') return false;
+  if (mode === 'basic' && member.status === 'absent') return false;
+  return true;
+}
+
+export function getRiskMembers(members: Member[], mode: GymDataMode = 'attendance') {
+  return members.filter((member) => isVisibleRisk(member, mode));
 }
 
 export function memberMatchesSearch(member: Member, search: string) {
@@ -33,9 +56,9 @@ export function memberMatchesSearch(member: Member, search: string) {
   return memberDigits.includes(queryDigits) || localDigits.includes(queryDigits);
 }
 
-export function getActionableRevenue(members: Member[]) {
+export function getActionableRevenue(members: Member[], mode: GymDataMode = 'attendance') {
   return members
-    .filter((member) => member.risk === 'high' && member.status !== 'recovered')
+    .filter((member) => member.risk === 'high' && isVisibleRisk(member, mode))
     .reduce((sum, member) => sum + member.price, 0);
 }
 
@@ -57,16 +80,16 @@ export function getRecoveryActivity(members: Member[]): RecoveryActivity {
   };
 }
 
-export function getPulseMetrics(members: Member[], base: BaseMetrics) {
-  const riskMembers = getRiskMembers(members);
+export function getPulseMetrics(members: Member[], base: BaseMetrics, mode: GymDataMode = 'attendance') {
+  const riskMembers = getRiskMembers(members, mode);
   const recovered = members.filter((member) => member.status === 'recovered');
   return {
     active: base.active + members.filter((member) => member.status !== 'expired').length,
     expiring: base.expiring + members.filter((member) => member.status === 'expiring').length,
-    absent: base.absent + members.filter((member) => member.status === 'absent').length,
+    absent: mode === 'attendance' ? base.absent + members.filter((member) => member.status === 'absent').length : 0,
     highRisk: riskMembers.filter((member) => member.risk === 'high').length,
     riskRevenue: riskMembers.reduce((sum, member) => sum + member.price, 0),
-    actionableRevenue: getActionableRevenue(members),
+    actionableRevenue: getActionableRevenue(members, mode),
     recoveredCount: base.recoveredCount + recovered.length,
     recoveredRevenue:
       base.recoveredRevenue + recovered.reduce((sum, member) => sum + (member.recoveredAmount ?? 0), 0),

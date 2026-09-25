@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { initialMembers, type Member } from '../lib/pulse-data.ts';
 import {
+  getDataModeProfile,
   getActionableRevenue,
   getPulseMetrics,
   getRecoveryActivity,
@@ -11,6 +12,22 @@ import {
 } from '../lib/pulse-logic.ts';
 
 const base = { active: 270, expiring: 13, absent: 23, recoveredCount: 12, recoveredRevenue: 445 };
+
+test('basic data mode uses only membership-date risk signals', () => {
+  const basicRiskMembers = getRiskMembers(initialMembers, 'basic');
+  assert.equal(basicRiskMembers.some((member) => member.status === 'absent'), false);
+  assert.equal(basicRiskMembers.every((member) => ['expired', 'expiring'].includes(member.status)), true);
+});
+
+test('attendance data mode keeps card/check-in absence signals', () => {
+  const attendanceRiskMembers = getRiskMembers(initialMembers, 'attendance');
+  assert.equal(attendanceRiskMembers.some((member) => member.status === 'absent'), true);
+});
+
+test('data mode profile explains the available signals', () => {
+  assert.equal(getDataModeProfile('basic').usesAttendance, false);
+  assert.equal(getDataModeProfile('attendance').usesAttendance, true);
+});
 
 test('actionable revenue includes only current high-risk non-recovered members', () => {
   assert.equal(getActionableRevenue(initialMembers), 155);
