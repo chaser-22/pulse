@@ -29,6 +29,7 @@ import {
   type RecoveryActivity,
 } from '@/lib/pulse-logic';
 import { getThemeClassName, getThemeColor, nextTheme, THEME_STORAGE_KEY, type Theme } from '@/lib/theme';
+import { useScrollReveal } from '@/hooks/use-scroll-reveal';
 
 type View = 'dashboard' | 'staff' | 'members' | 'radar';
 type Workspace = 'owner' | 'staff';
@@ -117,6 +118,8 @@ export default function Home() {
   const [workspace, setWorkspace] = useState<Workspace>('owner');
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [ready, setReady] = useState(false);
+  const [loaderLeaving, setLoaderLeaving] = useState(false);
+  const [loaderVisible, setLoaderVisible] = useState(true);
   const [mobileNav, setMobileNav] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
@@ -157,11 +160,17 @@ export default function Home() {
     } catch {
       // A corrupt local demo snapshot should never prevent the prototype from loading.
     }
+    let exitTimer = 0;
     const timer = window.setTimeout(() => {
       if (storedMembers) setMembers(storedMembers);
       setReady(true);
+      setLoaderLeaving(true);
+      exitTimer = window.setTimeout(() => setLoaderVisible(false), 900);
     }, 4000);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearTimeout(exitTimer);
+    };
   }, []);
 
   useEffect(() => {
@@ -174,6 +183,8 @@ export default function Home() {
     const timer = window.setTimeout(() => setSuccess(''), 3200);
     return () => window.clearTimeout(timer);
   }, [success]);
+
+  useScrollReveal(ready, `${workspace}:${view}`);
 
   const selectedMember = members.find((member) => member.id === selectedMemberId) ?? null;
 
@@ -325,10 +336,9 @@ export default function Home() {
     reader.readAsText(file);
   }
 
-  if (!ready) return <LoadingState />;
-
   return (
-    <main className="app-shell">
+    <>
+    <main className={`app-shell ${loaderLeaving ? 'app-shell-entering' : ''}`}>
       <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
         <div className="brand"><PulseLogo /><span className="brand-word">PULSE</span></div>
         <button className="sidebar-close" aria-label="Zatvori meni" onClick={() => setMobileNav(false)}><X /></button>
@@ -427,6 +437,8 @@ export default function Home() {
 
       {success && <output className={`success-toast ${success.includes('oporavljen') ? 'is-recovery' : ''}`} aria-live="polite"><CheckCircle2 /><span>{success}</span></output>}
     </main>
+    {loaderVisible && <LoadingState leaving={loaderLeaving} />}
+    </>
   );
 }
 
@@ -438,8 +450,8 @@ function Field({ label, required, children }: { label: string; required?: boolea
   return <label className="field"><span>{label}{required && ' *'}</span>{children}</label>;
 }
 
-function LoadingState() {
-  return <main className="pulse-loader" aria-live="polite" aria-busy="true">
+function LoadingState({ leaving = false }: { leaving?: boolean }) {
+  return <main className={`pulse-loader ${leaving ? 'is-leaving' : ''}`} aria-live="polite" aria-busy={!leaving}>
     <div className="pulse-loader-grid" aria-hidden="true" />
     <div className="pulse-loader-aura" aria-hidden="true" />
     <PulseLoaderScene />
