@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import {
-  Activity, ArrowRight, Check, CheckCircle2,
-  ChevronRight, CircleGauge, Clock3, CreditCard, FileSpreadsheet, History,
-  LayoutDashboard, LogIn, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
-  Moon, RotateCcw, Send, Settings2, ShieldAlert, Sparkles, Sun, Upload, Users, X, Zap,
+  ArrowRight, Check, CheckCircle2,
+  ChevronRight, CircleGauge, Clock3, FileSpreadsheet,
+  LayoutDashboard, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
+  Moon, RotateCcw, Send, Settings2, ShieldAlert, Sparkles, Sun, Upload, Users, X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,37 +14,34 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  copy, initialAutomations, initialMembers,
-  type Automation, type Channel, type Member, type MemberStatus, type RecoveryOutcome, type RiskLevel,
+  copy, initialMembers,
+  type Channel, type Member, type MemberStatus, type RecoveryOutcome, type RiskLevel,
 } from '@/lib/pulse-data';
 import {
-  getDataModeProfile,
   getPulseMetrics,
   getRecoveryActivity,
   getRecoveryLifecycle,
   getRiskMembers,
   memberMatchesSearch,
-  type GymDataMode,
   type RecoveryActivity,
 } from '@/lib/pulse-logic';
 import { getThemeClassName, getThemeColor, nextTheme, THEME_STORAGE_KEY, type Theme } from '@/lib/theme';
 
-type View = 'dashboard' | 'staff' | 'members' | 'radar' | 'automations';
+type View = 'dashboard' | 'staff' | 'members' | 'radar';
 type Workspace = 'owner' | 'staff';
 type Filter = 'all' | MemberStatus;
 type MemberForm = Pick<Member, 'firstName' | 'lastName' | 'phone' | 'email' | 'birthday' | 'packageName' | 'price' | 'startDate' | 'endDate' | 'status' | 'preferredChannel'>;
 
 const STORAGE_KEY = 'pulse-demo-gym-v1';
-const BASE_METRICS = { active: 270, expiring: 13, absent: 23, recoveredCount: 12, recoveredRevenue: 445 };
+const BASE_METRICS = { active: 270, expiring: 13, recoveredCount: 12, recoveredRevenue: 445 };
 const today = '2026-08-31';
 const { me: t } = copy;
 
 const filters: Array<{ id: Filter; label: string }> = [
   { id: 'all', label: 'Svi' }, { id: 'active', label: 'Aktivni' }, { id: 'expiring', label: 'Ističu' },
-  { id: 'absent', label: 'Odsutni' }, { id: 'expired', label: 'Istekli' }, { id: 'recovered', label: 'Oporavljeni' },
+  { id: 'expired', label: 'Istekli' }, { id: 'recovered', label: 'Oporavljeni' },
 ];
 
 const outcomeLabels: Record<RecoveryOutcome, string> = {
@@ -58,8 +55,7 @@ const viewMeta: Record<View, { eyebrow: string; title: string; subtitle: string 
   dashboard: { eyebrow: 'PONEDJELJAK, 31. AVGUST', title: 'Dobro jutro, Marko.', subtitle: 'Evo gdje je prihod u riziku i šta treba uraditi danas.' },
   staff: { eyebrow: 'RADNI PROSTOR RECEPCIJE', title: 'Danas na recepciji', subtitle: 'Prijavite dolaske, dodajte članove i završite kontakte koji su prioritet danas.' },
   members: { eyebrow: 'BAZA ČLANOVA', title: 'Članovi', subtitle: 'Pronađite, ažurirajte i kontaktirajte svakog člana na jednom mjestu.' },
-  radar: { eyebrow: 'JEDNOSTAVNI SIGNALI', title: 'Signali rizika', subtitle: 'Članovi su označeni po isteku, odsustvu i ručno unesenim podacima.' },
-  automations: { eyebrow: 'PORUKE ZA TIM', title: 'Predlošci poruka', subtitle: 'Pripremite poruke koje osoblje pregleda i šalje ručno.' },
+  radar: { eyebrow: 'JEDNOSTAVNI SIGNALI', title: 'Signali rizika', subtitle: 'Članovi su označeni po statusu članarine i datumu isteka.' },
 };
 
 function euro(value: number) {
@@ -94,7 +90,6 @@ function statusClass(status: MemberStatus) {
   if (status === 'expired') return 'status-expired';
   if (status === 'recovered') return 'status-recovered';
   if (status === 'expiring') return 'status-expiring';
-  if (status === 'absent') return 'status-absent';
   return 'status-active';
 }
 
@@ -112,7 +107,7 @@ function PulseLogo({ compact = false }: { compact?: boolean }) {
 function blankMemberForm(): MemberForm {
   return {
     firstName: '', lastName: '', phone: '+382 ', email: '', birthday: '', packageName: 'Standard', price: 35,
-    startDate: today, endDate: '2026-09-30', status: 'active', preferredChannel: 'WhatsApp',
+    startDate: today, endDate: '2026-09-30', status: 'active', preferredChannel: 'Poruka',
   };
 }
 
@@ -120,21 +115,18 @@ export default function Home() {
   const [view, setView] = useState<View>('dashboard');
   const [workspace, setWorkspace] = useState<Workspace>('owner');
   const [members, setMembers] = useState<Member[]>(initialMembers);
-  const [automations, setAutomations] = useState<Automation[]>(initialAutomations);
-  const [dataMode, setDataMode] = useState<GymDataMode>('basic');
   const [ready, setReady] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
-  const [channel, setChannel] = useState<Channel>('WhatsApp');
+  const [channel, setChannel] = useState<Channel>('Poruka');
   const [message, setMessage] = useState('');
   const [renewing, setRenewing] = useState(false);
   const [renewalAmount, setRenewalAmount] = useState('35');
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [memberForm, setMemberForm] = useState<MemberForm>(blankMemberForm());
-  const [automationPreviewId, setAutomationPreviewId] = useState<string | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [pilotOpen, setPilotOpen] = useState(false);
   const [success, setSuccess] = useState('');
@@ -155,21 +147,17 @@ export default function Home() {
 
   useEffect(() => {
     let storedMembers: Member[] | undefined;
-    let storedAutomations: Automation[] | undefined;
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored) as { members?: Member[]; automations?: Automation[]; dataMode?: GymDataMode };
+        const parsed = JSON.parse(stored) as { members?: Member[] };
         if (parsed.members?.length) storedMembers = parsed.members;
-        if (parsed.automations?.length) storedAutomations = parsed.automations;
-        if (parsed.dataMode === 'basic' || parsed.dataMode === 'attendance') setDataMode(parsed.dataMode);
       }
     } catch {
       // A corrupt local demo snapshot should never prevent the prototype from loading.
     }
     const timer = window.setTimeout(() => {
       if (storedMembers) setMembers(storedMembers);
-      if (storedAutomations) setAutomations(storedAutomations);
       setReady(true);
     }, 360);
     return () => window.clearTimeout(timer);
@@ -177,8 +165,8 @@ export default function Home() {
 
   useEffect(() => {
     if (!ready) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ members, automations, dataMode }));
-  }, [members, automations, dataMode, ready]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ members }));
+  }, [members, ready]);
 
   useEffect(() => {
     if (!success) return;
@@ -188,10 +176,9 @@ export default function Home() {
 
   const selectedMember = members.find((member) => member.id === selectedMemberId) ?? null;
 
-  const dataProfile = getDataModeProfile(dataMode);
-  const riskMembers = useMemo(() => getRiskMembers(members, dataMode), [members, dataMode]);
+  const riskMembers = useMemo(() => getRiskMembers(members), [members]);
   const highRiskMembers = useMemo(() => riskMembers.filter((member) => member.risk === 'high'), [riskMembers]);
-  const metrics = useMemo(() => getPulseMetrics(members, BASE_METRICS, dataMode), [members, dataMode]);
+  const metrics = useMemo(() => getPulseMetrics(members, BASE_METRICS), [members]);
   const recoveryActivity = useMemo(() => getRecoveryActivity(members), [members]);
 
   const filteredMembers = useMemo(() => {
@@ -225,8 +212,6 @@ export default function Home() {
 
   function resetDemo() {
     setMembers(initialMembers);
-    setAutomations(initialAutomations);
-    setDataMode('basic');
     setWorkspace('owner');
     setView('dashboard');
     setSelectedMemberId(null);
@@ -263,28 +248,13 @@ export default function Home() {
       ...member,
       status: 'recovered', risk: 'low', price: amount, recoveredAmount: amount, recoveredAt: today,
       startDate: today, endDate: '2026-09-30', riskReason: `Članarina obnovljena ${prettyDate(today)} uz pomoć PULSE recovery toka.`,
-      nextAction: 'Pozdravite člana pri sljedećem dolasku i pratite aktivnost naredne dvije sedmice.',
-      payments: [{ date: today, amount, method: 'Evidentirano u PULSE', note: 'Obnovljena članarina' }, ...member.payments],
+      nextAction: 'Nije potrebna akcija.',
     } : member));
     setRecoveryPulse((current) => current + 1);
     setSuccess(`${memberName} je oporavljen. ${euro(amount)} je dodato oporavljenom prihodu.`);
     setSelectedMemberId(null);
     setRenewing(false);
     setView('dashboard');
-  }
-
-  function simulateCheckin() {
-    if (!selectedMember) return;
-    const memberName = fullName(selectedMember);
-    setMembers((current) => current.map((member) => member.id === selectedMember.id ? {
-      ...member, lastVisit: today, visitsThisMonth: member.visitsThisMonth + 1,
-      attendance: [{ date: today, time: '10:38' }, ...member.attendance],
-      status: member.status === 'absent' ? 'active' : member.status,
-      risk: member.status === 'absent' ? 'low' : member.risk,
-      riskReason: member.status === 'absent' ? 'Novi dolazak je evidentiran. Rizik je smanjen i aktivnost se prati narednih 14 dana.' : member.riskReason,
-      nextAction: member.status === 'absent' ? 'Nije potrebna hitna akcija; pratite kontinuitet dolazaka.' : member.nextAction,
-    } : member));
-    setSuccess(`Dolazak za ${memberName} je evidentiran u 10:38.`);
   }
 
   function openMemberForm(member?: Member) {
@@ -312,10 +282,9 @@ export default function Home() {
     } else {
       const id = `${memberForm.firstName}-${memberForm.lastName}-${Date.now()}`.toLocaleLowerCase('me').replace(/\s+/g, '-');
       const created: Member = {
-        ...memberForm, id, price: Number(memberForm.price), risk: memberForm.status === 'expired' ? 'high' : memberForm.status === 'expiring' || memberForm.status === 'absent' ? 'medium' : 'low',
-        lastVisit: '—', visitsThisMonth: 0,
+        ...memberForm, id, price: Number(memberForm.price), risk: memberForm.status === 'expired' ? 'high' : memberForm.status === 'expiring' ? 'medium' : 'low',
         riskReason: memberForm.status === 'expired' ? 'Dodati član ima isteklu članarinu.' : 'Nema dovoljno istorije za procjenu rizika.',
-        nextAction: memberForm.status === 'expired' ? 'Pošaljite poruku za obnovu.' : 'Pratite prve dolaske.', attendance: [], payments: [],
+        nextAction: memberForm.status === 'expired' ? 'Kontaktirajte člana za obnovu.' : 'Nije potrebna akcija.',
       };
       setMembers((current) => [created, ...current]);
       setSuccess(`${created.firstName} ${created.lastName} je dodat/a u bazu.`);
@@ -337,15 +306,15 @@ export default function Home() {
         const cells = row.split(',').map((cell) => cell.trim());
         const value = (key: string) => cells[headers.indexOf(key)] ?? '';
         const statusCandidate = value('status') as MemberStatus;
-        const status: MemberStatus = ['active','expiring','absent','expired','recovered'].includes(statusCandidate) ? statusCandidate : 'active';
+        const status: MemberStatus = ['active','expiring','expired','recovered'].includes(statusCandidate) ? statusCandidate : 'active';
         const price = Number(value('price')) || 35;
-        const risk: RiskLevel = status === 'expired' ? 'high' : status === 'expiring' || status === 'absent' ? 'medium' : 'low';
+        const risk: RiskLevel = status === 'expired' ? 'high' : status === 'expiring' ? 'medium' : 'low';
         return {
           id: `csv-${Date.now()}-${index}`, firstName: value('firstname') || value('ime') || 'Novi', lastName: value('lastname') || value('prezime') || `Član ${index + 1}`,
           phone: value('phone') || value('telefon') || '+382 6X XXX XXX', email: value('email') || 'nije-unijeto@example.test', birthday: value('birthday') || '',
           status, risk, packageName: value('package') || 'Standard', price, startDate: value('startdate') || today, endDate: value('enddate') || '2026-09-30',
-          lastVisit: value('lastvisit') || '—', visitsThisMonth: 0, preferredChannel: 'WhatsApp', attendance: [], payments: [],
-          riskReason: risk === 'high' ? 'Uvezeni član ima isteklu članarinu.' : risk === 'medium' ? 'Uvezeni podaci ukazuju da član traži pažnju.' : 'Nema aktivnih signala rizika.',
+          preferredChannel: 'Poruka',
+          riskReason: risk === 'high' ? 'Uvezeni član ima isteklu članarinu.' : risk === 'medium' ? 'Članarina uskoro ističe.' : 'Nema aktivnih signala rizika.',
           nextAction: risk === 'low' ? 'Nije potrebna akcija.' : 'Provjerite podatke i kontaktirajte člana.',
         };
       });
@@ -367,7 +336,6 @@ export default function Home() {
           <NavButton active={view === 'dashboard'} icon={<LayoutDashboard />} label="Vlasnički pregled" onClick={() => goTo('dashboard')} />
           <NavButton active={view === 'members'} icon={<Users />} label={t.nav.members} count={members.length} onClick={() => goTo('members')} />
           <NavButton active={view === 'radar'} icon={<Radar />} label={t.nav.radar} count={riskMembers.length} onClick={() => goTo('radar')} />
-          <NavButton active={view === 'automations'} icon={<Zap />} label={t.nav.automations} onClick={() => goTo('automations')} />
           </> : <>
           <NavButton active={view === 'staff'} icon={<CheckCircle2 />} label="Dnevni pregled" count={riskMembers.length} onClick={() => goTo('staff')} />
           <NavButton active={view === 'members'} icon={<Users />} label={t.nav.members} count={members.length} onClick={() => goTo('members')} />
@@ -390,7 +358,6 @@ export default function Home() {
           <button className="mobile-menu" aria-label="Otvori meni" onClick={() => setMobileNav(true)}><Menu /></button>
           <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1><p>{viewMeta[view].subtitle}</p></div>
           <div className="top-actions">
-            <fieldset className="data-mode-switch"><legend className="sr-only">Tip podataka u gymu</legend><button type="button" aria-pressed={dataMode === 'basic'} className={dataMode === 'basic' ? 'active' : ''} onClick={() => setDataMode('basic')}><FileSpreadsheet /> Bez kartica</button><button type="button" aria-pressed={dataMode === 'attendance'} className={dataMode === 'attendance' ? 'active' : ''} onClick={() => setDataMode('attendance')}><CreditCard /> Sa karticama</button></fieldset>
             <button type="button" className="theme-toggle" aria-label={theme === 'dark' ? 'Uključi svijetlu temu' : 'Uključi tamnu temu'} title={theme === 'dark' ? 'Svijetla tema' : 'Tamna tema'} aria-pressed={theme === 'light'} onClick={toggleTheme}>
               <span className="theme-toggle-glow" aria-hidden="true" /><Sun className="theme-sun" aria-hidden="true" /><Moon className="theme-moon" aria-hidden="true" />
             </button>
@@ -401,11 +368,10 @@ export default function Home() {
           <input ref={fileInputRef} hidden type="file" accept=".csv,text/csv" onChange={(event) => { const file = event.target.files?.[0]; if (file) importCsv(file); event.target.value = ''; }} />
         </header>
 
-        {view === 'dashboard' && <Dashboard metrics={metrics} recoveryActivity={recoveryActivity} highRiskMembers={highRiskMembers} members={members} dataMode={dataMode} dataProfile={dataProfile} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} onOpenMember={openMember} onNavigate={goTo} onPilot={() => setPilotOpen(true)} />}
+        {view === 'dashboard' && <Dashboard metrics={metrics} recoveryActivity={recoveryActivity} highRiskMembers={highRiskMembers} members={members} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} onOpenMember={openMember} onNavigate={goTo} onPilot={() => setPilotOpen(true)} />}
         {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onOutcome={recordOutcome} onAddMember={() => openMemberForm()} onFindMember={() => goTo('members')} />}
-        {view === 'members' && <MembersScreen members={filteredMembers} total={members.length} filter={filter} search={search} dataMode={dataMode} onFilter={setFilter} onSearch={setSearch} onOpenMember={openMember} onImport={() => fileInputRef.current?.click()} />}
-        {view === 'radar' && <RadarScreen members={riskMembers} dataProfile={dataProfile} onOpenMember={openMember} />}
-        {view === 'automations' && <AutomationsScreen automations={automations} onToggle={(id, enabled) => { setAutomations((current) => current.map((item) => item.id === id ? { ...item, enabled, lastActivity: enabled ? 'Aktivan predložak' : 'Pauzirano' } : item)); setSuccess(enabled ? 'Predložak je aktivan.' : 'Predložak je pauziran.'); }} onPreview={setAutomationPreviewId} />}
+        {view === 'members' && <MembersScreen members={filteredMembers} total={members.length} filter={filter} search={search} onFilter={setFilter} onSearch={setSearch} onOpenMember={openMember} onImport={() => fileInputRef.current?.click()} />}
+        {view === 'radar' && <RadarScreen members={riskMembers} onOpenMember={openMember} />}
       </section>
 
       <Dialog open={Boolean(selectedMember)} onOpenChange={(open) => { if (!open) setSelectedMemberId(null); }}>
@@ -413,8 +379,7 @@ export default function Home() {
           {selectedMember && (
             <MemberProfile
               member={selectedMember} channel={channel} message={message} renewing={renewing} renewalAmount={renewalAmount}
-              dataMode={dataMode}
-              onChannel={setChannel} onMessage={setMessage} onQueue={queueMessage} onCheckin={simulateCheckin}
+              onChannel={setChannel} onMessage={setMessage} onQueue={queueMessage}
               onEdit={() => openMemberForm(selectedMember)} onRenew={() => setRenewing(true)} onCancelRenew={() => setRenewing(false)}
               onRenewalAmount={setRenewalAmount} onMarkRenewed={markRenewed}
             />
@@ -436,27 +401,16 @@ export default function Home() {
               <Field label="Početak"><Input type="date" value={memberForm.startDate} onChange={(e) => setMemberForm({ ...memberForm, startDate: e.target.value })} /></Field>
               <Field label="Ističe"><Input type="date" value={memberForm.endDate} onChange={(e) => setMemberForm({ ...memberForm, endDate: e.target.value })} /></Field>
               <Field label="Status"><select className="select-input" value={memberForm.status} onChange={(e) => setMemberForm({ ...memberForm, status: e.target.value as MemberStatus })}>{Object.entries(t.statuses).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></Field>
-              <Field label="Preferirani kanal"><select className="select-input" value={memberForm.preferredChannel} onChange={(e) => setMemberForm({ ...memberForm, preferredChannel: e.target.value as Channel })}><option>WhatsApp</option><option>Viber</option><option>SMS</option></select></Field>
+              <Field label="Preferirani kanal"><select className="select-input" value={memberForm.preferredChannel} onChange={(e) => setMemberForm({ ...memberForm, preferredChannel: e.target.value as Channel })}><option>Telefon</option><option>Poruka</option><option>E-mail</option></select></Field>
             </div>
             <DialogFooter className="form-footer"><Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Odustani</Button><Button type="submit" className="pulse-button">{editingId ? 'Sačuvaj izmjene' : 'Dodaj člana'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(automationPreviewId)} onOpenChange={(open) => { if (!open) setAutomationPreviewId(null); }}>
-        <DialogContent className="automation-dialog">
-          {(() => { const automation = automations.find((item) => item.id === automationPreviewId); if (!automation) return null; return <>
-            <DialogHeader><DialogTitle>{automation.title}</DialogTitle><DialogDescription>{automation.trigger} · {automation.audience}</DialogDescription></DialogHeader>
-            <div className="preview-phone"><div className="preview-phone-top"><span>{automation.channel}</span><span>10:42</span></div><div className="message-bubble">{automation.message.replace('{{ime}}', 'Miloš').replace('{{datum}}', '03.09.2026.')}</div><small>Pregled — poruka neće biti stvarno poslata</small></div>
-          <div className="activity-note"><History /><span><strong>Status predloška</strong>{automation.lastActivity}</span></div>
-            <DialogFooter><Button onClick={() => { setAutomationPreviewId(null); setSuccess('Pregled zatvoren. Nijedna poruka nije poslata.'); }} className="pulse-button">U redu</Button></DialogFooter>
-          </>; })()}
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={resetOpen} onOpenChange={setResetOpen}>
         <DialogContent className="confirm-dialog">
-          <DialogHeader><span className="confirm-icon"><RotateCcw /></span><DialogTitle>Resetovati demo?</DialogTitle><DialogDescription>Sve probne poruke, ishodi, dolasci i obnove biće vraćeni na početno stanje. Ovo utiče samo na podatke u ovom pregledaču.</DialogDescription></DialogHeader>
+          <DialogHeader><span className="confirm-icon"><RotateCcw /></span><DialogTitle>Resetovati demo?</DialogTitle><DialogDescription>Sve probne poruke, ishodi i obnove biće vraćeni na početno stanje. Ovo utiče samo na podatke u ovom pregledaču.</DialogDescription></DialogHeader>
           <DialogFooter><Button variant="outline" onClick={() => setResetOpen(false)}>Odustani</Button><Button className="pulse-button" onClick={resetDemo}>Resetuj i pripremi demo</Button></DialogFooter>
         </DialogContent>
       </Dialog>
@@ -464,8 +418,8 @@ export default function Home() {
       <Dialog open={pilotOpen} onOpenChange={setPilotOpen}>
         <DialogContent className="pilot-dialog">
           <DialogHeader><Badge className="pilot-badge">PILOT SA VAŠIM PODACIMA</Badge><DialogTitle>Provjerite koliko prihoda PULSE može vratiti vašoj teretani.</DialogTitle><DialogDescription>Za početak je dovoljan jednostavan Excel ili CSV spisak. Nije potrebna promjena postojećeg sistema.</DialogDescription></DialogHeader>
-          <div className="pilot-steps"><div><span>01</span><p><strong>Uvezemo članove</strong>Ime, datum isteka, posljednji dolazak ako postoji i cijena članarine.</p></div><div><span>02</span><p><strong>PULSE označava osnovne signale</strong>Dobijate listu članova kojima je istekla članarina, uskoro ističe ili su dugo odsutni.</p></div><div><span>03</span><p><strong>Tim prati rezultat</strong>Ručno bilježite kontakt, odgovor, obnovu i oporavljeni prihod.</p></div></div>
-          <div className="pilot-note"><ShieldAlert /><span><strong>Vaši podaci ostaju pod vašom kontrolom.</strong>Pilot radi i bez naprednih integracija; dovoljni su članovi i datumi isteka.</span></div>
+          <div className="pilot-steps"><div><span>01</span><p><strong>Uvezemo članove</strong>Ime, telefon, datum isteka i cijena članarine.</p></div><div><span>02</span><p><strong>PULSE označava osnovne signale</strong>Dobijate listu članova kojima je istekla članarina ili uskoro ističe.</p></div><div><span>03</span><p><strong>Tim prati rezultat</strong>Ručno bilježite kontakt, odgovor, obnovu i oporavljeni prihod.</p></div></div>
+          <div className="pilot-note"><ShieldAlert /><span><strong>Vaši podaci ostaju pod vašom kontrolom.</strong>Pilot radi iz jednostavnog CSV/Excel spiska članova.</span></div>
           <DialogFooter><Button variant="outline" onClick={() => setPilotOpen(false)}>Zatvori</Button><Button className="pulse-button" onClick={() => { setPilotOpen(false); setView('members'); setWorkspace('owner'); setSuccess('Otvoren je ekran za uvoz članova iz CSV-a.'); }}><Upload /> Pogledaj kako izgleda uvoz</Button></DialogFooter>
         </DialogContent>
       </Dialog>
@@ -494,10 +448,10 @@ function RecoveryLifecycle({ member }: { member: Member }) {
   return <ol className="recovery-lifecycle" aria-label="Status oporavka">{steps.map(([id, label], index) => <li className={index <= currentIndex ? 'complete' : ''} aria-current={id === current ? 'step' : undefined} key={id}><i />{label}</li>)}</ol>;
 }
 
-function Dashboard({ metrics, recoveryActivity, highRiskMembers, dataMode, dataProfile, recoveryPulse, signalCount, onOpenMember, onNavigate, onPilot }: {
+function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, signalCount, onOpenMember, onNavigate, onPilot }: {
   metrics: ReturnType<typeof getPulseMetrics>;
   recoveryActivity: RecoveryActivity;
-  highRiskMembers: Member[]; members: Member[]; dataMode: GymDataMode; dataProfile: ReturnType<typeof getDataModeProfile>; recoveryPulse: number; signalCount: number; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void; onPilot: () => void;
+  highRiskMembers: Member[]; members: Member[]; recoveryPulse: number; signalCount: number; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void; onPilot: () => void;
 }) {
   const collectedRevenue = 10320 + metrics.recoveredRevenue;
   const monthlyTarget = 12500;
@@ -509,7 +463,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, dataMode, dataP
         <h2 id="owner-risk-title">{euro(metrics.riskRevenue)}</h2>
         <p className="hero-statement">zahtijeva tvoju pažnju</p>
         <p className="actionable-copy">Od toga je <strong>{euro(metrics.actionableRevenue)}</strong> vezano za članove visokog prioriteta koje možeš kontaktirati danas.</p>
-        <div className="mode-note"><span>{dataProfile.label}</span>{dataProfile.riskBasis}</div>
+        <div className="mode-note"><span>CSV</span>Članarina i datum isteka</div>
         <button type="button" className="hero-link" onClick={() => onNavigate('radar')}>Pogledaj članove <ArrowRight /></button>
         <dl className="hero-outcomes">
           <div><dt>Oporavljeno</dt><dd className="number-shift" key={metrics.recoveredRevenue}>{euro(metrics.recoveredRevenue)}</dd></div>
@@ -545,7 +499,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, dataMode, dataP
     <section className="owner-metrics panel-card" aria-label="Ključne operativne metrike">
       <Metric label="Aktivni članovi" value={String(metrics.active)} hint="+8 ovog mjeseca" />
       <Metric label="Ističe za 7 dana" value={String(metrics.expiring)} hint="6 nije kontaktirano" tone="warning" />
-      {dataMode === 'attendance' ? <Metric label="Odsutni 14+ dana" value={String(metrics.absent)} hint="po karticama" tone="warning" /> : <Metric label="Podaci o dolascima" value="Opcionalno" hint="nije potrebno za start" />}
+      <Metric label="Izvor podataka" value="CSV" hint="bez integracija" />
       <Metric label="Visoki rizik" value={String(metrics.highRisk)} hint="akcija danas" tone="danger" />
       <Metric label="Obnovljeni" value={String(metrics.recoveredCount)} hint="ovog mjeseca" tone="success" />
       <Metric label="Oporavljen prihod" value={euro(metrics.recoveredRevenue)} hint="ovog mjeseca" tone="success" />
@@ -568,7 +522,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, dataMode, dataP
         </div>
       </section>
     </div>
-    <section className="pilot-footer"><div><strong>{dataProfile.title}</strong><span>{dataProfile.description}</span></div><Button variant="outline" onClick={onPilot}>Pogledaj pilot proces <ArrowRight /></Button></section>
+    <section className="pilot-footer"><div><strong>CSV pilot bez integracija</strong><span>Za početak su dovoljni članovi, telefoni, cijene i datumi isteka članarine.</span></div><Button variant="outline" onClick={onPilot}>Pogledaj pilot proces <ArrowRight /></Button></section>
   </div>;
 }
 
@@ -613,10 +567,9 @@ function Metric({ label, value, hint, tone = 'neutral' }: { label: string; value
   return <div className={`metric-line tone-${tone}`}><span>{label}</span><strong>{value}</strong><small>{hint}</small></div>;
 }
 
-function MembersScreen({ members, total, filter, search, dataMode, onFilter, onSearch, onOpenMember, onImport }: {
-  members: Member[]; total: number; filter: Filter; search: string; dataMode: GymDataMode; onFilter: (filter: Filter) => void; onSearch: (search: string) => void; onOpenMember: (member: Member) => void; onImport: () => void;
+function MembersScreen({ members, total, filter, search, onFilter, onSearch, onOpenMember, onImport }: {
+  members: Member[]; total: number; filter: Filter; search: string; onFilter: (filter: Filter) => void; onSearch: (search: string) => void; onOpenMember: (member: Member) => void; onImport: () => void;
 }) {
-  const attendanceMode = dataMode === 'attendance';
   return <div className="screen-stack">
     <section className="members-toolbar panel-card">
       <div className="search-box"><Search /><Input aria-label="Pretraži članove" placeholder="Pretraži ime, telefon ili e-mail…" value={search} onChange={(event) => onSearch(event.target.value)} />{search && <button aria-label="Obriši pretragu" onClick={() => onSearch('')}><X /></button>}</div>
@@ -625,32 +578,23 @@ function MembersScreen({ members, total, filter, search, dataMode, onFilter, onS
     </section>
     <section className="panel-card table-card">
       {members.length ? <>
-        <div className="members-table-wrap"><table className="members-table"><thead><tr><th>Član</th><th>Status</th><th>Paket</th><th>{attendanceMode ? 'Posljednji dolazak' : 'Podaci o dolascima'}</th><th>Ističe</th><th>Rizik</th><th><span className="sr-only">Otvori</span></th></tr></thead><tbody>{members.map((member) => <tr key={member.id} onClick={() => onOpenMember(member)}><td><span className="avatar">{initials(member)}</span><span><strong>{fullName(member)}</strong><small>{member.phone}</small></span></td><td><span className={`status-pill ${statusClass(member.status)}`}>{t.statuses[member.status]}</span></td><td><strong>{member.packageName}</strong><small>{euro(member.price)} / mj.</small></td><td>{attendanceMode ? member.lastVisit === '—' ? '—' : prettyDate(member.lastVisit) : 'Nije potrebno'}<small>{attendanceMode ? `${member.visitsThisMonth} posjeta ovog mj.` : 'može se dodati kasnije'}</small></td><td>{prettyDate(member.endDate)}</td><td><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nizak'}</span></td><td><button type="button" className="row-open-button" aria-label={`Otvori profil: ${fullName(member)}`} onClick={(event) => { event.stopPropagation(); onOpenMember(member); }}><ChevronRight /></button></td></tr>)}</tbody></table></div>
-        <div className="mobile-member-list">{members.map((member) => <button type="button" className="mobile-member-card" key={member.id} onClick={() => onOpenMember(member)}><span className="avatar">{initials(member)}</span><span className="mobile-member-main"><span><strong>{fullName(member)}</strong><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nizak'}</span></span><small>{member.packageName} · {euro(member.price)} mjesečno</small><span className="mobile-member-meta"><span><b>Status</b>{t.statuses[member.status]}</span><span><b>Ističe</b>{prettyDate(member.endDate)}</span><span><b>{attendanceMode ? 'Posjete' : 'Dolasci'}</b>{attendanceMode ? `${member.visitsThisMonth} ovaj mj.` : 'opciono'}</span></span></span><ChevronRight /></button>)}</div>
+        <div className="members-table-wrap"><table className="members-table"><thead><tr><th>Član</th><th>Status</th><th>Paket</th><th>Početak</th><th>Ističe</th><th>Rizik</th><th><span className="sr-only">Otvori</span></th></tr></thead><tbody>{members.map((member) => <tr key={member.id} onClick={() => onOpenMember(member)}><td><span className="avatar">{initials(member)}</span><span><strong>{fullName(member)}</strong><small>{member.phone}</small></span></td><td><span className={`status-pill ${statusClass(member.status)}`}>{t.statuses[member.status]}</span></td><td><strong>{member.packageName}</strong><small>{euro(member.price)} / mj.</small></td><td>{prettyDate(member.startDate)}</td><td>{prettyDate(member.endDate)}</td><td><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nizak'}</span></td><td><button type="button" className="row-open-button" aria-label={`Otvori profil: ${fullName(member)}`} onClick={(event) => { event.stopPropagation(); onOpenMember(member); }}><ChevronRight /></button></td></tr>)}</tbody></table></div>
+        <div className="mobile-member-list">{members.map((member) => <button type="button" className="mobile-member-card" key={member.id} onClick={() => onOpenMember(member)}><span className="avatar">{initials(member)}</span><span className="mobile-member-main"><span><strong>{fullName(member)}</strong><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nizak'}</span></span><small>{member.packageName} · {euro(member.price)} mjesečno</small><span className="mobile-member-meta"><span><b>Status</b>{t.statuses[member.status]}</span><span><b>Ističe</b>{prettyDate(member.endDate)}</span><span><b>Cijena</b>{euro(member.price)}</span></span></span><ChevronRight /></button>)}</div>
       </> : <EmptyState icon={<Search />} title="Nema rezultata" text="Pokušajte drugi izraz ili uklonite aktivni filter." action="Uvezi članove iz CSV-a" onAction={onImport} />}
     </section>
-    <div className="csv-note"><FileSpreadsheet /><span><strong>CSV uvoz je spreman za oba tipa gymova.</strong> Bez kartica su dovoljne kolone: firstname, lastname, phone, status, price, startdate, enddate. Sa karticama dodajte lastvisit kada postoji.</span></div>
+    <div className="csv-note"><FileSpreadsheet /><span><strong>CSV uvoz koristi samo članove i članarine.</strong> Kolone: firstname, lastname, phone, email, status, price, startdate, enddate.</span></div>
   </div>;
 }
 
-function RadarScreen({ members, dataProfile, onOpenMember }: { members: Member[]; dataProfile: ReturnType<typeof getDataModeProfile>; onOpenMember: (member: Member) => void }) {
+function RadarScreen({ members, onOpenMember }: { members: Member[]; onOpenMember: (member: Member) => void }) {
   const high = members.filter((member) => member.risk === 'high');
   const medium = members.filter((member) => member.risk === 'medium');
   return <div className="screen-stack radar-screen">
-    <section className="radar-summary panel-card" aria-label="Sažetak rizika"><div><p className="eyebrow">RED ZA AKCIJU</p><h2>Članovi sa jednostavnim signalima</h2><p>{dataProfile.usesAttendance ? 'Lista koristi članarinu, datum isteka i dolaske sa kartica ili check-in sistema.' : 'Lista koristi članarinu i datume isteka, bez pretpostavke da gym ima kartice ili check-in sistem.'}</p></div><dl><div><dt>Ukupno</dt><dd>{members.length}</dd></div><div className="high"><dt>Hitno</dt><dd>{high.length}</dd></div><div className="medium"><dt>Za praćenje</dt><dd>{medium.length}</dd></div></dl></section>
+    <section className="radar-summary panel-card" aria-label="Sažetak rizika"><div><p className="eyebrow">RED ZA AKCIJU</p><h2>Članovi sa signalima članarine</h2><p>Lista koristi samo status članarine i datum isteka iz CSV/Excel fajla.</p></div><dl><div><dt>Ukupno</dt><dd>{members.length}</dd></div><div className="high"><dt>Hitno</dt><dd>{high.length}</dd></div><div className="medium"><dt>Za praćenje</dt><dd>{medium.length}</dd></div></dl></section>
     <section className="risk-queue panel-card">
-      <div className="section-heading"><div><p className="eyebrow">LISTA ZA TIM</p><h2>{members.length} članova za provjeru</h2></div><span className="sorted-label"><CircleGauge /> {dataProfile.riskBasis}</span></div>
+      <div className="section-heading"><div><p className="eyebrow">LISTA ZA TIM</p><h2>{members.length} članova za provjeru</h2></div><span className="sorted-label"><CircleGauge /> Članarina i datum isteka</span></div>
       {members.length ? <div className="risk-cards">{members.map((member, index) => <article className={`risk-member-card ${member.risk === 'high' ? 'is-high' : ''}`} key={member.id}><span className="risk-order">{String(index + 1).padStart(2, '0')}</span><div className="risk-member-identity"><span className="avatar large">{initials(member)}</span><span><h3>{fullName(member)}</h3><span className={`status-pill ${statusClass(member.status)}`}>{t.statuses[member.status]}</span></span></div><div className="risk-reason"><small>SIGNAL</small><p>{member.riskReason}</p></div><div className="risk-next"><small>PREDLOG PORUKE</small><p>{member.nextAction}</p></div><div className="risk-value"><small>ČLANARINA</small><strong>{euro(member.price)}</strong></div><Button variant="outline" onClick={() => onOpenMember(member)}>Otvori profil <ChevronRight /></Button></article>)}</div> : <EmptyState icon={<CheckCircle2 />} title="Lista je čista" text="Nijedan član trenutno nema aktivan signal." />}
     </section>
-  </div>;
-}
-
-function AutomationsScreen({ automations, onToggle, onPreview }: { automations: Automation[]; onToggle: (id: string, enabled: boolean) => void; onPreview: (id: string) => void }) {
-  const queued = automations.reduce((sum, item) => sum + item.sentThisMonth, 0);
-  return <div className="screen-stack automation-screen">
-    <section className="automation-overview panel-card"><div><p className="eyebrow">OVAJ MJESEC</p><h2>{queued} nacrta poruka</h2><p>Ovo su predlošci koje tim može pregledati, kopirati i poslati ručno.</p></div><dl className="overview-stats"><div><dt>Aktivni</dt><dd>{automations.filter((item) => item.enabled).length}</dd></div><div><dt>Pauzirani</dt><dd>{automations.length - automations.filter((item) => item.enabled).length}</dd></div></dl></section>
-    <section className="automations-list panel-card">{automations.map((automation) => <article className={`automation-row ${automation.enabled ? '' : 'disabled'}`} key={automation.id}><div className="automation-main"><h3>{automation.title}</h3><p>{automation.trigger}</p></div><div className="automation-meta"><span><small>KOME</small>{automation.audience}</span><span><small>KANAL</small>{automation.channel}</span><span><small>STATUS</small>{automation.lastActivity}</span></div><label className="switch-label"><Switch checked={automation.enabled} onCheckedChange={(checked) => onToggle(automation.id, checked)} /><span>{automation.enabled ? 'Aktivan' : 'Pauziran'}</span></label><Button variant="outline" onClick={() => onPreview(automation.id)}><MessageCircle /> Pregled poruke</Button></article>)}</section>
-    <div className="demo-boundary"><ShieldAlert /><span><strong>Realna pilot granica</strong>PULSE priprema tekst i evidenciju. Stvarno slanje ostaje ručni korak tima.</span></div>
   </div>;
 }
 
@@ -658,29 +602,28 @@ function EmptyState({ icon, title, text, action, onAction }: { icon: React.React
   return <div className="empty-state"><span>{icon}</span><h3>{title}</h3><p>{text}</p>{action && <Button variant="outline" onClick={onAction}>{action}</Button>}</div>;
 }
 
-function MemberProfile({ member, channel, message, renewing, renewalAmount, dataMode, onChannel, onMessage, onQueue, onCheckin, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
-  member: Member; channel: Channel; message: string; renewing: boolean; renewalAmount: string; dataMode: GymDataMode;
-  onChannel: (channel: Channel) => void; onMessage: (message: string) => void; onQueue: () => void; onCheckin: () => void; onEdit: () => void;
+function MemberProfile({ member, channel, message, renewing, renewalAmount, onChannel, onMessage, onQueue, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
+  member: Member; channel: Channel; message: string; renewing: boolean; renewalAmount: string;
+  onChannel: (channel: Channel) => void; onMessage: (message: string) => void; onQueue: () => void; onEdit: () => void;
   onRenew: () => void; onCancelRenew: () => void; onRenewalAmount: (amount: string) => void; onMarkRenewed: (event: SyntheticEvent<HTMLFormElement>) => void;
 }) {
-  const attendanceMode = dataMode === 'attendance';
   return <div className="profile-layout">
     <div className="profile-main">
       <DialogHeader className="profile-header"><div className="avatar profile-avatar">{initials(member)}</div><div><div className="profile-badges"><span className={`status-pill ${statusClass(member.status)}`}>{t.statuses[member.status]}</span><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki rizik' : member.risk === 'medium' ? 'Srednji rizik' : 'Nizak rizik'}</span></div><DialogTitle>{fullName(member)}</DialogTitle><DialogDescription>{member.packageName} · {euro(member.price)} mjesečno</DialogDescription></div></DialogHeader>
-      <div className="profile-quick-actions"><Button variant="outline" onClick={onCheckin}><LogIn /> {t.actions.checkin}</Button><Button variant="outline" onClick={onEdit}><Pencil /> Uredi podatke</Button></div>
+      <div className="profile-quick-actions"><Button variant="outline" onClick={onEdit}><Pencil /> Uredi podatke</Button></div>
     </div>
     <section className="profile-context">
       <section className={`profile-risk ${riskClass(member.risk)}`}>
         <div><p className="eyebrow">PULSE SIGNAL</p><h3>{member.risk === 'high' ? 'Potrebna je provjera danas' : member.risk === 'medium' ? 'Kontaktirajte prije isteka' : 'Nema hitnog signala'}</h3></div>
-        <details open={member.risk === 'high' ? true : undefined}><summary>Zašto?</summary><p>{member.riskReason}</p><dl><div><dt>Ističe</dt><dd>{prettyDate(member.endDate)}</dd></div><div><dt>{attendanceMode ? 'Posljednji dolazak' : 'Dolasci'}</dt><dd>{attendanceMode ? member.lastVisit === '—' ? 'Nije evidentiran' : prettyDate(member.lastVisit) : 'Nije obavezno'}</dd></div></dl><span><strong>Preporučeni potez</strong>{member.nextAction}</span></details>
+        <details open={member.risk === 'high' ? true : undefined}><summary>Zašto?</summary><p>{member.riskReason}</p><dl><div><dt>Početak</dt><dd>{prettyDate(member.startDate)}</dd></div><div><dt>Ističe</dt><dd>{prettyDate(member.endDate)}</dd></div></dl><span><strong>Preporučeni potez</strong>{member.nextAction}</span></details>
       </section>
       <section className="member-recovery-path" aria-labelledby="member-recovery-title"><p className="eyebrow" id="member-recovery-title">TOK OPORAVKA</p><RecoveryLifecycle member={member} /></section>
-      <div className="profile-info-grid"><section><h3>Članarina i aktivnost</h3><dl className="profile-info-list"><Detail label="Paket" value={`${member.packageName} · ${euro(member.price)}`} sub={`${prettyDate(member.startDate)} — ${prettyDate(member.endDate)}`} /><Detail label={attendanceMode ? 'Posljednji dolazak' : 'Dolasci / kartice'} value={attendanceMode ? member.lastVisit === '—' ? 'Nema dolazaka' : prettyDate(member.lastVisit) : 'Nije povezano'} sub={attendanceMode ? `${member.visitsThisMonth} posjeta ovog mjeseca` : 'PULSE radi i bez ovih podataka'} /></dl></section><section><h3>Kontakt podaci</h3><dl className="profile-info-list"><Detail label="Telefon" value={member.phone} sub={member.preferredChannel} /><Detail label="E-mail" value={member.email} sub={member.birthday ? `Rođendan ${prettyDate(member.birthday)}` : 'Datum rođenja nije unijet'} /></dl></section></div>
+      <div className="profile-info-grid"><section><h3>Članarina</h3><dl className="profile-info-list"><Detail label="Paket" value={`${member.packageName} · ${euro(member.price)}`} sub={`${prettyDate(member.startDate)} — ${prettyDate(member.endDate)}`} /><Detail label="Status" value={t.statuses[member.status]} sub="iz CSV/Excel evidencije" /></dl></section><section><h3>Kontakt podaci</h3><dl className="profile-info-list"><Detail label="Telefon" value={member.phone} sub={member.preferredChannel} /><Detail label="E-mail" value={member.email} sub={member.birthday ? `Rođendan ${prettyDate(member.birthday)}` : 'Datum rođenja nije unijet'} /></dl></section></div>
     </section>
     <aside className="recovery-panel">
       <div className="recovery-panel-title"><span><MessageCircle /></span><div><p className="eyebrow">RECOVERY AKCIJA</p><h2>Pripremi poruku</h2></div></div>
       <p className="panel-copy">Personalizujte prijedlog. Poruka će biti samo stavljena u lokalni red.</p>
-      <fieldset className="channel-tabs"><legend className="sr-only">Izaberite kanal</legend>{(['WhatsApp','Viber','SMS'] as Channel[]).map((item) => <button type="button" className={channel === item ? 'active' : ''} key={item} onClick={() => onChannel(item)}>{item}</button>)}</fieldset>
+      <fieldset className="channel-tabs"><legend className="sr-only">Izaberite kanal</legend>{(['Telefon','Poruka','E-mail'] as Channel[]).map((item) => <button type="button" className={channel === item ? 'active' : ''} key={item} onClick={() => onChannel(item)}>{item}</button>)}</fieldset>
       <label className="message-field"><span>PORUKA ZA {member.firstName.toLocaleUpperCase('me')}</span><Textarea value={message} onChange={(event) => onMessage(event.target.value)} rows={7} /></label>
       <div className="message-meta"><span>{message.length} znakova</span><span><Sparkles /> PULSE prijedlog</span></div>
       {member.queuedMessage && <div className="queued-state"><CheckCircle2 /><span><strong>Poruka je u redu</strong>{member.queuedMessage.channel} · {member.queuedMessage.queuedAt}</span></div>}
@@ -689,7 +632,7 @@ function MemberProfile({ member, channel, message, renewing, renewalAmount, data
       <div className="recovery-divider"><span>NAKON OBNOVE</span></div>
       {!renewing ? <Button variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}><CheckCircle2 /> {member.status === 'recovered' ? 'Već je oporavljen' : t.actions.renew}</Button> : <form className="renew-form" onSubmit={onMarkRenewed}><div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div><p>Ovo će odmah povećati broj oporavljenih članova i prihod.</p><div><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div></form>}
     </aside>
-    <div className="profile-history-grid">{attendanceMode && <section><div className="subsection-title"><Activity /><h3>Istorija dolazaka</h3></div>{member.attendance.length ? <div className="timeline">{member.attendance.slice(0, 5).map((visit, index) => <div key={`${visit.date}-${index}`}><i /><span><strong>{prettyDate(visit.date)}</strong><small>{visit.time}</small></span></div>)}</div> : <p className="muted-empty">Još nema evidentiranih dolazaka.</p>}</section>}<section><div className="subsection-title"><CreditCard /><h3>Istorija plaćanja</h3></div>{member.payments.length ? <div className="payment-list">{member.payments.slice(0, 4).map((payment, index) => <div key={`${payment.date}-${index}`}><span><strong>{euro(payment.amount)}</strong><small>{prettyDate(payment.date)} · {payment.method}</small></span><CheckCircle2 /></div>)}</div> : <p className="muted-empty">Još nema evidentiranih uplata.</p>}</section>{!attendanceMode && <section><div className="subsection-title"><FileSpreadsheet /><h3>Basic pilot</h3></div><p className="muted-empty">Za ovaj tip gyma PULSE ne traži kartice. Fokus je na isteku članarine, ručnom kontaktu i obnovi.</p></section>}</div>
+    <div className="profile-history-grid"><section><div className="subsection-title"><FileSpreadsheet /><h3>CSV pilot</h3></div><p className="muted-empty">Signal dolazi samo iz statusa članarine i datuma isteka.</p></section></div>
   </div>;
 }
 

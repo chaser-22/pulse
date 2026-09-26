@@ -9,7 +9,6 @@ test('each PULSE view receives a distinct, task-appropriate atmosphere preset', 
   assert.equal(getAtmospherePreset('staff', 'staff'), 'task-lane');
   assert.equal(getAtmospherePreset('members', 'owner'), 'member-field');
   assert.equal(getAtmospherePreset('radar', 'owner'), 'radar-sweep');
-  assert.equal(getAtmospherePreset('automations', 'owner'), 'message-flow');
 });
 
 test('atmosphere frames advance predictably and amplify a recovery pulse', () => {

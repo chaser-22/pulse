@@ -159,7 +159,7 @@ export default function PageAtmosphereScene({
       const current = latestRef.current;
       const preset = getAtmospherePreset(current.view, current.workspace);
       const motion = getAtmosphereFrame(preset, now - startedAt, Math.min(current.recoveryPulse, 1));
-      const laneMode = preset === 'task-lane' || preset === 'message-flow';
+      const laneMode = preset === 'task-lane';
       const ambient = current.surface === 'ambient';
 
       boardGroup.visible = !ambient;

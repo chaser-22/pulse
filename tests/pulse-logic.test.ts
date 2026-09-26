@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { initialMembers, type Member } from '../lib/pulse-data.ts';
 import {
-  getDataModeProfile,
   getActionableRevenue,
   getPulseMetrics,
   getRecoveryActivity,
@@ -11,31 +10,20 @@ import {
   memberMatchesSearch,
 } from '../lib/pulse-logic.ts';
 
-const base = { active: 270, expiring: 13, absent: 23, recoveredCount: 12, recoveredRevenue: 445 };
+const base = { active: 270, expiring: 13, recoveredCount: 12, recoveredRevenue: 445 };
 
-test('basic data mode uses only membership-date risk signals', () => {
-  const basicRiskMembers = getRiskMembers(initialMembers, 'basic');
-  assert.equal(basicRiskMembers.some((member) => member.status === 'absent'), false);
-  assert.equal(basicRiskMembers.every((member) => ['expired', 'expiring'].includes(member.status)), true);
-});
-
-test('attendance data mode keeps card/check-in absence signals', () => {
-  const attendanceRiskMembers = getRiskMembers(initialMembers, 'attendance');
-  assert.equal(attendanceRiskMembers.some((member) => member.status === 'absent'), true);
-});
-
-test('data mode profile explains the available signals', () => {
-  assert.equal(getDataModeProfile('basic').usesAttendance, false);
-  assert.equal(getDataModeProfile('attendance').usesAttendance, true);
+test('risk queue uses only membership-date signals', () => {
+  const riskMembers = getRiskMembers(initialMembers);
+  assert.equal(riskMembers.every((member) => ['expired', 'expiring'].includes(member.status)), true);
 });
 
 test('actionable revenue includes only current high-risk non-recovered members', () => {
-  assert.equal(getActionableRevenue(initialMembers), 155);
+  assert.equal(getActionableRevenue(initialMembers), 80);
 });
 
 test('risk queue excludes recovered members', () => {
   const riskMembers = getRiskMembers(initialMembers);
-  assert.equal(riskMembers.length, 12);
+  assert.equal(riskMembers.length, 7);
   assert.ok(riskMembers.every((member) => member.risk !== 'low' && member.status !== 'recovered'));
 });
 
@@ -50,7 +38,7 @@ test('lifecycle advances from detected to contacted to renewed', () => {
 
 test('activity uses only recorded member state', () => {
   const members: Member[] = [
-    { ...initialMembers[0], queuedMessage: { channel: 'WhatsApp', text: 'Test', queuedAt: 'Danas' } },
+    { ...initialMembers[0], queuedMessage: { channel: 'Poruka', text: 'Test', queuedAt: 'Danas' } },
     { ...initialMembers[1], recoveryOutcome: 'follow_up', followUpAt: 'Sjutra' },
     { ...initialMembers[15], status: 'recovered', recoveredAmount: 40 },
   ];
@@ -70,10 +58,10 @@ test('renewal updates the derived financial picture', () => {
 });
 
 test('member search accepts local and international phone formats', () => {
-  const jelena = initialMembers.find((member) => member.id === 'jelena-popovic');
-  assert.ok(jelena);
-  assert.equal(memberMatchesSearch(jelena, '069 331 507'), true);
-  assert.equal(memberMatchesSearch(jelena, '+38269331507'), true);
-  assert.equal(memberMatchesSearch(jelena, 'Jelena'), true);
-  assert.equal(memberMatchesSearch(jelena, 'jelena.p@example.test'), true);
+  const milos = initialMembers.find((member) => member.id === 'milos-vukovic');
+  assert.ok(milos);
+  assert.equal(memberMatchesSearch(milos, '067 214 883'), true);
+  assert.equal(memberMatchesSearch(milos, '+38267214883'), true);
+  assert.equal(memberMatchesSearch(milos, 'Miloš'), true);
+  assert.equal(memberMatchesSearch(milos, 'milos.v@example.test'), true);
 });
