@@ -1988,7 +1988,7 @@ body {
   background:
     linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary) 20%, transparent), transparent),
     radial-gradient(circle at 50% 52%, color-mix(in srgb, var(--primary) 16%, transparent), transparent 48%);
-  animation: cyber-scan 5.4s linear infinite;
+  animation: cyber-scan 7.2s ease-in-out infinite;
 }
 
 .owner-hero::after {
@@ -2176,9 +2176,8 @@ body {
 }
 
 @keyframes cyber-scan {
-  from { transform: translateX(-18%) skewX(-10deg); opacity: .3; }
-  45% { opacity: .74; }
-  to { transform: translateX(18%) skewX(-10deg); opacity: .3; }
+  0%, 100% { transform: translateX(-10%) skewX(-8deg); opacity: .34; }
+  50% { transform: translateX(10%) skewX(-8deg); opacity: .72; }
 }
 
 @keyframes loading-grid {
