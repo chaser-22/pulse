@@ -38,7 +38,7 @@ export function getAtmosphereFrame(
     phase: seconds * (preset === 'radar-sweep' ? 0.9 : 0.62),
     drift: Math.sin(seconds * 0.23) * 0.5 + seconds * 0.04,
     energy: Math.min(1, baseEnergy[preset] + pulse * 0.42),
-    flow: preset === 'radar-sweep' ? (seconds * 0.08 + pulse * 0.18) % 1 : (seconds * 0.34 + pulse * 0.34) % 1,
+    flow: preset === 'radar-sweep' ? seconds * 0.08 + pulse * 0.18 : seconds * 0.34 + pulse * 0.34,
     signal: preset === 'radar-sweep' ? 0.2 : 0.54 + pulse * 0.24 + Math.abs(Math.sin(seconds * 1.45)) * 0.18,
     sweep: preset === 'radar-sweep' ? seconds * 0.9 : seconds * 0.26,
     wave: seconds * 1.25 + pulse * 0.65,

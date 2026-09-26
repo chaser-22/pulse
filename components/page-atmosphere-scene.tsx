@@ -195,9 +195,9 @@ export default function PageAtmosphereScene({
           for (let pointIndex = 0; pointIndex < positions.count; pointIndex += 1) {
             const progress = pointIndex / (positions.count - 1);
             const x = -5.6 + progress * 11.2;
-            const currentFlow = (progress + motion.flow * 1.6 + offset) % 1;
+            const flowPhase = (progress + motion.flow * 1.6 + offset) * Math.PI * 2;
             const y = lane * 0.28 + Math.sin(progress * Math.PI * 3 + motion.wave + offset * 4) * 0.2;
-            const z = -1.25 + Math.sin(currentFlow * Math.PI) * 1.15 + Math.cos(progress * 5 + motion.phase) * 0.12;
+            const z = -1.25 + (Math.sin(flowPhase) + 1) * 0.575 + Math.cos(progress * 5 + motion.phase) * 0.12;
             positions.setXYZ(pointIndex, x, y, z);
           }
           positions.needsUpdate = true;
@@ -205,12 +205,12 @@ export default function PageAtmosphereScene({
         const ambientPositions = ambientPointGeometry.attributes.position;
         for (let index = 0; index < ambientPositions.count; index += 1) {
           const lane = (index % 11) - 5;
-          const progress = (seeded(index, 41) + motion.flow * 1.35 + index * 0.009) % 1;
+          const pointPhase = (seeded(index, 41) + motion.flow * 1.35 + index * 0.009) * Math.PI * 2;
           ambientPositions.setXYZ(
             index,
-            -5.35 + progress * 10.7,
+            Math.sin(pointPhase) * 5.35,
             lane * 0.24 + Math.sin(motion.wave + index * 0.7) * 0.16,
-            -0.8 + seeded(index, 43) * 1.7,
+            -0.8 + seeded(index, 43) * 1.7 + Math.cos(pointPhase) * 0.12,
           );
         }
         ambientPositions.needsUpdate = true;
@@ -218,7 +218,8 @@ export default function PageAtmosphereScene({
           const positions = line.geometry.attributes.position;
           const axis = Number(line.userData.axis);
           const lineIndex = Number(line.userData.index);
-          const depth = -1.35 + ((motion.drift + lineIndex * 0.4) % 3.2);
+          const depthPhase = motion.drift * 0.86 + lineIndex * 0.72;
+          const depth = 0.25 + Math.sin(depthPhase) * 1.6;
           if (axis === 0) {
             positions.setXYZ(0, -5.4, lineIndex * 0.48, depth);
             positions.setXYZ(1, 5.4, lineIndex * 0.48, depth);
@@ -259,13 +260,14 @@ export default function PageAtmosphereScene({
 
       const glintPositions = glintGeometry.attributes.position;
       for (let index = 0; index < glintPositions.count; index += 1) {
-        const progress = (seeded(index, 19) + motion.flow + index * 0.021) % 1;
+        const glintPhase = (seeded(index, 19) + motion.flow + index * 0.021) * Math.PI * 2;
         const lane = (index % 5) - 2;
+        const glintArc = (Math.cos(glintPhase) + 1) * 0.5;
         glintPositions.setXYZ(
           index,
-          -3 + progress * 6,
-          -0.05 + Math.sin(progress * Math.PI) * 0.74 + lane * 0.13,
-          0.04 + Math.sin(progress * Math.PI) * 0.48 + seeded(index, 29) * 0.16,
+          Math.sin(glintPhase) * 3,
+          -0.05 + glintArc * 0.74 + lane * 0.13,
+          0.04 + glintArc * 0.48 + seeded(index, 29) * 0.16,
         );
       }
       glintPositions.needsUpdate = true;
