@@ -24,10 +24,11 @@ export function PulseLoaderScene() {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
-    camera.position.set(0, 0, 8.15);
+    camera.position.set(0, 0, 9.35);
 
     const reactor = new THREE.Group();
-    reactor.position.y = 0.72;
+    reactor.position.y = 0.52;
+    reactor.scale.setScalar(0.88);
     scene.add(reactor);
 
     const glowTexture = new THREE.CanvasTexture(createGlowTexture());
@@ -121,7 +122,7 @@ export function PulseLoaderScene() {
     const particleCount = 240;
     const particlePositions = new Float32Array(particleCount * 3);
     for (let index = 0; index < particleCount; index += 1) {
-      const radius = 2.25 + Math.random() * 2.6;
+      const radius = 2.05 + Math.random() * 1.75;
       const theta = Math.random() * Math.PI * 2;
       const z = (Math.random() - 0.5) * 2.8;
       particlePositions[index * 3] = Math.cos(theta) * radius;
