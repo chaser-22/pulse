@@ -159,7 +159,7 @@ export default function Home() {
     const timer = window.setTimeout(() => {
       if (storedMembers) setMembers(storedMembers);
       setReady(true);
-    }, 360);
+    }, 5000);
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -438,7 +438,15 @@ function Field({ label, required, children }: { label: string; required?: boolea
 }
 
 function LoadingState() {
-  return <main className="loading-shell"><aside><div className="skeleton logo" />{[1,2,3,4].map((item) => <div className="skeleton nav" key={item} />)}</aside><section><div className="skeleton title" /><div className="loading-grid"><div className="skeleton large" /><div className="skeleton large" /></div><div className="loading-stats">{[1,2,3,4].map((item) => <div className="skeleton stat" key={item} />)}</div></section><div className="loading-label"><span className="loader-ring" />Učitavanje PULSE podataka…</div></main>;
+  return <main className="loading-shell">
+    <div className="loading-orb"><PulseLogo compact /><span /><i /></div>
+    <div className="loading-copy">
+      <p className="eyebrow">PULSE CSV RECOVERY SYSTEM</p>
+      <h1>Pokrećem signale članarine</h1>
+      <div className="loading-track"><span /></div>
+      <small>Članovi · Datumi isteka · Ručni oporavak prihoda</small>
+    </div>
+  </main>;
 }
 
 function RecoveryLifecycle({ member }: { member: Member }) {

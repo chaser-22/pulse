@@ -22,9 +22,9 @@ test('atmosphere frames advance predictably and amplify a recovery pulse', () =>
   assert.deepEqual(getAtmosphereFrame('radar-sweep', 0, 0), {
     phase: 0,
     drift: 0,
-    energy: 0.38,
+    energy: 0.56,
     flow: 0,
-    signal: 0,
+    signal: 0.2,
     sweep: 0,
     wave: 0,
   });
@@ -34,7 +34,7 @@ test('constellation motion exposes a pulsing signal wave for the Three.js mesh',
   const idle = getAtmosphereFrame('constellation', 0, 0);
   const later = getAtmosphereFrame('constellation', 1_600, 0.5);
 
-  assert.equal(idle.signal, 0.45);
+  assert.equal(idle.signal, 0.54);
   assert.ok(later.signal > idle.signal);
   assert.notEqual(later.wave, idle.wave);
   assert.ok(later.energy <= 1);

@@ -21,6 +21,8 @@ const COLORS = {
   teal: new THREE.Color(0x2ecc9d),
   mint: new THREE.Color(0x7be7c8),
   amber: new THREE.Color(0xf8bd62),
+  violet: new THREE.Color(0x8b5cf6),
+  cyan: new THREE.Color(0x00d5ff),
   ink: new THREE.Color(0x19211d),
 };
 
@@ -56,7 +58,7 @@ export default function PageAtmosphereScene({
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-    camera.position.set(0, 0, 8.2);
+    camera.position.set(0, 0, 7.4);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setClearColor(0x000000, 0);
@@ -69,37 +71,37 @@ export default function PageAtmosphereScene({
     group.add(ambientGroup);
 
     const ambientMaterial = new THREE.LineBasicMaterial({
-      color: COLORS.mint,
+      color: COLORS.cyan,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.28,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
     const ambientAccentMaterial = new THREE.LineBasicMaterial({
-      color: COLORS.coralSoft,
+      color: COLORS.violet,
       transparent: true,
-      opacity: 0.16,
+      opacity: 0.2,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
-    const ambientLines = Array.from({ length: 7 }, (_, lineIndex) => {
+    const ambientLines = Array.from({ length: 13 }, (_, lineIndex) => {
       const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(72 * 3), 3));
-      const line = new THREE.Line(geometry, lineIndex % 3 === 0 ? ambientAccentMaterial : ambientMaterial);
+      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(96 * 3), 3));
+      const line = new THREE.Line(geometry, lineIndex % 4 === 0 ? ambientAccentMaterial : ambientMaterial);
       line.userData.offset = seeded(lineIndex, 31);
-      line.userData.lane = lineIndex - 3;
+      line.userData.lane = lineIndex - 6;
       ambientGroup.add(line);
       return line;
     });
     const ambientPointGeometry = new THREE.BufferGeometry();
-    const ambientPointPositions = new Float32Array(42 * 3);
+    const ambientPointPositions = new Float32Array(96 * 3);
     ambientPointGeometry.setAttribute('position', new THREE.BufferAttribute(ambientPointPositions, 3));
     const ambientPointMaterial = new THREE.PointsMaterial({
-      color: COLORS.teal,
-      size: 0.05,
+      color: COLORS.cyan,
+      size: 0.043,
       sizeAttenuation: true,
       transparent: true,
-      opacity: 0.48,
+      opacity: 0.6,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
@@ -109,14 +111,31 @@ export default function PageAtmosphereScene({
     boardGroup.rotation.x = -0.08;
     group.add(boardGroup);
 
-    const ribbonMaterials = [COLORS.coralSoft, COLORS.teal, COLORS.mint].map((color, index) => new THREE.LineBasicMaterial({
+    const gridMaterial = new THREE.LineBasicMaterial({
+      color: COLORS.cyan,
+      transparent: true,
+      opacity: 0.11,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const gridLines = Array.from({ length: 18 }, (_, index) => {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(2 * 3), 3));
+      const line = new THREE.Line(geometry, gridMaterial);
+      line.userData.axis = index % 2;
+      line.userData.index = Math.floor(index / 2) - 4;
+      ambientGroup.add(line);
+      return line;
+    });
+
+    const ribbonMaterials = [COLORS.coralSoft, COLORS.cyan, COLORS.violet, COLORS.mint].map((color, index) => new THREE.LineBasicMaterial({
       color,
       transparent: true,
-      opacity: index === 0 ? 0.22 : 0.28,
+      opacity: index === 0 ? 0.22 : 0.3,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     }));
-    const ribbons = Array.from({ length: 11 }, (_, index) => {
+    const ribbons = Array.from({ length: 15 }, (_, index) => {
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(96 * 3), 3));
       const line = new THREE.Line(geometry, ribbonMaterials[index % ribbonMaterials.length]);
@@ -126,10 +145,10 @@ export default function PageAtmosphereScene({
       return line;
     });
     const glintGeometry = new THREE.BufferGeometry();
-    glintGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(18 * 3), 3));
+    glintGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(34 * 3), 3));
     const glintMaterial = new THREE.PointsMaterial({
-      color: COLORS.mint,
-      size: 0.034,
+      color: COLORS.cyan,
+      size: 0.038,
       sizeAttenuation: true,
       transparent: true,
       opacity: 0.42,
@@ -164,8 +183,8 @@ export default function PageAtmosphereScene({
 
       boardGroup.visible = !ambient;
       ambientGroup.visible = ambient;
-      group.rotation.y = ambient ? Math.sin(motion.phase * 0.22) * 0.04 : laneMode ? Math.sin(motion.phase * 0.45) * 0.06 : Math.sin(motion.phase * 0.38) * 0.12;
-      group.rotation.x = ambient ? Math.sin(motion.phase * 0.18) * 0.025 : Math.sin(motion.phase * 0.25) * 0.035;
+      group.rotation.y = ambient ? Math.sin(motion.phase * 0.34) * 0.1 : laneMode ? Math.sin(motion.phase * 0.45) * 0.06 : Math.sin(motion.phase * 0.38) * 0.12;
+      group.rotation.x = ambient ? -0.2 + Math.sin(motion.phase * 0.2) * 0.055 : Math.sin(motion.phase * 0.25) * 0.035;
       boardGroup.scale.setScalar(preset === 'member-field' ? 0.92 : 1);
 
       if (ambient) {
@@ -175,29 +194,44 @@ export default function PageAtmosphereScene({
           const offset = Number(line.userData.offset);
           for (let pointIndex = 0; pointIndex < positions.count; pointIndex += 1) {
             const progress = pointIndex / (positions.count - 1);
-            const x = -4.5 + progress * 9;
-            const currentFlow = (progress + motion.flow + offset) % 1;
-            const y = lane * 0.36 + Math.sin(progress * Math.PI * 2 + motion.wave + offset * 4) * 0.18;
-            const z = -0.65 + Math.sin(currentFlow * Math.PI) * 0.62;
+            const x = -5.6 + progress * 11.2;
+            const currentFlow = (progress + motion.flow * 1.6 + offset) % 1;
+            const y = lane * 0.28 + Math.sin(progress * Math.PI * 3 + motion.wave + offset * 4) * 0.2;
+            const z = -1.25 + Math.sin(currentFlow * Math.PI) * 1.15 + Math.cos(progress * 5 + motion.phase) * 0.12;
             positions.setXYZ(pointIndex, x, y, z);
           }
           positions.needsUpdate = true;
         });
         const ambientPositions = ambientPointGeometry.attributes.position;
         for (let index = 0; index < ambientPositions.count; index += 1) {
-          const lane = (index % 7) - 3;
-          const progress = (seeded(index, 41) + motion.flow + index * 0.013) % 1;
+          const lane = (index % 11) - 5;
+          const progress = (seeded(index, 41) + motion.flow * 1.35 + index * 0.009) % 1;
           ambientPositions.setXYZ(
             index,
-            -4.35 + progress * 8.7,
-            lane * 0.35 + Math.sin(motion.wave + index * 0.7) * 0.12,
-            -0.2 + seeded(index, 43) * 0.9,
+            -5.35 + progress * 10.7,
+            lane * 0.24 + Math.sin(motion.wave + index * 0.7) * 0.16,
+            -0.8 + seeded(index, 43) * 1.7,
           );
         }
         ambientPositions.needsUpdate = true;
-        ambientMaterial.opacity = 0.12 + motion.signal * 0.1;
-        ambientAccentMaterial.opacity = 0.08 + motion.energy * 0.1;
-        ambientPointMaterial.opacity = 0.28 + motion.energy * 0.16;
+        gridLines.forEach((line) => {
+          const positions = line.geometry.attributes.position;
+          const axis = Number(line.userData.axis);
+          const lineIndex = Number(line.userData.index);
+          const depth = -1.35 + ((motion.drift + lineIndex * 0.4) % 3.2);
+          if (axis === 0) {
+            positions.setXYZ(0, -5.4, lineIndex * 0.48, depth);
+            positions.setXYZ(1, 5.4, lineIndex * 0.48, depth);
+          } else {
+            positions.setXYZ(0, lineIndex * 1.2, -2.8, depth);
+            positions.setXYZ(1, lineIndex * 1.2, 2.8, depth);
+          }
+          positions.needsUpdate = true;
+        });
+        ambientMaterial.opacity = 0.16 + motion.signal * 0.14;
+        ambientAccentMaterial.opacity = 0.1 + motion.energy * 0.16;
+        ambientPointMaterial.opacity = 0.34 + motion.energy * 0.22;
+        gridMaterial.opacity = 0.08 + motion.energy * 0.06;
 
         renderer.render(scene, camera);
         frame = requestAnimationFrame(render);
@@ -264,8 +298,10 @@ export default function PageAtmosphereScene({
       resizeObserver.disconnect();
       document.removeEventListener('visibilitychange', onVisibilityChange);
       ambientLines.forEach((line) => line.geometry.dispose());
+      gridLines.forEach((line) => line.geometry.dispose());
       ambientMaterial.dispose();
       ambientAccentMaterial.dispose();
+      gridMaterial.dispose();
       ambientPointGeometry.dispose();
       ambientPointMaterial.dispose();
       ribbons.forEach((line) => line.geometry.dispose());
