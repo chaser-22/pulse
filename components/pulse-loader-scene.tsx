@@ -24,10 +24,10 @@ export function PulseLoaderScene() {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
-    camera.position.set(0, 0, 7.25);
+    camera.position.set(0, 0, 8.15);
 
     const reactor = new THREE.Group();
-    reactor.position.y = 0.18;
+    reactor.position.y = 0.72;
     scene.add(reactor);
 
     const glowTexture = new THREE.CanvasTexture(createGlowTexture());
@@ -144,33 +144,6 @@ export function PulseLoaderScene() {
     );
     reactor.add(particles);
 
-    const signalGeometry = new THREE.BufferGeometry();
-    const signalPoints = 220;
-    const signalPositions = new Float32Array(signalPoints * 3);
-    for (let index = 0; index < signalPoints; index += 1) {
-      const progress = index / (signalPoints - 1);
-      const x = (progress - 0.5) * 3.7;
-      const distance = Math.abs(progress - 0.5);
-      const envelope = Math.exp(-Math.pow(distance * 8.5, 2));
-      const heartbeat =
-        Math.sin(progress * Math.PI * 34) * 0.035 +
-        Math.sin(progress * Math.PI * 10) * 0.16 * envelope;
-      signalPositions[index * 3] = x;
-      signalPositions[index * 3 + 1] = heartbeat;
-      signalPositions[index * 3 + 2] = 0.05;
-    }
-    signalGeometry.setAttribute('position', new THREE.BufferAttribute(signalPositions, 3));
-
-    const signalMaterial = new THREE.LineBasicMaterial({
-      color: 0xff8f86,
-      transparent: true,
-      opacity: 0.55,
-      blending: THREE.AdditiveBlending,
-    });
-    const signal = new THREE.Line(signalGeometry, signalMaterial);
-    signal.position.y = -1.68;
-    reactor.add(signal);
-
     const resize = () => {
       const width = Math.max(canvas.clientWidth, 1);
       const height = Math.max(canvas.clientHeight, 1);
@@ -218,8 +191,6 @@ export function PulseLoaderScene() {
 
       particles.rotation.z = elapsed * 0.028 * motion;
       particles.rotation.y = elapsed * 0.018 * motion;
-      signalMaterial.opacity = 0.42 + pulse * 0.22;
-
       renderer.render(scene, camera);
       frame = window.requestAnimationFrame(render);
     };
@@ -248,8 +219,6 @@ export function PulseLoaderScene() {
       });
       particleGeometry.dispose();
       (particles.material as THREE.Material).dispose();
-      signalGeometry.dispose();
-      signalMaterial.dispose();
       renderer.dispose();
     };
   }, []);
