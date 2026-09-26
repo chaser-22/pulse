@@ -10,6 +10,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PageAtmosphere } from '@/components/page-atmosphere';
+import { PulseLoaderScene } from '@/components/pulse-loader-scene';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -159,7 +160,7 @@ export default function Home() {
     const timer = window.setTimeout(() => {
       if (storedMembers) setMembers(storedMembers);
       setReady(true);
-    }, 5000);
+    }, 4000);
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -438,14 +439,43 @@ function Field({ label, required, children }: { label: string; required?: boolea
 }
 
 function LoadingState() {
-  return <main className="loading-shell">
-    <div className="loading-orb"><PulseLogo compact /><span /><i /></div>
-    <div className="loading-copy">
-      <p className="eyebrow">PULSE CSV RECOVERY SYSTEM</p>
-      <h1>Pokrećem signale članarine</h1>
-      <div className="loading-track"><span /></div>
-      <small>Članovi · Datumi isteka · Ručni oporavak prihoda</small>
+  return <main className="pulse-loader" aria-live="polite" aria-busy="true">
+    <div className="pulse-loader-grid" aria-hidden="true" />
+    <div className="pulse-loader-aura" aria-hidden="true" />
+    <PulseLoaderScene />
+
+    <header className="pulse-loader-brand">
+      <PulseLogo compact />
+      <span>
+        <strong>PULSE</strong>
+        <small>REVENUE RECOVERY</small>
+      </span>
+    </header>
+
+    <div className="pulse-loader-hud" aria-hidden="true">
+      <span>MEMBER SIGNALS</span>
+      <span>RECOVERY ENGINE</span>
+      <span>4.0 SEC</span>
     </div>
+
+    <section className="pulse-loader-copy">
+      <p className="pulse-loader-kicker"><span /> SYSTEM ONLINE</p>
+      <h1>Turning member signals<br />into recovered revenue.</h1>
+      <p>Analiziram članarine, prioritete i prilike za oporavak prihoda.</p>
+      <div className="pulse-loader-progress" aria-hidden="true">
+        <span />
+      </div>
+      <div className="pulse-loader-status">
+        <span>01 · Učitavanje članova</span>
+        <span>02 · Skeniranje rizika</span>
+        <span>03 · Recovery ready</span>
+      </div>
+    </section>
+
+    <footer className="pulse-loader-footer">
+      <span>PODGORICA · PILOT SYSTEM</span>
+      <span className="pulse-loader-signal"><i /> LIVE SIGNAL</span>
+    </footer>
   </main>;
 }
 
