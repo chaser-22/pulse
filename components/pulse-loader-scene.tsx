@@ -11,6 +11,12 @@ export function PulseLoaderScene() {
     if (!canvas) return;
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const themeStyles = getComputedStyle(document.documentElement);
+    const primaryColor = new THREE.Color(themeStyles.getPropertyValue('--primary').trim());
+    const foregroundColor = new THREE.Color(themeStyles.getPropertyValue('--foreground').trim());
+    const wireColor = primaryColor.clone().lerp(foregroundColor, 0.22);
+    const particleColor = primaryColor.clone().lerp(foregroundColor, 0.36);
+
     const renderer = new THREE.WebGLRenderer({
       canvas,
       alpha: true,
@@ -31,13 +37,13 @@ export function PulseLoaderScene() {
     reactor.scale.setScalar(0.88);
     scene.add(reactor);
 
-    const glowTexture = new THREE.CanvasTexture(createGlowTexture());
+    const glowTexture = new THREE.CanvasTexture(createGlowTexture(primaryColor));
     glowTexture.colorSpace = THREE.SRGBColorSpace;
 
     const glow = new THREE.Sprite(
       new THREE.SpriteMaterial({
         map: glowTexture,
-        color: 0xff6a5e,
+        color: primaryColor,
         transparent: true,
         opacity: 0.38,
         blending: THREE.AdditiveBlending,
@@ -50,7 +56,7 @@ export function PulseLoaderScene() {
     const core = new THREE.Mesh(
       new THREE.IcosahedronGeometry(0.72, 4),
       new THREE.MeshBasicMaterial({
-        color: 0xff6a5e,
+        color: primaryColor,
         transparent: true,
         opacity: 0.13,
         blending: THREE.AdditiveBlending,
@@ -62,7 +68,7 @@ export function PulseLoaderScene() {
     const wireCore = new THREE.Mesh(
       new THREE.IcosahedronGeometry(0.94, 2),
       new THREE.MeshBasicMaterial({
-        color: 0xff8176,
+        color: wireColor,
         wireframe: true,
         transparent: true,
         opacity: 0.72,
@@ -73,7 +79,7 @@ export function PulseLoaderScene() {
     const shell = new THREE.Mesh(
       new THREE.SphereGeometry(1.18, 32, 32),
       new THREE.MeshBasicMaterial({
-        color: 0xff6a5e,
+        color: primaryColor,
         wireframe: true,
         transparent: true,
         opacity: 0.055,
@@ -92,7 +98,7 @@ export function PulseLoaderScene() {
       const mesh = new THREE.Mesh(
         new THREE.TorusGeometry(spec.radius, spec.tube, 8, 180),
         new THREE.MeshBasicMaterial({
-          color: 0xff7468,
+          color: primaryColor,
           transparent: true,
           opacity: spec.opacity,
           blending: THREE.AdditiveBlending,
@@ -106,7 +112,7 @@ export function PulseLoaderScene() {
 
     const pulseRings = [0, 1, 2].map((index) => {
       const material = new THREE.MeshBasicMaterial({
-        color: 0xff6a5e,
+        color: primaryColor,
         transparent: true,
         opacity: 0,
         blending: THREE.AdditiveBlending,
@@ -135,7 +141,7 @@ export function PulseLoaderScene() {
     const particles = new THREE.Points(
       particleGeometry,
       new THREE.PointsMaterial({
-        color: 0xff8f86,
+        color: particleColor,
         size: 0.018,
         transparent: true,
         opacity: 0.48,
@@ -227,7 +233,12 @@ export function PulseLoaderScene() {
   return <canvas ref={canvasRef} className="pulse-loader-canvas" aria-hidden="true" />;
 }
 
-function createGlowTexture() {
+function createGlowTexture(primaryColor: THREE.Color) {
+  primaryColor = primaryColor.clone().convertLinearToSRGB();
+  const red = Math.round(primaryColor.r * 255);
+  const green = Math.round(primaryColor.g * 255);
+  const blue = Math.round(primaryColor.b * 255);
+
   const canvas = document.createElement('canvas');
   canvas.width = 256;
   canvas.height = 256;
@@ -235,10 +246,10 @@ function createGlowTexture() {
   if (!context) return canvas;
 
   const gradient = context.createRadialGradient(128, 128, 0, 128, 128, 128);
-  gradient.addColorStop(0, 'rgba(255,106,94,0.9)');
-  gradient.addColorStop(0.18, 'rgba(255,106,94,0.36)');
-  gradient.addColorStop(0.5, 'rgba(255,106,94,0.08)');
-  gradient.addColorStop(1, 'rgba(255,106,94,0)');
+  gradient.addColorStop(0, `rgba(${red},${green},${blue},0.9)`);
+  gradient.addColorStop(0.18, `rgba(${red},${green},${blue},0.36)`);
+  gradient.addColorStop(0.5, `rgba(${red},${green},${blue},0.08)`);
+  gradient.addColorStop(1, `rgba(${red},${green},${blue},0)`);
   context.fillStyle = gradient;
   context.fillRect(0, 0, 256, 256);
 
