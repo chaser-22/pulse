@@ -451,34 +451,40 @@ function Field({ label, required, children }: { label: string; required?: boolea
 }
 
 function LoadingState({ leaving = false }: { leaving?: boolean }) {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const startedAt = performance.now();
+    const timer = window.setInterval(() => {
+      const elapsed = performance.now() - startedAt;
+      const next = Math.min(100, Math.floor((elapsed / 4000) * 100));
+      setProgress(next);
+      if (next >= 100) window.clearInterval(timer);
+    }, 40);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const visibleProgress = leaving ? 100 : progress;
+
   return <main className={`pulse-loader pulse-loader-centered ${leaving ? 'is-leaving' : ''}`} aria-live="polite" aria-busy={!leaving}>
     <div className="pulse-loader-grid" aria-hidden="true" />
     <div className="pulse-loader-vignette" aria-hidden="true" />
     <PulseLoaderScene />
 
-    <section className="pulse-loader-center">
-      <div className="pulse-loader-brandmark">
-        <PulseLogo compact />
-        <span>REVENUE RECOVERY</span>
-      </div>
-
-      <div className="pulse-loader-title">
-        <p className="pulse-loader-kicker"><span /> RECOVERY ENGINE</p>
+    <section className="pulse-loader-center" aria-label={`PULSE loading ${visibleProgress}%`}>
+      <div className="pulse-loader-wordmark" aria-hidden="true">
         <h1>PULSE</h1>
-        <p className="pulse-loader-tagline">Turning member signals into recovered revenue.</p>
       </div>
 
-      <div className="pulse-loader-progress" aria-hidden="true"><span /></div>
-
-      <div className="pulse-loader-status" aria-hidden="true">
-        <span>MEMBERS</span>
-        <i />
-        <span>RISK SIGNALS</span>
-        <i />
-        <span>RECOVERY</span>
+      <div className="pulse-loader-meter">
+        <div className="pulse-loader-progress" aria-hidden="true">
+          <span style={{ width: `${visibleProgress}%` }} />
+        </div>
+        <output className="pulse-loader-percent" aria-label={`${visibleProgress} percent`}>
+          {visibleProgress}<span>%</span>
+        </output>
       </div>
-
-      <p className="pulse-loader-meta">PODGORICA · PILOT SYSTEM · 4.0 SEC</p>
     </section>
   </main>;
 }
