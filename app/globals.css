@@ -2841,3 +2841,112 @@ body {
     min-width: 230px;
   }
 }
+
+/* Question / answer reveal animation */
+.risk-disclosure,
+.profile-risk details {
+  overflow: clip;
+}
+
+.risk-disclosure summary,
+.profile-risk summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  user-select: none;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.risk-disclosure summary::-webkit-details-marker,
+.profile-risk summary::-webkit-details-marker {
+  display: none;
+}
+
+.risk-disclosure summary::before,
+.profile-risk summary::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transform-origin: 55% 55%;
+  opacity: .78;
+  transition: transform 260ms cubic-bezier(.2,.8,.2,1), opacity 180ms ease;
+}
+
+.risk-disclosure[open] summary,
+.profile-risk details[open] summary {
+  color: color-mix(in srgb, var(--primary) 82%, var(--text-strong));
+}
+
+.risk-disclosure[open] summary::before,
+.profile-risk details[open] summary::before {
+  transform: rotate(45deg);
+  opacity: 1;
+}
+
+.risk-disclosure[open] > div,
+.profile-risk details[open] > :is(p, dl, span) {
+  animation: answer-reveal 360ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.risk-disclosure[open] > div {
+  transform-origin: top left;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.profile-risk details[open] > p {
+  animation-delay: 20ms;
+}
+
+.profile-risk details[open] > dl {
+  animation-delay: 55ms;
+}
+
+.profile-risk details[open] > span {
+  animation-delay: 90ms;
+}
+
+@supports selector(details::details-content) {
+  .risk-disclosure::details-content,
+  .profile-risk details::details-content {
+    block-size: 0;
+    opacity: 0;
+    overflow: clip;
+    transition:
+      block-size 380ms cubic-bezier(.16, 1, .3, 1),
+      opacity 220ms ease,
+      content-visibility 380ms allow-discrete;
+  }
+
+  .risk-disclosure[open]::details-content,
+  .profile-risk details[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+}
+
+@keyframes answer-reveal {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(-8px) scale(.985);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .risk-disclosure summary::before,
+  .profile-risk summary::before,
+  .risk-disclosure[open] > div,
+  .profile-risk details[open] > :is(p, dl, span) {
+    animation: none;
+    transition: none;
+  }
+}
