@@ -451,43 +451,35 @@ function Field({ label, required, children }: { label: string; required?: boolea
 }
 
 function LoadingState({ leaving = false }: { leaving?: boolean }) {
-  return <main className={`pulse-loader ${leaving ? 'is-leaving' : ''}`} aria-live="polite" aria-busy={!leaving}>
+  return <main className={`pulse-loader pulse-loader-centered ${leaving ? 'is-leaving' : ''}`} aria-live="polite" aria-busy={!leaving}>
     <div className="pulse-loader-grid" aria-hidden="true" />
-    <div className="pulse-loader-aura" aria-hidden="true" />
+    <div className="pulse-loader-vignette" aria-hidden="true" />
     <PulseLoaderScene />
 
-    <header className="pulse-loader-brand">
-      <PulseLogo compact />
-      <span>
-        <strong>PULSE</strong>
-        <small>REVENUE RECOVERY</small>
-      </span>
-    </header>
-
-    <div className="pulse-loader-hud" aria-hidden="true">
-      <span>MEMBER SIGNALS</span>
-      <span>RECOVERY ENGINE</span>
-      <span>4.0 SEC</span>
-    </div>
-
-    <section className="pulse-loader-copy">
-      <p className="pulse-loader-kicker"><span /> SYSTEM ONLINE</p>
-      <h1>Turning member signals<br />into recovered revenue.</h1>
-      <p>Analiziram članarine, prioritete i prilike za oporavak prihoda.</p>
-      <div className="pulse-loader-progress" aria-hidden="true">
-        <span />
+    <section className="pulse-loader-center">
+      <div className="pulse-loader-brandmark">
+        <PulseLogo compact />
+        <span>REVENUE RECOVERY</span>
       </div>
-      <div className="pulse-loader-status">
-        <span>01 · Učitavanje članova</span>
-        <span>02 · Skeniranje rizika</span>
-        <span>03 · Recovery ready</span>
+
+      <div className="pulse-loader-title">
+        <p className="pulse-loader-kicker"><span /> RECOVERY ENGINE</p>
+        <h1>PULSE</h1>
+        <p className="pulse-loader-tagline">Turning member signals into recovered revenue.</p>
       </div>
+
+      <div className="pulse-loader-progress" aria-hidden="true"><span /></div>
+
+      <div className="pulse-loader-status" aria-hidden="true">
+        <span>MEMBERS</span>
+        <i />
+        <span>RISK SIGNALS</span>
+        <i />
+        <span>RECOVERY</span>
+      </div>
+
+      <p className="pulse-loader-meta">PODGORICA · PILOT SYSTEM · 4.0 SEC</p>
     </section>
-
-    <footer className="pulse-loader-footer">
-      <span>PODGORICA · PILOT SYSTEM</span>
-      <span className="pulse-loader-signal"><i /> LIVE SIGNAL</span>
-    </footer>
   </main>;
 }
 
