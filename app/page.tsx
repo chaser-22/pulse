@@ -459,7 +459,7 @@ function LoadingState({ leaving = false }: { leaving?: boolean }) {
     <section className="pulse-loader-center">
       <div className="pulse-loader-brandmark">
         <PulseLogo compact />
-        <span>PULSE</span>
+        <span>REVENUE RECOVERY</span>
       </div>
 
       <div className="pulse-loader-title">
