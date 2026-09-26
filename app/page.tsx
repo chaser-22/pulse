@@ -120,6 +120,7 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const [loaderLeaving, setLoaderLeaving] = useState(false);
   const [loaderVisible, setLoaderVisible] = useState(true);
+  const [appEntering, setAppEntering] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
@@ -161,15 +162,19 @@ export default function Home() {
       // A corrupt local demo snapshot should never prevent the prototype from loading.
     }
     let exitTimer = 0;
+    let entranceTimer = 0;
     const timer = window.setTimeout(() => {
       if (storedMembers) setMembers(storedMembers);
       setReady(true);
       setLoaderLeaving(true);
+      setAppEntering(true);
       exitTimer = window.setTimeout(() => setLoaderVisible(false), 900);
+      entranceTimer = window.setTimeout(() => setAppEntering(false), 2400);
     }, 4000);
     return () => {
       window.clearTimeout(timer);
       window.clearTimeout(exitTimer);
+      window.clearTimeout(entranceTimer);
     };
   }, []);
 
@@ -338,7 +343,7 @@ export default function Home() {
 
   return (
     <>
-    <main className={`app-shell ${loaderLeaving ? 'app-shell-entering' : ''}`}>
+    <main className={`app-shell ${appEntering ? 'app-shell-entering' : ''}`}>
       <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
         <div className="brand"><PulseLogo /><span className="brand-word">PULSE</span></div>
         <button className="sidebar-close" aria-label="Zatvori meni" onClick={() => setMobileNav(false)}><X /></button>
