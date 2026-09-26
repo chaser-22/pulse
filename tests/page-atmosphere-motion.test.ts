@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import * as atmosphereMotion from '../lib/page-atmosphere-motion.ts';
 
 const { getAtmosphereFrame, getAtmospherePreset } = atmosphereMotion;
@@ -49,4 +50,19 @@ test('recovery flow advances risk signals toward the recovered side', () => {
   assert.ok(later.flow > idle.flow);
   assert.ok(later.flow < 1);
   assert.ok(radar.flow < later.flow);
+});
+
+
+test('background flow stays continuous across the old wrap boundary', () => {
+  const before = getAtmosphereFrame('constellation', 2_940, 0);
+  const after = getAtmosphereFrame('constellation', 2_942, 0);
+
+  assert.ok(after.flow > before.flow);
+  assert.ok(after.flow - before.flow < 0.01);
+});
+
+test('ambient viewport motion does not modulo-wrap animated positions', () => {
+  const source = readFileSync(new URL('../components/page-atmosphere-scene.tsx', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(source, /motion\.(?:flow|drift)[^;\n]*%\s*(?:1|3\.2)/);
 });
