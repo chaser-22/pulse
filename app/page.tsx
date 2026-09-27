@@ -533,18 +533,51 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
       </div>
     </section>
 
-    <section className="priority-queue" aria-labelledby="priority-title">
-      <div className="section-heading"><div><p className="eyebrow">DANAS</p><h2 id="priority-title">Danas — članovi koji trebaju pažnju</h2></div><span className="summary-count">{highRiskMembers.length} visoki prioritet</span></div>
+    <section className="priority-queue priority-queue--today" aria-labelledby="priority-title">
+      <div className="priority-heading">
+        <div>
+          <p className="eyebrow">DANAS</p>
+          <h2 id="priority-title">Danas — članovi koji trebaju pažnju</h2>
+          <p className="priority-subtitle">Najvažniji članovi za današnji kontakt, poredani za brz pregled i akciju.</p>
+        </div>
+        <span className="summary-count"><strong>{highRiskMembers.length}</strong> visoki prioritet</span>
+      </div>
+
       {highRiskMembers.length ? <div className="priority-list">{highRiskMembers.map((member) => <article className="priority-row" key={member.id}>
-        <div className="priority-person"><span className="avatar">{initials(member)}</span><span><strong>{fullName(member)}</strong><small>{member.packageName}</small></span></div>
-        <span className={`risk-label ${riskClass(member.risk)}`}>{member.risk === 'high' ? 'Visok rizik' : 'Srednji rizik'}</span>
-        <p className="priority-reason">{member.riskReason}</p>
-        <strong className="priority-value">{euro(member.price)}</strong>
-        <button type="button" className="priority-action" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button>
-        <details className="risk-disclosure"><summary>Zašto?</summary><div><p>{member.riskReason}</p><span><strong>Preporučeni potez</strong>{member.nextAction}</span><span><strong>Članarina ističe</strong>{prettyDate(member.endDate)}</span></div></details>
-        <RecoveryLifecycle member={member} />
+        <div className="priority-row-main">
+          <div className="priority-person">
+            <span className="avatar">{initials(member)}</span>
+            <span><strong>{fullName(member)}</strong><small>{member.packageName}</small></span>
+          </div>
+
+          <span className={`risk-label ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visok rizik' : 'Srednji rizik'}</span>
+
+          <div className="priority-reason-block">
+            <small>ZAŠTO TREBA PAŽNJU</small>
+            <p className="priority-reason">{member.riskReason}</p>
+          </div>
+
+          <div className="priority-value-block">
+            <small>ČLANARINA</small>
+            <strong className="priority-value">{euro(member.price)}</strong>
+          </div>
+
+          <button type="button" className="priority-action" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button>
+        </div>
+
+        <div className="priority-row-meta">
+          <RecoveryLifecycle member={member} />
+          <details className="risk-disclosure">
+            <summary>Detalji rizika</summary>
+            <div><p>{member.riskReason}</p><span><strong>Preporučeni potez</strong>{member.nextAction}</span><span><strong>Članarina ističe</strong>{prettyDate(member.endDate)}</span></div>
+          </details>
+        </div>
       </article>)}</div> : <div className="priority-empty"><CheckCircle2 /><span><strong>Danas nema članova visokog prioriteta.</strong><small>Pregledajte sve aktivne signale rizika.</small></span></div>}
-      <button type="button" className="text-button" onClick={() => onNavigate('radar')}>Prikaži sve rizične članove <ArrowRight /></button>
+
+      <div className="priority-footer">
+        <span>Prioriteti su spremni za današnji kontakt.</span>
+        <button type="button" className="text-button" onClick={() => onNavigate('radar')}>Prikaži sve rizične članove <ArrowRight /></button>
+      </div>
     </section>
 
     <section className="recovery-activity" aria-labelledby="activity-title">
