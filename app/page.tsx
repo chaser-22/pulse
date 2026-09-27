@@ -28,6 +28,7 @@ import {
   memberMatchesSearch,
   type RecoveryActivity,
 } from '@/lib/pulse-logic';
+import { addDaysIso, parseMemberCsv, toLocalIsoDate } from '@/lib/csv-import';
 import { getThemeClassName, getThemeColor, nextTheme, THEME_STORAGE_KEY, type Theme } from '@/lib/theme';
 import { useScrollReveal } from '@/hooks/use-scroll-reveal';
 
@@ -37,7 +38,6 @@ type Filter = 'all' | MemberStatus;
 type MemberForm = Pick<Member, 'firstName' | 'lastName' | 'phone' | 'email' | 'birthday' | 'packageName' | 'price' | 'startDate' | 'endDate' | 'status' | 'preferredChannel'>;
 
 const STORAGE_KEY = 'pulse-demo-gym-v1';
-const today = '2026-08-31';
 const { me: t } = copy;
 
 function getMemberRevealDelay(index: number, total: number) {
@@ -58,7 +58,7 @@ const outcomeLabels: Record<RecoveryOutcome, string> = {
 };
 
 const viewMeta: Record<View, { eyebrow: string; title: string; subtitle: string }> = {
-  dashboard: { eyebrow: 'PONEDJELJAK, 31. AVGUST', title: 'Dobro jutro, Marko.', subtitle: 'Evo gdje je prihod u riziku i šta treba uraditi danas.' },
+  dashboard: { eyebrow: 'DANAŠNJI PREGLED', title: 'Dobro jutro, Marko.', subtitle: 'Evo gdje je prihod u riziku i šta treba uraditi danas.' },
   staff: { eyebrow: 'RADNI PROSTOR RECEPCIJE', title: 'Danas na recepciji', subtitle: 'Prijavite dolaske, dodajte članove i završite kontakte koji su prioritet danas.' },
   members: { eyebrow: 'BAZA ČLANOVA', title: 'Članovi', subtitle: 'Pronađite, ažurirajte i kontaktirajte svakog člana na jednom mjestu.' },
   radar: { eyebrow: 'JEDNOSTAVNI SIGNALI', title: 'Signali rizika', subtitle: 'Članovi su označeni po statusu članarine i datumu isteka.' },
@@ -111,9 +111,10 @@ function PulseLogo({ compact = false }: { compact?: boolean }) {
 }
 
 function blankMemberForm(): MemberForm {
+  const today = toLocalIsoDate();
   return {
     firstName: '', lastName: '', phone: '+382 ', email: '', birthday: '', packageName: 'Standard', price: 35,
-    startDate: today, endDate: '2026-09-30', status: 'active', preferredChannel: 'Poruka',
+    startDate: today, endDate: addDaysIso(today, 30), status: 'active', preferredChannel: 'Poruka',
   };
 }
 
@@ -139,6 +140,7 @@ export default function Home() {
   const [resetOpen, setResetOpen] = useState(false);
   const [pilotOpen, setPilotOpen] = useState(false);
   const [success, setSuccess] = useState('');
+  const [importError, setImportError] = useState('');
   const [recoveryPulse, setRecoveryPulse] = useState(0);
   const [theme, setTheme] = useState<Theme>(() => document.documentElement.classList.contains('light') ? 'light' : 'dark');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -194,6 +196,12 @@ export default function Home() {
     const timer = window.setTimeout(() => setSuccess(''), 3200);
     return () => window.clearTimeout(timer);
   }, [success]);
+
+  useEffect(() => {
+    if (!importError) return;
+    const timer = window.setTimeout(() => setImportError(''), 6000);
+    return () => window.clearTimeout(timer);
+  }, [importError]);
 
   useScrollReveal(ready, `${workspace}:${view}`);
 
@@ -267,10 +275,11 @@ export default function Home() {
     const amount = Number(renewalAmount);
     if (!Number.isFinite(amount) || amount <= 0) return;
     const memberName = fullName(selectedMember);
+    const today = toLocalIsoDate();
     setMembers((current) => current.map((member) => member.id === selectedMember.id ? {
       ...member,
       status: 'recovered', risk: 'low', price: amount, recoveredAmount: amount, recoveredAt: today,
-      startDate: today, endDate: '2026-09-30', riskReason: `Članarina obnovljena ${prettyDate(today)} uz pomoć PULSE recovery toka.`,
+      startDate: today, endDate: addDaysIso(today, 30), riskReason: `Članarina obnovljena ${prettyDate(today)} uz pomoć PULSE recovery toka.`,
       nextAction: 'Nije potrebna akcija.',
     } : member));
     setRecoveryPulse((current) => current + 1);
@@ -318,33 +327,24 @@ export default function Home() {
   function importCsv(file: File) {
     const reader = new FileReader();
     reader.onload = () => {
-      const text = typeof reader.result === 'string' ? reader.result.trim() : '';
-      const rows = text.split(/\r?\n/).filter(Boolean);
-      if (rows.length < 2) {
-        setSuccess('CSV nema redove za uvoz. Očekuju se zaglavlje i najmanje jedan član.');
+      const text = typeof reader.result === 'string' ? reader.result : '';
+      const result = parseMemberCsv(text, members, toLocalIsoDate());
+
+      if (result.errors.length) {
+        setSuccess('');
+        setImportError(`CSV nije uvezen. ${result.errors.slice(0, 3).join(' ')}`);
         return;
       }
-      const headers = rows[0].split(',').map((header) => header.trim().toLowerCase());
-      const imported: Member[] = rows.slice(1).map((row, index) => {
-        const cells = row.split(',').map((cell) => cell.trim());
-        const value = (key: string) => cells[headers.indexOf(key)] ?? '';
-        const statusCandidate = value('status') as MemberStatus;
-        const status: MemberStatus = ['active','expiring','expired','recovered'].includes(statusCandidate) ? statusCandidate : 'active';
-        const price = Number(value('price')) || 35;
-        const risk: RiskLevel = status === 'expired' ? 'high' : status === 'expiring' ? 'medium' : 'low';
-        return {
-          id: `csv-${Date.now()}-${index}`, firstName: value('firstname') || value('ime') || 'Novi', lastName: value('lastname') || value('prezime') || `Član ${index + 1}`,
-          phone: value('phone') || value('telefon') || '+382 6X XXX XXX', email: value('email') || 'nije-unijeto@example.test', birthday: value('birthday') || '',
-          status, risk, packageName: value('package') || 'Standard', price, startDate: value('startdate') || today, endDate: value('enddate') || '2026-09-30',
-          preferredChannel: 'Poruka',
-          riskReason: risk === 'high' ? 'Uvezeni član ima isteklu članarinu.' : risk === 'medium' ? 'Članarina uskoro ističe.' : 'Nema aktivnih signala rizika.',
-          nextAction: risk === 'low' ? 'Nije potrebna akcija.' : 'Provjerite podatke i kontaktirajte člana.',
-        };
-      });
-      setMembers(imported);
+
+      setMembers(result.members);
       setSelectedMemberId(null);
       setRecoveryPulse(0);
-      setSuccess(`Uvezeno je ${imported.length} ${imported.length === 1 ? 'član' : 'člana'} iz CSV fajla.`);
+      setImportError('');
+      setSuccess(`Uvezeno je ${result.members.length} ${result.members.length === 1 ? 'član' : 'članova'} iz CSV fajla.`);
+    };
+    reader.onerror = () => {
+      setSuccess('');
+      setImportError('CSV nije uvezen. Fajl nije moguće pročitati.');
     };
     reader.readAsText(file);
   }
@@ -441,14 +441,15 @@ export default function Home() {
 
       <Dialog open={pilotOpen} onOpenChange={setPilotOpen}>
         <DialogContent className="pilot-dialog">
-          <DialogHeader><Badge className="pilot-badge">PILOT SA VAŠIM PODACIMA</Badge><DialogTitle>Provjerite koliko prihoda PULSE može vratiti vašoj teretani.</DialogTitle><DialogDescription>Za početak je dovoljan jednostavan Excel ili CSV spisak. Nije potrebna promjena postojećeg sistema.</DialogDescription></DialogHeader>
-          <div className="pilot-steps"><div><span>01</span><p><strong>Uvezemo članove</strong>Ime, telefon, datum isteka i cijena članarine.</p></div><div><span>02</span><p><strong>PULSE označava osnovne signale</strong>Dobijate listu članova kojima je istekla članarina ili uskoro ističe.</p></div><div><span>03</span><p><strong>Tim prati rezultat</strong>Ručno bilježite kontakt, odgovor, obnovu i oporavljeni prihod.</p></div></div>
-          <div className="pilot-note"><ShieldAlert /><span><strong>Vaši podaci ostaju pod vašom kontrolom.</strong>Pilot radi iz jednostavnog CSV/Excel spiska članova.</span></div>
+          <DialogHeader><Badge className="pilot-badge">PILOT SA VAŠIM PODACIMA</Badge><DialogTitle>Provjerite koliko prihoda PULSE može vratiti vašoj teretani.</DialogTitle><DialogDescription>Za početak je dovoljan običan CSV iz Excela ili postojećeg sistema. Nije potrebna promjena načina rada.</DialogDescription></DialogHeader>
+          <div className="pilot-steps"><div><span>01</span><p><strong>Uvezemo članove</strong>Ime, telefon, cijena i datum isteka su dovoljni. Status nije potreban.</p></div><div><span>02</span><p><strong>PULSE računa status i rizik</strong>Datum isteka automatski određuje ko je aktivan, kome uskoro ističe i kome je članarina istekla.</p></div><div><span>03</span><p><strong>Tim prati rezultat</strong>Kontakt, odgovor, praćenje, obnova i oporavljeni prihod ostaju sačuvani u PULSE toku.</p></div></div>
+          <div className="pilot-note"><ShieldAlert /><span><strong>PULSE provjerava CSV prije zamjene podataka.</strong>Ako nedostaje ime, telefon, cijena ili datum isteka, postojeći podaci ostaju netaknuti i dobićete jasan opis greške.</span></div>
           <DialogFooter><Button variant="outline" onClick={() => setPilotOpen(false)}>Zatvori</Button><Button className="pulse-button" onClick={() => { setPilotOpen(false); setView('members'); setWorkspace('owner'); setSuccess('Otvoren je ekran za uvoz članova iz CSV-a.'); }}><Upload /> Pogledaj kako izgleda uvoz</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       {success && <output className={`success-toast ${success.includes('oporavljen') ? 'is-recovery' : ''}`} aria-live="polite"><CheckCircle2 /><span>{success}</span></output>}
+      {importError && <output className="success-toast is-error" aria-live="assertive"><ShieldAlert /><span>{importError}</span></output>}
     </main>
     {loaderVisible && <LoadingState leaving={loaderLeaving} />}
     </>
@@ -674,7 +675,7 @@ function MembersScreen({ members, total, filter, search, onFilter, onSearch, onO
         <div className="mobile-member-list">{members.map((member, index) => <button type="button" className="mobile-member-card member-list-item" style={{ '--member-reveal-delay': getMemberRevealDelay(index, members.length) } as CSSProperties} key={member.id} onClick={() => onOpenMember(member)}><span className="avatar">{initials(member)}</span><span className="mobile-member-main"><span><strong>{fullName(member)}</strong><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nizak'}</span></span><small>{member.packageName} · {euro(member.price)} mjesečno</small><span className="mobile-member-meta"><span><b>Status</b>{(t.statuses[member.status] ?? 'Provjeriti')}</span><span><b>Ističe</b>{prettyDate(member.endDate)}</span><span><b>Cijena</b>{euro(member.price)}</span></span></span><ChevronRight /></button>)}</div>
       </> : <EmptyState icon={<Search />} title="Nema rezultata" text="Pokušajte drugi izraz ili uklonite aktivni filter." action="Uvezi članove iz CSV-a" onAction={onImport} />}
     </section>
-    <div className="csv-note"><FileSpreadsheet /><span><strong>CSV uvoz koristi samo članove i članarine.</strong> Kolone: firstname, lastname, phone, email, status, price, startdate, enddate.</span></div>
+    <div className="csv-note"><FileSpreadsheet /><span><strong>Minimum za pilot: ime, telefon, cijena i datum isteka.</strong> Status nije potreban — PULSE ga računa iz datuma isteka. Prihvatamo česte nazive kolona na crnogorskom/engleskom i CSV sa zarezom ili tačka-zarezom.</span></div>
   </div>;
 }
 
@@ -682,7 +683,7 @@ function RadarScreen({ members, onOpenMember }: { members: Member[]; onOpenMembe
   const high = members.filter((member) => member.risk === 'high');
   const medium = members.filter((member) => member.risk === 'medium');
   return <div className="screen-stack radar-screen">
-    <section className="radar-summary panel-card" aria-label="Sažetak rizika"><div><p className="eyebrow">RED ZA AKCIJU</p><h2>Članovi sa signalima članarine</h2><p>Lista koristi samo status članarine i datum isteka iz CSV/Excel fajla.</p></div><dl><div><dt>Ukupno</dt><dd>{members.length}</dd></div><div className="high"><dt>Hitno</dt><dd>{high.length}</dd></div><div className="medium"><dt>Za praćenje</dt><dd>{medium.length}</dd></div></dl></section>
+    <section className="radar-summary panel-card" aria-label="Sažetak rizika"><div><p className="eyebrow">RED ZA AKCIJU</p><h2>Članovi sa signalima članarine</h2><p>PULSE računa status i rizik iz datuma isteka i cijene članarine iz CSV fajla.</p></div><dl><div><dt>Ukupno</dt><dd>{members.length}</dd></div><div className="high"><dt>Hitno</dt><dd>{high.length}</dd></div><div className="medium"><dt>Za praćenje</dt><dd>{medium.length}</dd></div></dl></section>
     <section className="risk-queue panel-card">
       <div className="section-heading"><div><p className="eyebrow">LISTA ZA TIM</p><h2>{members.length} članova za provjeru</h2></div><span className="sorted-label"><CircleGauge /> Članarina i datum isteka</span></div>
       {members.length ? <div className="risk-cards">{members.map((member, index) => <article className={`risk-member-card ${member.risk === 'high' ? 'is-high' : ''}`} key={member.id}><span className="risk-order">{String(index + 1).padStart(2, '0')}</span><div className="risk-member-identity"><span className="avatar large">{initials(member)}</span><span><h3>{fullName(member)}</h3><span className={`status-pill ${statusClass(member.status)}`}>{(t.statuses[member.status] ?? 'Provjeriti')}</span></span></div><div className="risk-reason"><small>SIGNAL</small><p>{member.riskReason}</p></div><div className="risk-next"><small>PREDLOG PORUKE</small><p>{member.nextAction}</p></div><div className="risk-value"><small>ČLANARINA</small><strong>{euro(member.price)}</strong></div><Button variant="outline" onClick={() => onOpenMember(member)}>Otvori profil <ChevronRight /></Button></article>)}</div> : <EmptyState icon={<CheckCircle2 />} title="Lista je čista" text="Nijedan član trenutno nema aktivan signal." />}
