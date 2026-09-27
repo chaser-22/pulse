@@ -37,7 +37,6 @@ type Filter = 'all' | MemberStatus;
 type MemberForm = Pick<Member, 'firstName' | 'lastName' | 'phone' | 'email' | 'birthday' | 'packageName' | 'price' | 'startDate' | 'endDate' | 'status' | 'preferredChannel'>;
 
 const STORAGE_KEY = 'pulse-demo-gym-v1';
-const BASE_METRICS = { active: 270, expiring: 13, recoveredCount: 12, recoveredRevenue: 445 };
 const today = '2026-08-31';
 const { me: t } = copy;
 
@@ -202,7 +201,7 @@ export default function Home() {
 
   const riskMembers = useMemo(() => getRiskMembers(members), [members]);
   const highRiskMembers = useMemo(() => riskMembers.filter((member) => member.risk === 'high'), [riskMembers]);
-  const metrics = useMemo(() => getPulseMetrics(members, BASE_METRICS), [members]);
+  const metrics = useMemo(() => getPulseMetrics(members), [members]);
   const recoveryActivity = useMemo(() => getRecoveryActivity(members), [members]);
 
   const filteredMembers = useMemo(() => {
@@ -342,7 +341,9 @@ export default function Home() {
           nextAction: risk === 'low' ? 'Nije potrebna akcija.' : 'Provjerite podatke i kontaktirajte člana.',
         };
       });
-      setMembers((current) => [...imported, ...current]);
+      setMembers(imported);
+      setSelectedMemberId(null);
+      setRecoveryPulse(0);
       setSuccess(`Uvezeno je ${imported.length} ${imported.length === 1 ? 'član' : 'člana'} iz CSV fajla.`);
     };
     reader.readAsText(file);
@@ -513,9 +514,6 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
   recoveryActivity: RecoveryActivity;
   highRiskMembers: Member[]; members: Member[]; recoveryPulse: number; signalCount: number; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void; onPilot: () => void;
 }) {
-  const collectedRevenue = 10320 + metrics.recoveredRevenue;
-  const monthlyTarget = 12500;
-  const targetProgress = Math.min(100, (collectedRevenue / monthlyTarget) * 100);
   return <div className="screen-stack dashboard-screen">
     <section className="owner-hero" aria-labelledby="owner-risk-title">
       <span className="owner-hero-frame-pulse" aria-hidden="true" />
@@ -612,31 +610,13 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
     </section>
 
     <section className="owner-metrics panel-card" aria-label="Ključne operativne metrike">
-      <Metric label="Aktivni članovi" value={String(metrics.active)} hint="+8 ovog mjeseca" />
-      <Metric label="Ističe za 7 dana" value={String(metrics.expiring)} hint="6 nije kontaktirano" tone="warning" />
-      <Metric label="Izvor podataka" value="CSV" hint="bez integracija" />
+      <Metric label="Aktivni članovi" value={String(metrics.active)} hint="trenutni skup članova" />
+      <Metric label="Ističe za 7 dana" value={String(metrics.expiring)} hint="za kontakt prije isteka" tone="warning" />
+      <Metric label="Izvor podataka" value="CSV" hint="članovi i članarine" />
       <Metric label="Visoki rizik" value={String(metrics.highRisk)} hint="akcija danas" tone="danger" />
-      <Metric label="Obnovljeni" value={String(metrics.recoveredCount)} hint="ovog mjeseca" tone="success" />
-      <Metric label="Oporavljen prihod" value={euro(metrics.recoveredRevenue)} hint="ovog mjeseca" tone="success" />
+      <Metric label="Obnovljeni" value={String(metrics.recoveredCount)} hint="zabilježeno u PULSE" tone="success" />
+      <Metric label="Oporavljen prihod" value={euro(metrics.recoveredRevenue)} hint="zabilježeno u PULSE" tone="success" />
     </section>
-
-    <div className="lower-grid lower-grid--simple">
-      <section className="revenue-overview panel-card" aria-label="Finansijski pregled ovog mjeseca">
-        <div className="revenue-total">
-          <div className="revenue-title-row"><p className="eyebrow">NAPLAĆENO OVOG MJESECA</p><span className="period-label">Avgust 2026.</span></div>
-          <strong>{euro(collectedRevenue)}</strong>
-          <p><span>+8,4%</span> u odnosu na jul</p>
-          <div className="revenue-progress-copy"><span>{Math.round(targetProgress)}% mjesečnog cilja</span><b>Cilj {euro(monthlyTarget)}</b></div>
-          <div className="revenue-progress"><span style={{ width: `${targetProgress}%` }} /></div>
-        </div>
-        <RevenueTrend collectedRevenue={collectedRevenue} />
-        <div className="revenue-breakdown">
-          <div><span className="breakdown-dot memberships" /><p><small>Redovne članarine</small><strong>{euro(9500)}</strong></p></div>
-          <div><span className="breakdown-dot recovered" /><p><small>PULSE oporavak</small><strong>{euro(metrics.recoveredRevenue)}</strong></p></div>
-          <div><span className="breakdown-dot other" /><p><small>Dnevne karte i ostalo</small><strong>{euro(820)}</strong></p></div>
-        </div>
-      </section>
-    </div>
     <section className="pilot-footer"><div><strong>CSV pilot bez integracija</strong><span>Za početak su dovoljni članovi, telefoni, cijene i datumi isteka članarine.</span></div><Button variant="outline" onClick={onPilot}>Pogledaj pilot proces <ArrowRight /></Button></section>
   </div>;
 }
@@ -662,19 +642,6 @@ function StaffBoard({ members, onOpenMember, onOutcome, onAddMember, onFindMembe
         </div>
       </article>)}</div>
     </section>
-  </div>;
-}
-
-function RevenueTrend({ collectedRevenue }: { collectedRevenue: number }) {
-  return <div className="revenue-trend">
-    <div className="trend-heading"><span>Trend prihoda</span><strong>+{euro(collectedRevenue - 10000)}</strong></div>
-    <svg viewBox="0 0 360 112">
-      <title>Trend naplaćenog prihoda od marta do avgusta raste sa 8.900 na preko 10.800 eura</title>
-      <path className="trend-grid-line" d="M8 24H352M8 55H352M8 86H352" />
-      <path className="revenue-line" pathLength="1" d="M10 82 C45 78 62 70 78 68 S130 59 146 61 S198 70 214 55 S265 49 282 40 S327 24 350 20" />
-      <circle className="revenue-current-dot" cx="350" cy="20" r="4" />
-    </svg>
-    <div className="trend-months"><span>MAR</span><span>APR</span><span>MAJ</span><span>JUN</span><span>JUL</span><span>AVG</span></div>
   </div>;
 }
 
