@@ -5,21 +5,39 @@ import { readFileSync } from 'node:fs';
 const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 
-test('today priority queue uses a structured aligned row layout', () => {
-  assert.match(page, /className="priority-queue priority-queue--today"/);
-  assert.match(page, /className="priority-row-main"/);
-  assert.match(page, /className="priority-reason-block"/);
-  assert.match(page, /className="priority-value-block"/);
-  assert.match(page, /className="priority-row-meta"/);
+test('today queue uses isolated compact operational-list markup', () => {
+  for (const className of [
+    'today-queue',
+    'today-queue__header',
+    'today-queue__columns',
+    'today-queue__item',
+    'today-queue__main',
+    'today-queue__member',
+    'today-queue__risk',
+    'today-queue__reason',
+    'today-queue__value',
+    'today-queue__action',
+    'today-queue__rail',
+    'today-queue__details',
+  ]) {
+    assert.match(page, new RegExp(`className="[^"]*\\b${className}\\b`));
+  }
+
+  assert.doesNotMatch(page, /priority-row-main|priority-row-meta|priority-reason-block|priority-value-block/);
 });
 
-test('priority queue exposes clear column labels and aligned desktop grid', () => {
-  assert.match(page, /ZAŠTO TREBA PAŽNJU/);
-  assert.match(page, /ČLANARINA/);
-  assert.match(css, /\.priority-row-main\s*\{[\s\S]*?grid-template-columns:/);
-  assert.match(css, /\.priority-row-meta\s*\{[\s\S]*?grid-template-columns:/);
+test('desktop today queue shares one predictable five-column grid', () => {
+  assert.match(css, /--today-queue-grid:\s*minmax\(190px,\s*\.9fr\)\s+104px\s+minmax\(260px,\s*1\.5fr\)\s+88px\s+124px/);
+  assert.match(css, /\.today-queue__columns[\s\S]*?grid-template-columns:\s*var\(--today-queue-grid\)/);
+  assert.match(css, /\.today-queue__main[\s\S]*?grid-template-columns:\s*var\(--today-queue-grid\)/);
 });
 
-test('priority queue collapses cleanly on smaller screens', () => {
-  assert.match(css, /@media \(max-width: 820px\)[\s\S]*?\.priority-row-main\s*\{[\s\S]*?grid-template-columns:\s*1fr auto/);
+test('today queue primary rows stay compact and avoid absolute layout', () => {
+  assert.match(css, /\.today-queue__main\s*\{[\s\S]*?min-height:\s*74px/);
+  assert.doesNotMatch(css, /\.today-queue[^\{]*\{[^\}]*position:\s*absolute/);
+});
+
+test('today queue has explicit tablet and mobile collapse rules', () => {
+  assert.match(css, /@media \(max-width: 1100px\)[\s\S]*?\.today-queue__main\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto/);
+  assert.match(css, /@media \(max-width: 620px\)[\s\S]*?\.today-queue__action\s*\{[\s\S]*?width:\s*100%/);
 });
