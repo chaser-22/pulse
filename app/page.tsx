@@ -482,7 +482,7 @@ function LoadingState({ leaving = false }: { leaving?: boolean }) {
   return <main className={`pulse-loader pulse-loader-centered ${leaving ? 'is-leaving' : ''}`} aria-live="polite" aria-busy={!leaving}>
     <div className="pulse-loader-grid" aria-hidden="true" />
     <div className="pulse-loader-vignette" aria-hidden="true" />
-    <PulseLoaderScene progress={visibleProgress} />
+    <PulseLoaderScene />
 
     <section className="pulse-loader-center" aria-label={`PULSE loading ${visibleProgress}%`}>
       <div className="pulse-loader-wordmark" aria-hidden="true">
