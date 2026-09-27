@@ -538,6 +538,8 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .pilot-note svg { flex: none; width: 14px; }.pilot-note span { display: grid; color: #858b80; font-size: 12px; }.pilot-note strong { color: #dfe2da; }
 .success-toast { position: fixed; z-index: 80; right: 22px; bottom: 22px; width: min(380px,calc(100vw - 30px)); display: flex; align-items: center; gap: 10px; padding: 13px 15px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface-2); color: var(--foreground); font-size: 13px; line-height: 1.45; animation: toast-enter 220ms ease-out both; }
 .success-toast svg { flex: none; width: 17px; color: var(--primary); }
+.success-toast.is-error { border-color: color-mix(in srgb, var(--danger) 44%, var(--border-strong)); background: color-mix(in srgb, var(--danger) 8%, var(--surface-2)); }
+.success-toast.is-error svg { color: var(--danger); }
 @keyframes toast-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Loading */
