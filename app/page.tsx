@@ -533,51 +533,72 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
       </div>
     </section>
 
-    <section className="priority-queue priority-queue--today" aria-labelledby="priority-title">
-      <div className="priority-heading">
-        <div>
+    <section className="today-queue" aria-labelledby="priority-title">
+      <header className="today-queue__header">
+        <div className="today-queue__heading">
           <p className="eyebrow">DANAS</p>
           <h2 id="priority-title">Danas — članovi koji trebaju pažnju</h2>
-          <p className="priority-subtitle">Najvažniji članovi za današnji kontakt, poredani za brz pregled i akciju.</p>
+          <p>Najvažniji članovi za današnji kontakt, poredani za brz pregled i akciju.</p>
         </div>
-        <span className="summary-count"><strong>{highRiskMembers.length}</strong> visoki prioritet</span>
-      </div>
+        <span className="today-queue__count"><strong>{highRiskMembers.length}</strong> visoki prioritet</span>
+      </header>
 
-      {highRiskMembers.length ? <div className="priority-list">{highRiskMembers.map((member) => <article className="priority-row" key={member.id}>
-        <div className="priority-row-main">
-          <div className="priority-person">
-            <span className="avatar">{initials(member)}</span>
-            <span><strong>{fullName(member)}</strong><small>{member.packageName}</small></span>
-          </div>
-
-          <span className={`risk-label ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visok rizik' : 'Srednji rizik'}</span>
-
-          <div className="priority-reason-block">
-            <small>ZAŠTO TREBA PAŽNJU</small>
-            <p className="priority-reason">{member.riskReason}</p>
-          </div>
-
-          <div className="priority-value-block">
-            <small>ČLANARINA</small>
-            <strong className="priority-value">{euro(member.price)}</strong>
-          </div>
-
-          <button type="button" className="priority-action" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button>
+      {highRiskMembers.length ? <div className="today-queue__list" role="list">
+        <div className="today-queue__columns" aria-hidden="true">
+          <span>Član</span>
+          <span>Rizik</span>
+          <span>Zašto treba pažnju</span>
+          <span>Članarina</span>
+          <span>Akcija</span>
         </div>
 
-        <div className="priority-row-meta">
-          <RecoveryLifecycle member={member} />
-          <details className="risk-disclosure">
-            <summary>Detalji rizika</summary>
-            <div><p>{member.riskReason}</p><span><strong>Preporučeni potez</strong>{member.nextAction}</span><span><strong>Članarina ističe</strong>{prettyDate(member.endDate)}</span></div>
-          </details>
-        </div>
-      </article>)}</div> : <div className="priority-empty"><CheckCircle2 /><span><strong>Danas nema članova visokog prioriteta.</strong><small>Pregledajte sve aktivne signale rizika.</small></span></div>}
+        {highRiskMembers.map((member) => <article className="today-queue__item" role="listitem" key={member.id}>
+          <div className="today-queue__main">
+            <div className="today-queue__member">
+              <span className="avatar">{initials(member)}</span>
+              <span>
+                <strong>{fullName(member)}</strong>
+                <small>{member.packageName}</small>
+              </span>
+            </div>
 
-      <div className="priority-footer">
+            <div className="today-queue__risk">
+              <span className={riskClass(member.risk)}><i />{member.risk === 'high' ? 'Visok rizik' : 'Srednji rizik'}</span>
+            </div>
+
+            <div className="today-queue__reason">
+              <small className="today-queue__mobile-label">Zašto treba pažnju</small>
+              <p>{member.riskReason}</p>
+            </div>
+
+            <div className="today-queue__value">
+              <small className="today-queue__mobile-label">Članarina</small>
+              <strong>{euro(member.price)}</strong>
+            </div>
+
+            <button type="button" className="today-queue__action" onClick={() => onOpenMember(member)}>
+              Kontaktiraj <ArrowRight />
+            </button>
+          </div>
+
+          <div className="today-queue__rail">
+            <RecoveryLifecycle member={member} />
+            <details className="today-queue__details">
+              <summary>Detalji rizika</summary>
+              <div className="today-queue__details-panel">
+                <p>{member.riskReason}</p>
+                <span><strong>Preporučeni potez</strong>{member.nextAction}</span>
+                <span><strong>Članarina ističe</strong>{prettyDate(member.endDate)}</span>
+              </div>
+            </details>
+          </div>
+        </article>)}
+      </div> : <div className="today-queue__empty"><CheckCircle2 /><span><strong>Danas nema članova visokog prioriteta.</strong><small>Pregledajte sve aktivne signale rizika.</small></span></div>}
+
+      <footer className="today-queue__footer">
         <span>Prioriteti su spremni za današnji kontakt.</span>
         <button type="button" className="text-button" onClick={() => onNavigate('radar')}>Prikaži sve rizične članove <ArrowRight /></button>
-      </div>
+      </footer>
     </section>
 
     <section className="recovery-activity" aria-labelledby="activity-title">
