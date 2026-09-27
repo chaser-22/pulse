@@ -172,9 +172,11 @@ export default function Home() {
       if (storedMembers) setMembers(storedMembers);
       setReady(true);
       setLoaderLeaving(true);
-      setAppEntering(true);
-      exitTimer = window.setTimeout(() => setLoaderVisible(false), 900);
-      entranceTimer = window.setTimeout(() => setAppEntering(false), 2400);
+      exitTimer = window.setTimeout(() => {
+        setLoaderVisible(false);
+        setAppEntering(true);
+        entranceTimer = window.setTimeout(() => setAppEntering(false), 2400);
+      }, 900);
     }, 4000);
     return () => {
       window.clearTimeout(timer);
@@ -348,7 +350,7 @@ export default function Home() {
 
   return (
     <>
-    <main className={`app-shell ${appEntering ? 'app-shell-entering' : ''}`}>
+    <main className={`app-shell ${appEntering ? 'app-shell-entering' : ''} ${loaderVisible ? 'app-shell-loader-covered' : ''}`}>
       <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
         <div className="brand"><PulseLogo /><span className="brand-word">PULSE</span></div>
         <button className="sidebar-close" aria-label="Zatvori meni" onClick={() => setMobileNav(false)}><X /></button>

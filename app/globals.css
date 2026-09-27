@@ -3357,6 +3357,11 @@ body {
 /* Site motion system */
 body:has(.pulse-loader) { overflow: hidden; }
 
+.app-shell-loader-covered {
+  visibility: hidden;
+}
+
+
 .pulse-loader.is-leaving {
   pointer-events: none;
   transform-origin: 50% 20%;
