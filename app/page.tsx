@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type SyntheticEvent } from 'react';
 import {
   ArrowRight, Check, CheckCircle2,
   ChevronRight, CircleGauge, Clock3, FileSpreadsheet,
@@ -40,6 +40,11 @@ const STORAGE_KEY = 'pulse-demo-gym-v1';
 const BASE_METRICS = { active: 270, expiring: 13, recoveredCount: 12, recoveredRevenue: 445 };
 const today = '2026-08-31';
 const { me: t } = copy;
+
+function getMemberRevealDelay(index: number, total: number) {
+  const step = Math.max(34, Math.min(68, 1_050 / Math.max(total - 1, 1)));
+  return `${Math.round(index * step)}ms`;
+}
 
 const filters: Array<{ id: Filter; label: string }> = [
   { id: 'all', label: 'Svi' }, { id: 'active', label: 'Aktivni' }, { id: 'expiring', label: 'Ističu' },
@@ -634,7 +639,7 @@ function MembersScreen({ members, total, filter, search, onFilter, onSearch, onO
       {members.length ? <>
         <div className="members-table-wrap"><table className="members-table">
           <thead><tr><th>Član</th><th>Status</th><th>Paket</th><th>Početak</th><th>Ističe</th><th>Rizik</th><th><span className="sr-only">Otvori</span></th></tr></thead>
-          <tbody>{members.map((member) => <tr key={member.id} onClick={() => onOpenMember(member)}>
+          <tbody>{members.map((member, index) => <tr className="member-list-item" style={{ '--member-reveal-delay': getMemberRevealDelay(index, members.length) } as CSSProperties} key={member.id} onClick={() => onOpenMember(member)}>
             <td><div className="table-member"><span className="avatar">{initials(member)}</span><span><strong>{fullName(member)}</strong><small>{member.phone}</small></span></div></td>
             <td><span className={`status-pill ${statusClass(member.status)}`}>{(t.statuses[member.status] ?? 'Provjeriti')}</span></td>
             <td><strong>{member.packageName}</strong><small>{euro(member.price)} / mj.</small></td>
@@ -643,7 +648,7 @@ function MembersScreen({ members, total, filter, search, onFilter, onSearch, onO
             <td><button type="button" className="row-open-button" aria-label={`Otvori profil: ${fullName(member)}`} onClick={(event) => { event.stopPropagation(); onOpenMember(member); }}><ChevronRight /></button></td>
           </tr>)}</tbody>
         </table></div>
-        <div className="mobile-member-list">{members.map((member) => <button type="button" className="mobile-member-card" key={member.id} onClick={() => onOpenMember(member)}><span className="avatar">{initials(member)}</span><span className="mobile-member-main"><span><strong>{fullName(member)}</strong><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nizak'}</span></span><small>{member.packageName} · {euro(member.price)} mjesečno</small><span className="mobile-member-meta"><span><b>Status</b>{(t.statuses[member.status] ?? 'Provjeriti')}</span><span><b>Ističe</b>{prettyDate(member.endDate)}</span><span><b>Cijena</b>{euro(member.price)}</span></span></span><ChevronRight /></button>)}</div>
+        <div className="mobile-member-list">{members.map((member, index) => <button type="button" className="mobile-member-card member-list-item" style={{ '--member-reveal-delay': getMemberRevealDelay(index, members.length) } as CSSProperties} key={member.id} onClick={() => onOpenMember(member)}><span className="avatar">{initials(member)}</span><span className="mobile-member-main"><span><strong>{fullName(member)}</strong><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nizak'}</span></span><small>{member.packageName} · {euro(member.price)} mjesečno</small><span className="mobile-member-meta"><span><b>Status</b>{(t.statuses[member.status] ?? 'Provjeriti')}</span><span><b>Ističe</b>{prettyDate(member.endDate)}</span><span><b>Cijena</b>{euro(member.price)}</span></span></span><ChevronRight /></button>)}</div>
       </> : <EmptyState icon={<Search />} title="Nema rezultata" text="Pokušajte drugi izraz ili uklonite aktivni filter." action="Uvezi članove iz CSV-a" onAction={onImport} />}
     </section>
     <div className="csv-note"><FileSpreadsheet /><span><strong>CSV uvoz koristi samo članove i članarine.</strong> Kolone: firstname, lastname, phone, email, status, price, startdate, enddate.</span></div>
