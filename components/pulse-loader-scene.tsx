@@ -2,9 +2,15 @@
 
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { getLoaderPulseRate } from '@/lib/loader-pulse-motion';
 
-export function PulseLoaderScene() {
+export function PulseLoaderScene({ progress }: { progress: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const progressRef = useRef(progress);
+
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -164,11 +170,20 @@ export function PulseLoaderScene() {
 
     let frame = 0;
     const startedAt = performance.now();
+    let lastFrameAt = startedAt;
+    let pulsePhase = 0;
+    let currentPulseRate = getLoaderPulseRate(progressRef.current);
 
     const render = (now: number) => {
       const elapsed = (now - startedAt) / 1000;
+      const delta = Math.min((now - lastFrameAt) / 1000, 0.05);
+      lastFrameAt = now;
       const motion = reducedMotion ? 0.16 : 1;
-      const pulse = (Math.sin(elapsed * 2.8) + 1) / 2;
+      const targetPulseRate = getLoaderPulseRate(progressRef.current);
+      currentPulseRate += (targetPulseRate - currentPulseRate) * (1 - Math.exp(-delta * 4.2));
+      pulsePhase += delta * currentPulseRate * Math.PI * 2;
+      const heartbeat = Math.pow(Math.max(0, Math.sin(pulsePhase)), 8);
+      const progressEnergy = Math.min(1, Math.max(0, progressRef.current / 100));
 
       reactor.rotation.y = Math.sin(elapsed * 0.18) * 0.16 * motion;
       reactor.rotation.x = Math.sin(elapsed * 0.14) * 0.055 * motion;
@@ -177,27 +192,41 @@ export function PulseLoaderScene() {
       wireCore.rotation.y = elapsed * 0.31 * motion;
       core.rotation.x = -elapsed * 0.17 * motion;
       core.rotation.z = elapsed * 0.12 * motion;
-      core.scale.setScalar(0.96 + pulse * 0.08 * motion);
+      core.scale.setScalar(0.94 + heartbeat * 0.16 * motion);
+      wireCore.scale.setScalar(1 + heartbeat * 0.08 * motion);
       shell.rotation.y = -elapsed * 0.09 * motion;
       shell.rotation.x = elapsed * 0.05 * motion;
+      shell.scale.setScalar(1 + heartbeat * 0.035 * motion);
 
-      glow.scale.setScalar(4.55 + pulse * 0.35 * motion);
-      (glow.material as THREE.SpriteMaterial).opacity = 0.26 + pulse * 0.16;
+      glow.scale.setScalar(4.4 + heartbeat * 0.82 * motion);
+      (glow.material as THREE.SpriteMaterial).opacity = 0.22 + heartbeat * 0.3;
 
       orbits.forEach(({ mesh, speed }, index) => {
-        mesh.rotation.z = elapsed * speed * motion + index * 0.72;
+        mesh.rotation.z = elapsed * speed * (1 + progressEnergy * 0.28) * motion + index * 0.72;
+        mesh.scale.setScalar(1 + heartbeat * (0.012 + index * 0.002) * motion);
       });
 
-      pulseRings.forEach((ring) => {
-        const cycle = (elapsed * 0.34 + ring.userData.offset) % 1;
-        const scale = 1 + cycle * 1.5;
+      const beatPosition = (pulsePhase - Math.PI / 2) / (Math.PI * 2);
+      pulseRings.forEach((ring, index) => {
+        const shifted = beatPosition - index * 0.1;
+        const cycle = shifted - Math.floor(shifted);
+        const scale = 1 + cycle * 1.75;
+        const fade =
+          cycle < 0.08
+            ? cycle / 0.08
+            : cycle < 0.78
+              ? 1 - (cycle - 0.08) / 0.7
+              : 0;
+
         ring.scale.setScalar(scale);
-        (ring.material as THREE.MeshBasicMaterial).opacity =
-          cycle < 0.12 ? cycle * 2.2 : Math.max(0, (1 - cycle) * 0.23);
+        (ring.material as THREE.MeshBasicMaterial).opacity = fade * (0.34 + progressEnergy * 0.18);
       });
 
-      particles.rotation.z = elapsed * 0.028 * motion;
-      particles.rotation.y = elapsed * 0.018 * motion;
+      const particleMaterial = particles.material as THREE.PointsMaterial;
+      particleMaterial.opacity = 0.38 + heartbeat * 0.2;
+      particleMaterial.size = 0.018 + heartbeat * 0.006 * motion;
+      particles.rotation.z = elapsed * 0.028 * (1 + progressEnergy * 0.35) * motion;
+      particles.rotation.y = elapsed * 0.018 * (1 + progressEnergy * 0.35) * motion;
       renderer.render(scene, camera);
       frame = window.requestAnimationFrame(render);
     };
