@@ -10,8 +10,6 @@ import {
   memberMatchesSearch,
 } from '../lib/pulse-logic.ts';
 
-const base = { active: 270, expiring: 13, recoveredCount: 12, recoveredRevenue: 445 };
-
 test('risk queue uses only membership-date signals', () => {
   const riskMembers = getRiskMembers(initialMembers);
   assert.equal(riskMembers.every((member) => ['expired', 'expiring'].includes(member.status)), true);
@@ -45,13 +43,26 @@ test('activity uses only recorded member state', () => {
   assert.deepEqual(getRecoveryActivity(members), { contacted: 2, followUps: 1, renewed: 1, recoveredAmount: 40 });
 });
 
+
+test('dashboard metrics come only from the current member dataset', () => {
+  assert.deepEqual(getPulseMetrics(initialMembers), {
+    active: 9,
+    expiring: 5,
+    highRisk: 2,
+    riskRevenue: 280,
+    actionableRevenue: 80,
+    recoveredCount: 2,
+    recoveredRevenue: 75,
+  });
+});
+
 test('renewal updates the derived financial picture', () => {
   const target = initialMembers[0];
-  const before = getPulseMetrics(initialMembers, base);
+  const before = getPulseMetrics(initialMembers);
   const renewed = initialMembers.map((member) => member.id === target.id ? {
     ...member, status: 'recovered' as const, risk: 'low' as const, recoveredAmount: member.price,
   } : member);
-  const after = getPulseMetrics(renewed, base);
+  const after = getPulseMetrics(renewed);
   assert.equal(after.riskRevenue, before.riskRevenue - 35);
   assert.equal(after.actionableRevenue, before.actionableRevenue - 35);
   assert.equal(after.recoveredRevenue, before.recoveredRevenue + 35);
