@@ -511,6 +511,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
   const targetProgress = Math.min(100, (collectedRevenue / monthlyTarget) * 100);
   return <div className="screen-stack dashboard-screen">
     <section className="owner-hero" aria-labelledby="owner-risk-title">
+      <span className="owner-hero-frame-pulse" aria-hidden="true" />
       <div className="owner-hero-copy">
         <p className="eyebrow">PRIHOD U RIZIKU</p>
         <h2 id="owner-risk-title">{euro(metrics.riskRevenue)}</h2>
