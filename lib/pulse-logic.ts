@@ -7,13 +7,6 @@ export type RecoveryActivity = {
   renewed: number;
   recoveredAmount: number;
 };
-export type BaseMetrics = {
-  active: number;
-  expiring: number;
-  recoveredCount: number;
-  recoveredRevenue: number;
-};
-
 function isVisibleRisk(member: Member) {
   if (member.risk === 'low' || member.status === 'recovered') return false;
   return member.status === 'expired' || member.status === 'expiring';
@@ -61,17 +54,17 @@ export function getRecoveryActivity(members: Member[]): RecoveryActivity {
   };
 }
 
-export function getPulseMetrics(members: Member[], base: BaseMetrics) {
+export function getPulseMetrics(members: Member[]) {
   const riskMembers = getRiskMembers(members);
   const recovered = members.filter((member) => member.status === 'recovered');
+
   return {
-    active: base.active + members.filter((member) => member.status !== 'expired').length,
-    expiring: base.expiring + members.filter((member) => member.status === 'expiring').length,
+    active: members.filter((member) => member.status !== 'expired').length,
+    expiring: members.filter((member) => member.status === 'expiring').length,
     highRisk: riskMembers.filter((member) => member.risk === 'high').length,
     riskRevenue: riskMembers.reduce((sum, member) => sum + member.price, 0),
     actionableRevenue: getActionableRevenue(members),
-    recoveredCount: base.recoveredCount + recovered.length,
-    recoveredRevenue:
-      base.recoveredRevenue + recovered.reduce((sum, member) => sum + (member.recoveredAmount ?? 0), 0),
+    recoveredCount: recovered.length,
+    recoveredRevenue: recovered.reduce((sum, member) => sum + (member.recoveredAmount ?? 0), 0),
   };
 }
