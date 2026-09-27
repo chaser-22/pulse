@@ -116,21 +116,6 @@ export function PulseLoaderScene({ progress }: { progress: number }) {
       return { mesh, speed: spec.speed };
     });
 
-    const pulseRings = [0, 1, 2].map((index) => {
-      const material = new THREE.MeshBasicMaterial({
-        color: primaryColor,
-        transparent: true,
-        opacity: 0,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      });
-      const mesh = new THREE.Mesh(new THREE.TorusGeometry(1.12, 0.012, 8, 128), material);
-      mesh.rotation.x = Math.PI / 2;
-      mesh.userData.offset = index / 3;
-      reactor.add(mesh);
-      return mesh;
-    });
-
     const particleCount = 240;
     const particlePositions = new Float32Array(particleCount * 3);
     for (let index = 0; index < particleCount; index += 1) {
@@ -206,22 +191,6 @@ export function PulseLoaderScene({ progress }: { progress: number }) {
         mesh.scale.setScalar(1 + heartbeat * (0.012 + index * 0.002) * motion);
       });
 
-      const beatPosition = (pulsePhase - Math.PI / 2) / (Math.PI * 2);
-      pulseRings.forEach((ring, index) => {
-        const shifted = beatPosition - index * 0.1;
-        const cycle = shifted - Math.floor(shifted);
-        const scale = 1 + cycle * 1.75;
-        const fade =
-          cycle < 0.08
-            ? cycle / 0.08
-            : cycle < 0.78
-              ? 1 - (cycle - 0.08) / 0.7
-              : 0;
-
-        ring.scale.setScalar(scale);
-        (ring.material as THREE.MeshBasicMaterial).opacity = fade * (0.34 + progressEnergy * 0.18);
-      });
-
       const particleMaterial = particles.material as THREE.PointsMaterial;
       particleMaterial.opacity = 0.38 + heartbeat * 0.2;
       particleMaterial.size = 0.018 + heartbeat * 0.006 * motion;
@@ -248,10 +217,6 @@ export function PulseLoaderScene({ progress }: { progress: number }) {
       orbits.forEach(({ mesh }) => {
         mesh.geometry.dispose();
         (mesh.material as THREE.Material).dispose();
-      });
-      pulseRings.forEach((ring) => {
-        ring.geometry.dispose();
-        (ring.material as THREE.Material).dispose();
       });
       particleGeometry.dispose();
       (particles.material as THREE.Material).dispose();
