@@ -1195,6 +1195,7 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 @media (prefers-reduced-motion: reduce) {
   .signal-static { transform: none; }
   .page-atmosphere, .page-atmosphere-static { display: none; }
+  .owner-hero-frame-pulse { display: none !important; animation: none !important; }
 }
 
 /* Reception speed flow and contextual member detail */
@@ -2000,6 +2001,76 @@ body {
   border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
   filter: blur(.2px);
   opacity: .55;
+}
+
+.owner-hero-frame-pulse {
+  display: none;
+}
+
+@supports (offset-path: inset(1px round 1px)) {
+  .owner-hero-frame-pulse {
+    position: absolute;
+    z-index: 3;
+    top: 0;
+    left: 0;
+    display: block;
+    width: clamp(58px, 8vw, 104px);
+    height: 2px;
+    border-radius: 999px;
+    pointer-events: none;
+    offset-path: inset(2px round 32px);
+    offset-anchor: center;
+    offset-rotate: auto;
+    opacity: 0;
+    background:
+      linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in srgb, var(--primary) 24%, transparent) 18%,
+        color-mix(in srgb, var(--primary) 88%, var(--foreground)) 58%,
+        var(--foreground) 72%,
+        transparent 100%
+      );
+    box-shadow:
+      0 0 7px color-mix(in srgb, var(--foreground) 46%, transparent),
+      0 0 16px color-mix(in srgb, var(--primary) 60%, transparent),
+      0 0 34px color-mix(in srgb, var(--primary) 32%, transparent);
+    filter: blur(.1px);
+    mix-blend-mode: screen;
+    will-change: offset-distance, opacity, filter;
+    animation: owner-hero-frame-flow 5s linear infinite;
+  }
+}
+
+@keyframes owner-hero-frame-flow {
+  0%, 58% {
+    offset-distance: 0%;
+    opacity: 0;
+    filter: blur(.8px) brightness(.92);
+  }
+  62% {
+    offset-distance: 0%;
+    opacity: .18;
+    filter: blur(.5px) brightness(1);
+  }
+  72% {
+    opacity: .92;
+    filter: blur(.1px) brightness(1.16);
+  }
+  90% {
+    opacity: .78;
+    filter: blur(.1px) brightness(1.08);
+  }
+  96% {
+    offset-distance: 100%;
+    opacity: .42;
+    filter: blur(.4px) brightness(1);
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+    filter: blur(.8px) brightness(.92);
+  }
 }
 
 .owner-hero-copy {
