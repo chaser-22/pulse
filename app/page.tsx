@@ -177,7 +177,7 @@ export default function Home() {
         setAppEntering(true);
         entranceTimer = window.setTimeout(() => setAppEntering(false), 2400);
       }, 900);
-    }, 4000);
+    }, 5000);
     return () => {
       window.clearTimeout(timer);
       window.clearTimeout(exitTimer);
@@ -469,7 +469,7 @@ function LoadingState({ leaving = false }: { leaving?: boolean }) {
     const startedAt = performance.now();
     const timer = window.setInterval(() => {
       const elapsed = performance.now() - startedAt;
-      const next = Math.min(100, Math.floor((elapsed / 4000) * 100));
+      const next = Math.min(100, Math.floor((elapsed / 5000) * 100));
       setProgress(next);
       if (next >= 100) window.clearInterval(timer);
     }, 40);
