@@ -28,7 +28,7 @@ import {
   memberMatchesSearch,
   type RecoveryActivity,
 } from '@/lib/pulse-logic';
-import { addDaysIso, parseMemberCsv, toLocalIsoDate } from '@/lib/csv-import';
+import { addDaysIso, inferMembershipState, parseMemberCsv, toLocalIsoDate } from '@/lib/csv-import';
 import { getThemeClassName, getThemeColor, nextTheme, THEME_STORAGE_KEY, type Theme } from '@/lib/theme';
 import { useScrollReveal } from '@/hooks/use-scroll-reveal';
 
@@ -59,9 +59,9 @@ const outcomeLabels: Record<RecoveryOutcome, string> = {
 
 const viewMeta: Record<View, { eyebrow: string; title: string; subtitle: string }> = {
   dashboard: { eyebrow: 'DANAŠNJI PREGLED', title: 'Dobro jutro, Marko.', subtitle: 'Evo gdje je prihod u riziku i šta treba uraditi danas.' },
-  staff: { eyebrow: 'RADNI PROSTOR RECEPCIJE', title: 'Danas na recepciji', subtitle: 'Prijavite dolaske, dodajte članove i završite kontakte koji su prioritet danas.' },
-  members: { eyebrow: 'BAZA ČLANOVA', title: 'Članovi', subtitle: 'Pronađite, ažurirajte i kontaktirajte svakog člana na jednom mjestu.' },
-  radar: { eyebrow: 'JEDNOSTAVNI SIGNALI', title: 'Signali rizika', subtitle: 'Članovi su označeni po statusu članarine i datumu isteka.' },
+  staff: { eyebrow: 'RADNI PROSTOR RECEPCIJE', title: 'Danas na recepciji', subtitle: 'Pronađite člana, zabilježite ishod kontakta i završite današnje prioritete.' },
+  members: { eyebrow: 'BAZA ČLANOVA', title: 'Članovi', subtitle: 'Pretražite članove, provjerite članarinu i otvorite sljedeću akciju.' },
+  radar: { eyebrow: 'SIGNALI RIZIKA', title: 'Signali rizika', subtitle: 'Prioriteti izračunati iz datuma isteka i vrijednosti članarine.' },
 };
 
 function euro(value: number) {
@@ -72,6 +72,46 @@ function prettyDate(value: string) {
   if (!value) return '—';
   const [year, month, day] = value.split('-');
   return `${day}.${month}.${year}.`;
+}
+
+function formatActionTimestamp(date = new Date()) {
+  return new Intl.DateTimeFormat('sr-Latn-ME', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date).replace(',', ' ·');
+}
+
+function formatFollowUpTimestamp(date = new Date()) {
+  const followUp = new Date(date);
+  followUp.setDate(followUp.getDate() + 1);
+  followUp.setHours(10, 0, 0, 0);
+  return new Intl.DateTimeFormat('sr-Latn-ME', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(followUp).replace(',', ' ·');
+}
+
+function memberSignalCopy(status: MemberStatus) {
+  if (status === 'expired') {
+    return {
+      riskReason: 'Članarina je istekla.',
+      nextAction: 'Kontaktirajte člana danas i ponudite jednostavnu obnovu.',
+    };
+  }
+  if (status === 'expiring') {
+    return {
+      riskReason: 'Članarina ističe u narednih 7 dana.',
+      nextAction: 'Pošaljite podsjetnik prije isteka članarine.',
+    };
+  }
+  return {
+    riskReason: 'Članarina je aktivna i ne ističe u narednih 7 dana.',
+    nextAction: 'Nije potrebna akcija.',
+  };
 }
 
 function initials(member: Member) {
@@ -236,7 +276,7 @@ export default function Home() {
     setMembers((current) => current.map((item) => item.id === memberId ? {
       ...item,
       recoveryOutcome: outcome,
-      followUpAt: outcome === 'follow_up' ? 'Sjutra u 10:00' : undefined,
+      followUpAt: outcome === 'follow_up' ? formatFollowUpTimestamp() : undefined,
     } : item));
     setSuccess(`${fullName(member)}: ${outcomeLabels[outcome]}.`);
   }
@@ -264,9 +304,9 @@ export default function Home() {
   function queueMessage() {
     if (!selectedMember || !message.trim()) return;
     setMembers((current) => current.map((member) => member.id === selectedMember.id ? {
-      ...member, preferredChannel: channel, queuedMessage: { channel, text: message.trim(), queuedAt: 'Danas u 10:42' },
+      ...member, preferredChannel: channel, queuedMessage: { channel, text: message.trim(), queuedAt: formatActionTimestamp() },
     } : member));
-    setSuccess(`Poruka za ${selectedMember.firstName} je stavljena u red za ${channel}.`);
+    setSuccess(`Nacrt poruke za ${selectedMember.firstName} je sačuvan za kanal: ${channel}.`);
   }
 
   function markRenewed(event: SyntheticEvent<HTMLFormElement>) {
@@ -307,16 +347,39 @@ export default function Home() {
 
   function saveMember(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!memberForm.firstName.trim() || !memberForm.lastName.trim()) return;
+    if (!memberForm.firstName.trim() || !memberForm.lastName.trim() || !memberForm.phone.trim()) return;
+
+    const price = Number(memberForm.price);
+    if (!Number.isFinite(price) || price <= 0 || !memberForm.endDate) return;
+
+    const inferred = inferMembershipState(memberForm.endDate, toLocalIsoDate());
+    const copyForState = memberSignalCopy(inferred.status);
+
     if (editingId) {
-      setMembers((current) => current.map((member) => member.id === editingId ? { ...member, ...memberForm, price: Number(memberForm.price) } : member));
+      setMembers((current) => current.map((member) => {
+        if (member.id !== editingId) return member;
+        if (member.status === 'recovered') {
+          return { ...member, ...memberForm, price, status: 'recovered', risk: 'low' };
+        }
+        return {
+          ...member,
+          ...memberForm,
+          price,
+          status: inferred.status,
+          risk: inferred.risk,
+          ...copyForState,
+        };
+      }));
       setSuccess('Podaci o članu su sačuvani.');
     } else {
       const id = `${memberForm.firstName}-${memberForm.lastName}-${Date.now()}`.toLocaleLowerCase('me').replace(/\s+/g, '-');
       const created: Member = {
-        ...memberForm, id, price: Number(memberForm.price), risk: memberForm.status === 'expired' ? 'high' : memberForm.status === 'expiring' ? 'medium' : 'low',
-        riskReason: memberForm.status === 'expired' ? 'Dodati član ima isteklu članarinu.' : 'Nema dovoljno istorije za procjenu rizika.',
-        nextAction: memberForm.status === 'expired' ? 'Kontaktirajte člana za obnovu.' : 'Nije potrebna akcija.',
+        ...memberForm,
+        id,
+        price,
+        status: inferred.status,
+        risk: inferred.risk,
+        ...copyForState,
       };
       setMembers((current) => [created, ...current]);
       setSuccess(`${created.firstName} ${created.lastName} je dodat/a u bazu.`);
@@ -368,7 +431,7 @@ export default function Home() {
         </nav>
         <div className={`sidebar-insight ${workspace === 'staff' ? 'reception-insight' : ''}`}>
           <span className="pulse-dot" />
-          {workspace === 'owner' ? <div><strong>{euro(metrics.recoveredRevenue)}</strong><small>oporavljeno ovog mjeseca</small></div> : <div><strong>{riskMembers.filter((member) => !member.recoveryOutcome).length}</strong><small>zadataka preostalo danas</small></div>}
+          {workspace === 'owner' ? <div><strong>{euro(metrics.recoveredRevenue)}</strong><small>oporavljeno kroz PULSE</small></div> : <div><strong>{riskMembers.filter((member) => !member.recoveryOutcome).length}</strong><small>prioriteta preostalo</small></div>}
         </div>
         {workspace === 'owner' && <button className="demo-reset-button" onClick={() => setResetOpen(true)}><RotateCcw /> Resetuj demo</button>}
         <div className="gym-card"><span className="gym-monogram">PD</span><span><strong>{t.gymName}</strong><small>{t.location} · Demo podaci</small></span><Settings2 /></div>
@@ -413,18 +476,18 @@ export default function Home() {
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="form-dialog">
-          <DialogHeader><DialogTitle>{editingId ? 'Uredi člana' : 'Dodaj novog člana'}</DialogTitle><DialogDescription>Demo podaci ostaju samo u ovom pregledaču.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{editingId ? 'Uredi člana' : 'Dodaj člana'}</DialogTitle><DialogDescription>Status i rizik računaju se iz datuma isteka. Podaci ovog pilota ostaju samo u ovom pregledaču.</DialogDescription></DialogHeader>
           <form onSubmit={saveMember} className="member-form">
             <div className="form-grid">
               <Field label="Ime" required><Input value={memberForm.firstName} onChange={(e) => setMemberForm({ ...memberForm, firstName: e.target.value })} /></Field>
               <Field label="Prezime" required><Input value={memberForm.lastName} onChange={(e) => setMemberForm({ ...memberForm, lastName: e.target.value })} /></Field>
-              <Field label="Telefon"><Input value={memberForm.phone} onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })} /></Field>
+              <Field label="Telefon" required><Input required value={memberForm.phone} onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })} /></Field>
               <Field label="E-mail"><Input type="email" value={memberForm.email} onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })} /></Field>
               <Field label="Paket"><select className="select-input" value={memberForm.packageName} onChange={(e) => setMemberForm({ ...memberForm, packageName: e.target.value })}><option>Standard</option><option>Plus</option><option>Neograničeno</option></select></Field>
-              <Field label="Mjesečna cijena"><div className="amount-input"><Input type="number" min="1" value={memberForm.price} onChange={(e) => setMemberForm({ ...memberForm, price: Number(e.target.value) })} /><span>€</span></div></Field>
+              <Field label="Mjesečna cijena" required><div className="amount-input"><Input required type="number" min="1" value={memberForm.price} onChange={(e) => setMemberForm({ ...memberForm, price: Number(e.target.value) })} /><span>€</span></div></Field>
               <Field label="Početak"><Input type="date" value={memberForm.startDate} onChange={(e) => setMemberForm({ ...memberForm, startDate: e.target.value })} /></Field>
-              <Field label="Ističe"><Input type="date" value={memberForm.endDate} onChange={(e) => setMemberForm({ ...memberForm, endDate: e.target.value })} /></Field>
-              <Field label="Status"><select className="select-input" value={memberForm.status} onChange={(e) => setMemberForm({ ...memberForm, status: e.target.value as MemberStatus })}>{Object.entries(t.statuses).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></Field>
+              <Field label="Ističe" required><Input required type="date" value={memberForm.endDate} onChange={(e) => setMemberForm({ ...memberForm, endDate: e.target.value })} /></Field>
+              
               <Field label="Preferirani kanal"><select className="select-input" value={memberForm.preferredChannel} onChange={(e) => setMemberForm({ ...memberForm, preferredChannel: e.target.value as Channel })}><option>Telefon</option><option>Poruka</option><option>E-mail</option></select></Field>
             </div>
             <DialogFooter className="form-footer"><Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Odustani</Button><Button type="submit" className="pulse-button">{editingId ? 'Sačuvaj izmjene' : 'Dodaj člana'}</Button></DialogFooter>
@@ -601,7 +664,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
     </section>
 
     <section className="recovery-activity" aria-labelledby="activity-title">
-      <div><p className="eyebrow">AKTIVNOST OPORAVKA</p><h2 id="activity-title">Šta se promijenilo u ovom pregledu?</h2></div>
+      <div><p className="eyebrow">AKTIVNOST OPORAVKA</p><h2 id="activity-title">Rezultat kontakata</h2></div>
       <dl>
         <div><dt>Kontaktirano</dt><dd>{recoveryActivity.contacted}</dd></div>
         <div><dt>Za praćenje</dt><dd>{recoveryActivity.followUps}</dd></div>
@@ -632,7 +695,7 @@ function StaffBoard({ members, onOpenMember, onOutcome, onAddMember, onFindMembe
       <dl className="staff-stats"><div><dt>Preostalo</dt><dd>{members.length - completed}</dd></div><div><dt>Završeno</dt><dd>{completed}</dd></div><div><dt>Praćenja</dt><dd>{followUps}</dd></div></dl>
     </section>
     <section className="staff-queue panel-card" id="staff-queue">
-      <div className="section-heading"><div><p className="eyebrow">RED ZA DANAS</p><h2>Kontakti po osnovnim signalima</h2></div><span className="summary-count">{members.length - completed} preostalo</span></div>
+      <div className="section-heading"><div><p className="eyebrow">RED ZA DANAS</p><h2>Današnji kontakti</h2></div><span className="summary-count">{members.length - completed} preostalo</span></div>
       <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${member.recoveryOutcome || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
         <span className="task-priority">{String(index + 1).padStart(2, '0')}</span>
         <div className="task-person"><span className="avatar large">{initials(member)}</span><span><span className="task-name"><h3>{fullName(member)}</h3><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : 'Srednji'}</span></span><small><MessageCircle /> {member.preferredChannel} · {member.packageName}</small></span></div>
@@ -714,13 +777,13 @@ function MemberProfile({ member, channel, message, renewing, renewalAmount, onCh
       <div className="profile-info-grid"><section><h3>Članarina</h3><dl className="profile-info-list"><Detail label="Paket" value={`${member.packageName} · ${euro(member.price)}`} sub={`${prettyDate(member.startDate)} — ${prettyDate(member.endDate)}`} /><Detail label="Status" value={(t.statuses[member.status] ?? 'Provjeriti')} sub="iz CSV/Excel evidencije" /></dl></section><section><h3>Kontakt podaci</h3><dl className="profile-info-list"><Detail label="Telefon" value={member.phone} sub={member.preferredChannel} /><Detail label="E-mail" value={member.email} sub={member.birthday ? `Rođendan ${prettyDate(member.birthday)}` : 'Datum rođenja nije unijet'} /></dl></section></div>
     </section>
     <aside className="recovery-panel">
-      <div className="recovery-panel-title"><span><MessageCircle /></span><div><p className="eyebrow">RECOVERY AKCIJA</p><h2>Pripremi poruku</h2></div></div>
-      <p className="panel-copy">Personalizujte prijedlog. Poruka će biti samo stavljena u lokalni red.</p>
+      <div className="recovery-panel-title"><span><MessageCircle /></span><div><p className="eyebrow">AKCIJA OPORAVKA</p><h2>Pripremi poruku</h2></div></div>
+      <p className="panel-copy">Prilagodite prijedlog i sačuvajte nacrt. Slanje se u pilotu obavlja ručno.</p>
       <fieldset className="channel-tabs"><legend className="sr-only">Izaberite kanal</legend>{(['Telefon','Poruka','E-mail'] as Channel[]).map((item) => <button type="button" className={channel === item ? 'active' : ''} key={item} onClick={() => onChannel(item)}>{item}</button>)}</fieldset>
       <label className="message-field"><span>PORUKA ZA {member.firstName.toLocaleUpperCase('me')}</span><Textarea value={message} onChange={(event) => onMessage(event.target.value)} rows={7} /></label>
       <div className="message-meta"><span>{message.length} znakova</span><span><Sparkles /> PULSE prijedlog</span></div>
-      {member.queuedMessage && <div className="queued-state"><CheckCircle2 /><span><strong>Poruka je u redu</strong>{member.queuedMessage.channel} · {member.queuedMessage.queuedAt}</span></div>}
-      <Button className="pulse-button queue-button" onClick={onQueue} disabled={!message.trim()}><Send /> Stavi poruku u red</Button>
+      {member.queuedMessage && <div className="queued-state"><CheckCircle2 /><span><strong>Nacrt je sačuvan</strong>{member.queuedMessage.channel} · {member.queuedMessage.queuedAt}</span></div>}
+      <Button className="pulse-button queue-button" onClick={onQueue} disabled={!message.trim()}><Send /> Sačuvaj nacrt</Button>
       <div className="fake-service-note"><ShieldAlert /> Ovo je nacrt poruke. Tim je šalje ručno iz izabranog kanala.</div>
       <div className="recovery-divider"><span>NAKON OBNOVE</span></div>
       {!renewing ? <Button variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}><CheckCircle2 /> {member.status === 'recovered' ? 'Već je oporavljen' : t.actions.renew}</Button> : <form className="renew-form" onSubmit={onMarkRenewed}><div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div><p>Ovo će odmah povećati broj oporavljenih članova i prihod.</p><div><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div></form>}
