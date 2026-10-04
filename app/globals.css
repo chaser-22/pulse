@@ -4,6 +4,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+:root {
+  --font-ui: "Inter", "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: "Inter", "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
 @theme inline {
   --color-background: var(--background); --color-foreground: var(--foreground);
   --color-card: var(--card); --color-card-foreground: var(--card-foreground);
@@ -20,7 +25,7 @@
 }
 
 :root, .light {
-  --font-geist-sans: "Inter", "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
+  --font-geist-sans: var(--font-ui);
   --font-geist-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --background: #f5f3ef; --foreground: #202321; --card: #ffffffd9; --card-foreground: #202321;
   --popover: #fffdfa; --popover-foreground: #202321; --primary: #e85249; --primary-foreground: #fffdfa;
@@ -35,7 +40,7 @@
 }
 
 .dark {
-  --font-geist-sans: "Inter", "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
+  --font-geist-sans: var(--font-ui);
   --font-geist-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --background: #0e0f10; --foreground: #ededed; --card: #17191b; --card-foreground: #ededed;
   --popover: #1d1f22; --popover-foreground: #ededed; --primary: #ff6a5e; --primary-foreground: #0e0f10;
@@ -51,7 +56,7 @@
 
 * { box-sizing: border-box; border-color: var(--border); }
 html { background: var(--background); color: var(--foreground); font-size: 15px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: geometricPrecision; }
-body { margin: 0; min-height: 100vh; overflow-x: hidden; background: var(--background); color: var(--foreground); font-family: var(--font-geist-sans), "Inter", "Segoe UI Variable", "Segoe UI", Arial, sans-serif; font-size: 14px; line-height: 1.58; letter-spacing: -.006em; font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum"; text-rendering: optimizeLegibility; }
+body { margin: 0; min-height: 100vh; overflow-x: hidden; background: var(--background); color: var(--foreground); font-family: var(--font-ui); font-size: 14px; font-weight: 400; line-height: 1.58; letter-spacing: -.008em; font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum"; font-kerning: normal; font-synthesis: none; text-rendering: optimizeLegibility; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
