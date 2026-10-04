@@ -4,10 +4,13 @@ import { readFileSync } from 'node:fs';
 
 const globals = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 const polish = readFileSync(new URL('../app/layout-polish.css', import.meta.url), 'utf8');
+const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
-test('PULSE uses one deliberate premium UI type stack without synthetic weights', () => {
-  assert.match(globals, /--font-ui:\s*"Inter",[\s\S]*?system-ui,[\s\S]*?sans-serif/);
-  assert.match(globals, /--font-display:\s*"Inter",[\s\S]*?system-ui,[\s\S]*?sans-serif/);
+test('PULSE loads one deliberate premium UI family with resilient fallbacks', () => {
+  assert.match(html, /fonts\.googleapis\.com\/css2\?family=Manrope/);
+  assert.match(html, /display=swap/);
+  assert.match(globals, /--font-ui:\s*"Manrope",[\s\S]*?"Inter",[\s\S]*?system-ui,[\s\S]*?sans-serif/);
+  assert.match(globals, /--font-display:\s*"Manrope",[\s\S]*?"Inter",[\s\S]*?system-ui,[\s\S]*?sans-serif/);
   assert.match(globals, /body\s*\{[\s\S]*?font-family:\s*var\(--font-ui\)/);
   assert.match(globals, /font-synthesis:\s*none/);
   assert.match(polish, /:where\(h1, h2, h3, \[data-slot='dialog-title'\]\)[\s\S]*?font-family:\s*var\(--font-display\)/);
