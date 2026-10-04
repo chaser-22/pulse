@@ -1459,6 +1459,21 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .task-name h3,
+  .risk-member-identity h3 {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .task-person small {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   .members-toolbar {
     grid-template-columns: 1fr;
   }
@@ -1641,6 +1656,14 @@
 
   .today-queue__risk {
     justify-self: start;
+  }
+
+  .today-queue__member strong,
+  .today-queue__member small {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .today-queue__value {
