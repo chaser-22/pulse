@@ -188,6 +188,7 @@
 .radar-summary h2 {
   margin: 0;
   font-size: clamp(18px, 1.65vw, 22px);
+  font-weight: 700;
   line-height: 1.25;
   letter-spacing: -.03em;
 }
@@ -294,11 +295,22 @@
   font-weight: 600;
 }
 
-:where(.status-pill, .risk-pill, .summary-count, .sorted-label, .mode-note, .today-queue__count, .outcome-badge, .task-done) {
+.status-pill,
+.risk-pill,
+.summary-count,
+.sorted-label,
+.mode-note,
+.today-queue__count,
+.outcome-badge,
+.task-done {
   font-weight: 600;
 }
 
-:where(.metric-line strong, .hero-outcomes dd, .recovery-activity dd, .radar-summary dd, .risk-value strong) {
+.metric-line strong,
+.hero-outcomes dd,
+.recovery-activity dd,
+.radar-summary dd,
+.risk-value strong {
   font-weight: 700;
 }
 
@@ -405,6 +417,7 @@
 
 .today-queue__heading h2 {
   font-size: clamp(22px, 2vw, 30px);
+  font-weight: 700;
   line-height: 1.12;
 }
 
