@@ -9,8 +9,6 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PageAtmosphere } from '@/components/page-atmosphere';
-import { PulseLoaderScene } from '@/components/pulse-loader-scene';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -165,7 +163,7 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const [loaderLeaving, setLoaderLeaving] = useState(false);
   const [loaderVisible, setLoaderVisible] = useState(true);
-  const [appEntering, setAppEntering] = useState(false);
+  const [simpleEntering, setSimpleEntering] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
@@ -207,6 +205,7 @@ export default function Home() {
     } catch {
       // A corrupt local demo snapshot should never prevent the prototype from loading.
     }
+
     let exitTimer = 0;
     let entranceTimer = 0;
     const timer = window.setTimeout(() => {
@@ -215,10 +214,11 @@ export default function Home() {
       setLoaderLeaving(true);
       exitTimer = window.setTimeout(() => {
         setLoaderVisible(false);
-        setAppEntering(true);
-        entranceTimer = window.setTimeout(() => setAppEntering(false), 2400);
-      }, 900);
-    }, 5000);
+        setSimpleEntering(true);
+        entranceTimer = window.setTimeout(() => setSimpleEntering(false), 520);
+      }, 180);
+    }, 650);
+
     return () => {
       window.clearTimeout(timer);
       window.clearTimeout(exitTimer);
@@ -414,7 +414,7 @@ export default function Home() {
 
   return (
     <>
-    <main className={`app-shell ${appEntering ? 'app-shell-entering' : ''} ${loaderVisible ? 'app-shell-loader-covered' : ''}`}>
+    <main className={`app-shell ${simpleEntering ? 'simple-shell-entering' : ''} ${loaderVisible ? 'app-shell-loader-covered' : ''}`}>
       <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
         <div className="brand"><PulseLogo /><span className="brand-word">PULSE</span></div>
         <button className="sidebar-close" aria-label="Zatvori meni" onClick={() => setMobileNav(false)}><X /></button>
@@ -440,7 +440,6 @@ export default function Home() {
       {mobileNav && <button className="nav-backdrop" aria-label="Zatvori meni" onClick={() => setMobileNav(false)} />}
 
       <section className="main-panel">
-        <PageAtmosphere view={view} workspace={workspace} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} surface="ambient" />
         <header className="topbar">
           <button className="mobile-menu" aria-label="Otvori meni" onClick={() => setMobileNav(true)}><Menu /></button>
           <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1><p>{viewMeta[view].subtitle}</p></div>
@@ -528,40 +527,11 @@ function Field({ label, required, children }: { label: string; required?: boolea
 }
 
 function LoadingState({ leaving = false }: { leaving?: boolean }) {
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    const startedAt = performance.now();
-    const timer = window.setInterval(() => {
-      const elapsed = performance.now() - startedAt;
-      const next = Math.min(100, Math.floor((elapsed / 5000) * 100));
-      setProgress(next);
-      if (next >= 100) window.clearInterval(timer);
-    }, 40);
-
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const visibleProgress = leaving ? 100 : progress;
-
-  return <main className={`pulse-loader pulse-loader-centered ${leaving ? 'is-leaving' : ''}`} aria-live="polite" aria-busy={!leaving}>
-    <div className="pulse-loader-grid" aria-hidden="true" />
-    <div className="pulse-loader-vignette" aria-hidden="true" />
-    <PulseLoaderScene />
-
-    <section className="pulse-loader-center" aria-label={`PULSE loading ${visibleProgress}%`}>
-      <div className="pulse-loader-wordmark" aria-hidden="true">
-        <h1>PULSE</h1>
-      </div>
-
-      <div className="pulse-loader-meter">
-        <div className="pulse-loader-progress" aria-hidden="true">
-          <span style={{ width: `${visibleProgress}%` }} />
-        </div>
-        <output className="pulse-loader-percent" aria-label={`${visibleProgress} percent`}>
-          {visibleProgress}<span>%</span>
-        </output>
-      </div>
+  return <main className={`pulse-loader simple-loader ${leaving ? 'is-leaving' : ''}`} aria-live="polite" aria-busy={!leaving}>
+    <section className="simple-loader-center" aria-label="PULSE se pokreće">
+      <span className="simple-loader-mark" aria-hidden="true"><PulseLogo compact /></span>
+      <strong>PULSE</strong>
+      <small>Revenue recovery</small>
     </section>
   </main>;
 }
@@ -580,14 +550,18 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
 }) {
   return <div className="screen-stack dashboard-screen">
     <section className="owner-hero" aria-labelledby="owner-risk-title">
-      <span className="owner-hero-frame-pulse" aria-hidden="true" />
       <div className="owner-hero-copy">
-        <p className="eyebrow">PRIHOD U RIZIKU</p>
-        <h2 id="owner-risk-title">{euro(metrics.riskRevenue)}</h2>
-        <p className="hero-statement">zahtijeva tvoju pažnju</p>
-        <p className="actionable-copy">Od toga je <strong>{euro(metrics.actionableRevenue)}</strong> vezano za članove visokog prioriteta koje možeš kontaktirati danas.</p>
-        <div className="mode-note"><span>CSV</span>Članarina i datum isteka</div>
-        <button type="button" className="hero-link" onClick={() => onNavigate('radar')}>Pogledaj članove <ArrowRight /></button>
+        <div className="owner-hero-label"><span className="owner-hero-accent" aria-hidden="true" /><p className="eyebrow">PRIHOD U RIZIKU</p></div>
+        <div className="owner-hero-main">
+          <div className="owner-risk-value">
+            <h2 id="owner-risk-title">{euro(metrics.riskRevenue)}</h2>
+            <p className="hero-statement">zahtijeva pažnju</p>
+          </div>
+          <div className="owner-hero-context">
+            <p className="actionable-copy">Od toga je <strong>{euro(metrics.actionableRevenue)}</strong> vezano za članove visokog prioriteta koje možeš kontaktirati danas.</p>
+            <button type="button" className="hero-link" onClick={() => onNavigate('radar')}>Pogledaj članove <ArrowRight /></button>
+          </div>
+        </div>
         <dl className="hero-outcomes">
           <div><dt>Oporavljeno</dt><dd className="number-shift" key={metrics.recoveredRevenue}>{euro(metrics.recoveredRevenue)}</dd></div>
           <div><dt>Obnovljeni članovi</dt><dd>{metrics.recoveredCount}</dd></div>
