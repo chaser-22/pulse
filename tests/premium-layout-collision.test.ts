@@ -23,12 +23,8 @@ test('mobile member identity lets name and risk badge wrap without colliding', (
 });
 
 test('premium type roles use a compact consistent weight hierarchy', () => {
-  assert.match(
-    polish,
-    /:where\(\.status-pill, \.risk-pill, \.summary-count, \.sorted-label, \.mode-note, \.today-queue__count, \.outcome-badge, \.task-done\)[\s\S]*?font-weight:\s*600/,
-  );
-  assert.match(
-    polish,
-    /:where\(\.metric-line strong, \.hero-outcomes dd, \.recovery-activity dd, \.radar-summary dd, \.risk-value strong\)[\s\S]*?font-weight:\s*700/,
-  );
+  assert.match(polish, /\.status-pill,[\s\S]*?\.task-done\s*\{[\s\S]*?font-weight:\s*600/);
+  assert.match(polish, /\.metric-line strong,[\s\S]*?\.risk-value strong\s*\{[\s\S]*?font-weight:\s*700/);
+  assert.match(polish, /\.today-queue__heading h2\s*\{[\s\S]*?font-weight:\s*700/);
+  assert.match(polish, /\.recovery-activity h2\s*\{[\s\S]*?font-weight:\s*700/);
 });
