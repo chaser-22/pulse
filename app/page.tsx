@@ -715,6 +715,10 @@ function StaffBoard({ members, onOpenMember, onOutcome, onAddMember, onFindMembe
   </div>;
 }
 
+function Metric({ label, value, hint, tone = 'neutral' }: { label: string; value: string; hint: string; tone?: 'neutral' | 'warning' | 'danger' | 'success' }) {
+  return <div className={`metric-line tone-${tone}`}><span>{label}</span><strong>{value}</strong><small>{hint}</small></div>;
+}
+
 function MembersScreen({ members, total, filter, search, onFilter, onSearch, onOpenMember, onImport }: {
   members: Member[]; total: number; filter: Filter; search: string; onFilter: (filter: Filter) => void; onSearch: (search: string) => void; onOpenMember: (member: Member) => void; onImport: () => void;
 }) {
