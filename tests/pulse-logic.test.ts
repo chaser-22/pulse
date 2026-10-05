@@ -72,7 +72,7 @@ test('renewal updates the derived financial picture', () => {
 });
 
 test('member search accepts local and international phone formats', () => {
-  const milos = initialMembers.find((member) => member.id === 'milos-vukovic');
+  const milos = initialMembers.find((member) => member.firstName === 'Miloš');
   assert.ok(milos);
   assert.equal(memberMatchesSearch(milos, '067 214 883'), true);
   assert.equal(memberMatchesSearch(milos, '+38267214883'), true);
