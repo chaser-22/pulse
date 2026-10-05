@@ -1909,3 +1909,16 @@
     transition: none;
   }
 }
+
+
+/* CSV-only truth pass: reduced member facts should not leave empty layout columns. */
+.profile-context .profile-info-grid {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 560px;
+}
+
+@media (max-width: 1180px) {
+  .members-table {
+    min-width: 760px;
+  }
+}
