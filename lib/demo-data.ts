@@ -1,5 +1,5 @@
-import { addDaysIso, parseMemberCsv, toLocalIsoDate } from './csv-import';
-import type { Member } from './pulse-data';
+import { addDaysIso, parseMemberCsv, toLocalIsoDate } from './csv-import.ts';
+import type { Member } from './pulse-data.ts';
 
 const demoRows = [
   ['Miloš Vuković', '+382 67 214 883', 35, -3],
