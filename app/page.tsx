@@ -17,9 +17,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  copy, initialMembers,
+  copy,
   type Channel, type Member, type MemberStatus, type RecoveryOutcome, type RiskLevel,
 } from '@/lib/pulse-data';
+import { createDemoMembers } from '@/lib/demo-data';
 import {
   getPulseMetrics,
   getRecoveryActivity,
@@ -35,9 +36,9 @@ import { useScrollReveal } from '@/hooks/use-scroll-reveal';
 type View = 'dashboard' | 'staff' | 'members' | 'radar';
 type Workspace = 'owner' | 'staff';
 type Filter = 'all' | MemberStatus;
-type MemberForm = Pick<Member, 'firstName' | 'lastName' | 'phone' | 'email' | 'birthday' | 'packageName' | 'price' | 'startDate' | 'endDate' | 'status' | 'preferredChannel'>;
+type MemberForm = Pick<Member, 'firstName' | 'lastName' | 'phone' | 'price' | 'endDate'>;
 
-const STORAGE_KEY = 'pulse-demo-gym-v1';
+const STORAGE_KEY = 'pulse-csv-only-demo-v2';
 const { me: t } = copy;
 
 function getMemberRevealDelay(index: number, total: number) {
@@ -58,7 +59,7 @@ const outcomeLabels: Record<RecoveryOutcome, string> = {
 };
 
 const viewMeta: Record<View, { eyebrow: string; title: string; subtitle: string }> = {
-  dashboard: { eyebrow: 'DANAŠNJI PREGLED', title: 'Dobro jutro, Marko.', subtitle: 'Evo gdje je prihod u riziku i šta treba uraditi danas.' },
+  dashboard: { eyebrow: 'DANAŠNJI PREGLED', title: 'Pregled članarina', subtitle: 'Prihod u riziku i članovi kojima članarina ističe ili je već istekla.' },
   staff: { eyebrow: 'RADNI PROSTOR RECEPCIJE', title: 'Danas na recepciji', subtitle: 'Pronađite člana, zabilježite ishod kontakta i završite današnje prioritete.' },
   members: { eyebrow: 'BAZA ČLANOVA', title: 'Članovi', subtitle: 'Pretražite članove, provjerite članarinu i otvorite sljedeću akciju.' },
   radar: { eyebrow: 'SIGNALI RIZIKA', title: 'Signali rizika', subtitle: 'Prioriteti izračunati iz datuma isteka i vrijednosti članarine.' },
@@ -124,8 +125,8 @@ function fullName(member: Member) {
 
 function newMessage(member: Member) {
   if (member.status === 'expired') return `Zdravo ${member.firstName}, primijetili smo da je tvoja članarina istekla. Ako želiš da nastaviš, javi nam i pripremićemo obnovu prije tvog sljedećeg dolaska.`;
-  if (member.status === 'expiring') return `Zdravo ${member.firstName}, samo mali podsjetnik: tvoja članarina ističe ${prettyDate(member.endDate)} Javi nam ako želiš da je produžimo. — PULSE Demo Gym`;
-  return `Zdravo ${member.firstName}, nedostaješ nam u teretani. Da li ti raspored treninga i dalje odgovara? Tu smo da pomognemo da se vratiš u ritam.`;
+  if (member.status === 'expiring') return `Zdravo ${member.firstName}, samo mali podsjetnik: tvoja članarina ističe ${prettyDate(member.endDate)} Javi nam ako želiš da je produžimo.`;
+  return `Zdravo ${member.firstName}, tvoja članarina je aktivna do ${prettyDate(member.endDate)}.`;
 }
 
 function riskClass(risk: RiskLevel) {
@@ -153,15 +154,18 @@ function PulseLogo({ compact = false }: { compact?: boolean }) {
 function blankMemberForm(): MemberForm {
   const today = toLocalIsoDate();
   return {
-    firstName: '', lastName: '', phone: '+382 ', email: '', birthday: '', packageName: 'Standard', price: 35,
-    startDate: today, endDate: addDaysIso(today, 30), status: 'active', preferredChannel: 'Poruka',
+    firstName: '',
+    lastName: '',
+    phone: '+382 ',
+    price: 35,
+    endDate: addDaysIso(today, 30),
   };
 }
 
 export default function Home() {
   const [view, setView] = useState<View>('dashboard');
   const [workspace, setWorkspace] = useState<Workspace>('owner');
-  const [members, setMembers] = useState<Member[]>(initialMembers);
+  const [members, setMembers] = useState<Member[]>(() => createDemoMembers());
   const [ready, setReady] = useState(false);
   const [loaderLeaving, setLoaderLeaving] = useState(false);
   const [loaderVisible, setLoaderVisible] = useState(true);
@@ -282,7 +286,7 @@ export default function Home() {
   }
 
   function resetDemo() {
-    setMembers(initialMembers);
+    setMembers(createDemoMembers());
     setWorkspace('owner');
     setView('dashboard');
     setSelectedMemberId(null);
@@ -333,9 +337,11 @@ export default function Home() {
     if (member) {
       setEditingId(member.id);
       setMemberForm({
-        firstName: member.firstName, lastName: member.lastName, phone: member.phone, email: member.email,
-        birthday: member.birthday, packageName: member.packageName, price: member.price, startDate: member.startDate,
-        endDate: member.endDate, status: member.status, preferredChannel: member.preferredChannel,
+        firstName: member.firstName,
+        lastName: member.lastName,
+        phone: member.phone,
+        price: member.price,
+        endDate: member.endDate,
       });
       setSelectedMemberId(null);
     } else {
@@ -376,6 +382,11 @@ export default function Home() {
       const created: Member = {
         ...memberForm,
         id,
+        email: '',
+        birthday: '',
+        packageName: 'Nije navedeno',
+        startDate: '',
+        preferredChannel: 'Poruka',
         price,
         status: inferred.status,
         risk: inferred.risk,
@@ -434,7 +445,7 @@ export default function Home() {
           {workspace === 'owner' ? <div><strong>{euro(metrics.recoveredRevenue)}</strong><small>oporavljeno kroz PULSE</small></div> : <div><strong>{riskMembers.filter((member) => !member.recoveryOutcome).length}</strong><small>prioriteta preostalo</small></div>}
         </div>
         {workspace === 'owner' && <button className="demo-reset-button" onClick={() => setResetOpen(true)}><RotateCcw /> Resetuj demo</button>}
-        <div className="gym-card"><span className="gym-monogram">PD</span><span><strong>{t.gymName}</strong><small>{t.location} · Demo podaci</small></span><Settings2 /></div>
+        <div className="gym-card"><span className="gym-monogram">PD</span><span><strong>{t.gymName}</strong><small>CSV demo · 4 obavezna polja</small></span><Settings2 /></div>
       </aside>
 
       {mobileNav && <button className="nav-backdrop" aria-label="Zatvori meni" onClick={() => setMobileNav(false)} />}
@@ -476,19 +487,14 @@ export default function Home() {
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="form-dialog">
-          <DialogHeader><DialogTitle>{editingId ? 'Uredi člana' : 'Dodaj člana'}</DialogTitle><DialogDescription>Status i rizik računaju se iz datuma isteka. Podaci ovog pilota ostaju samo u ovom pregledaču.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{editingId ? 'Uredi člana' : 'Dodaj člana'}</DialogTitle><DialogDescription>Potrebni su samo ime, telefon, cijena i datum isteka. Status i rizik PULSE računa automatski.</DialogDescription></DialogHeader>
           <form onSubmit={saveMember} className="member-form">
             <div className="form-grid">
               <Field label="Ime" required><Input value={memberForm.firstName} onChange={(e) => setMemberForm({ ...memberForm, firstName: e.target.value })} /></Field>
               <Field label="Prezime" required><Input value={memberForm.lastName} onChange={(e) => setMemberForm({ ...memberForm, lastName: e.target.value })} /></Field>
               <Field label="Telefon" required><Input required value={memberForm.phone} onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })} /></Field>
-              <Field label="E-mail"><Input type="email" value={memberForm.email} onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })} /></Field>
-              <Field label="Paket"><select className="select-input" value={memberForm.packageName} onChange={(e) => setMemberForm({ ...memberForm, packageName: e.target.value })}><option>Standard</option><option>Plus</option><option>Neograničeno</option></select></Field>
               <Field label="Mjesečna cijena" required><div className="amount-input"><Input required type="number" min="1" value={memberForm.price} onChange={(e) => setMemberForm({ ...memberForm, price: Number(e.target.value) })} /><span>€</span></div></Field>
-              <Field label="Početak"><Input type="date" value={memberForm.startDate} onChange={(e) => setMemberForm({ ...memberForm, startDate: e.target.value })} /></Field>
               <Field label="Ističe" required><Input required type="date" value={memberForm.endDate} onChange={(e) => setMemberForm({ ...memberForm, endDate: e.target.value })} /></Field>
-              
-              <Field label="Preferirani kanal"><select className="select-input" value={memberForm.preferredChannel} onChange={(e) => setMemberForm({ ...memberForm, preferredChannel: e.target.value as Channel })}><option>Telefon</option><option>Poruka</option><option>E-mail</option></select></Field>
             </div>
             <DialogFooter className="form-footer"><Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Odustani</Button><Button type="submit" className="pulse-button">{editingId ? 'Sačuvaj izmjene' : 'Dodaj člana'}</Button></DialogFooter>
           </form>
