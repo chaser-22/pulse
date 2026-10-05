@@ -26,5 +26,5 @@ test('member actions store real display timestamps instead of demo clock values'
 test('top-level copy is concise and operational', () => {
   assert.match(page, /Danas na recepciji/);
   assert.match(page, /Pronađite člana, zabilježite ishod kontakta i završite današnje prioritete\./);
-  assert.match(page, /oporavljeno kroz PULSE/);
+  assert.match(page, /evidentirano nakon obnove/);
 });

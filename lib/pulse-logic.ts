@@ -20,7 +20,7 @@ export function memberMatchesSearch(member: Member, search: string) {
   const normalized = search.trim().toLocaleLowerCase('me');
   if (!normalized) return true;
 
-  const text = `${member.firstName} ${member.lastName} ${member.email}`.toLocaleLowerCase('me');
+  const text = `${member.firstName} ${member.lastName}`.toLocaleLowerCase('me');
   if (text.includes(normalized)) return true;
 
   const queryDigits = normalized.replace(/\D/g, '');

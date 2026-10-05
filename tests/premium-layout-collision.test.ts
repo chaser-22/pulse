@@ -26,5 +26,5 @@ test('premium type roles use a compact consistent weight hierarchy', () => {
   assert.match(polish, /\.status-pill,[\s\S]*?\.task-done\s*\{[\s\S]*?font-weight:\s*600/);
   assert.match(polish, /\.metric-line strong,[\s\S]*?\.risk-value strong\s*\{[\s\S]*?font-weight:\s*700/);
   assert.match(polish, /\.today-queue__heading h2\s*\{[\s\S]*?font-weight:\s*700/);
-  assert.match(polish, /\.recovery-activity h2\s*\{[\s\S]*?font-weight:\s*700/);
+  assert.match(polish, /\.recovery-activity h2,[\s\S]*?\.radar-summary h2\s*\{[\s\S]*?font-weight:\s*700/);
 });

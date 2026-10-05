@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { initialMembers, type Member } from '../lib/pulse-data.ts';
+import { createDemoMembers } from '../lib/demo-data.ts';
+import type { Member } from '../lib/pulse-data.ts';
+
+const initialMembers = createDemoMembers('2026-10-05');
 import {
   getActionableRevenue,
   getPulseMetrics,
@@ -38,7 +41,7 @@ test('activity uses only recorded member state', () => {
   const members: Member[] = [
     { ...initialMembers[0], queuedMessage: { channel: 'Poruka', text: 'Test', queuedAt: 'Danas' } },
     { ...initialMembers[1], recoveryOutcome: 'follow_up', followUpAt: 'Sjutra' },
-    { ...initialMembers[15], status: 'recovered', recoveredAmount: 40 },
+    { ...initialMembers[2], status: 'recovered', risk: 'low', recoveredAmount: 40 },
   ];
   assert.deepEqual(getRecoveryActivity(members), { contacted: 2, followUps: 1, renewed: 1, recoveredAmount: 40 });
 });
@@ -51,8 +54,8 @@ test('dashboard metrics come only from the current member dataset', () => {
     highRisk: 2,
     riskRevenue: 280,
     actionableRevenue: 80,
-    recoveredCount: 2,
-    recoveredRevenue: 75,
+    recoveredCount: 0,
+    recoveredRevenue: 0,
   });
 });
 
@@ -69,10 +72,10 @@ test('renewal updates the derived financial picture', () => {
 });
 
 test('member search accepts local and international phone formats', () => {
-  const milos = initialMembers.find((member) => member.id === 'milos-vukovic');
+  const milos = initialMembers.find((member) => member.firstName === 'Miloš');
   assert.ok(milos);
   assert.equal(memberMatchesSearch(milos, '067 214 883'), true);
   assert.equal(memberMatchesSearch(milos, '+38267214883'), true);
   assert.equal(memberMatchesSearch(milos, 'Miloš'), true);
-  assert.equal(memberMatchesSearch(milos, 'milos.v@example.test'), true);
+  assert.equal(memberMatchesSearch(milos, 'milos.v@example.test'), false);
 });
