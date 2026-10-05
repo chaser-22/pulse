@@ -14,14 +14,14 @@ test('owner dashboard does not use unsupported hard-coded financial totals', () 
 });
 
 test('CSV import replaces the demo member dataset instead of appending to it', () => {
-  assert.match(page, /setMembers\(imported\)/);
+  assert.match(page, /setMembers\(result\.members\)/);
   assert.doesNotMatch(page, /setMembers\(\(current\) => \[\.\.\.imported, \.\.\.current\]\)/);
 });
 
 test('owner dashboard keeps only member-derived and PULSE-tracked recovery metrics', () => {
   assert.match(page, /Metric label="Aktivni članovi" value=\{String\(metrics\.active\)\}/);
   assert.match(page, /Metric label="Ističe za 7 dana" value=\{String\(metrics\.expiring\)\}/);
-  assert.match(page, /Metric label="Visoki rizik" value=\{String\(metrics\.highRisk\)\}/);
-  assert.match(page, /Metric label="Oporavljeni" value=\{String\(metrics\.recoveredCount\)\}/);
-  assert.match(page, /Metric label="Oporavljen prihod" value=\{euro\(metrics\.recoveredRevenue\)\}/);
+  assert.match(page, /Metric label="Istekle članarine" value=\{String\(metrics\.highRisk\)\}/);
+  assert.match(page, /Metric label="Obnove u PULSE" value=\{String\(metrics\.recoveredCount\)\}/);
+  assert.match(page, /Metric label="Evidentiran prihod" value=\{euro\(metrics\.recoveredRevenue\)\}/);
 });
