@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { initialMembers } from '../lib/pulse-data.ts';
+import { createDemoMembers } from '../lib/demo-data.ts';
 import {
   addDaysIso,
   inferMembershipState,
@@ -71,7 +71,7 @@ test('invalid required member data blocks replacement instead of inventing defau
 
 test('re-import preserves PULSE recovery state for a matching member', () => {
   const recovered = {
-    ...initialMembers[0],
+    ...createDemoMembers('2026-09-27')[0],
     id: 'existing-member',
     phone: '+382 67 555 777',
     status: 'recovered' as const,
