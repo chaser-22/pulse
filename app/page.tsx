@@ -48,7 +48,7 @@ function getMemberRevealDelay(index: number, total: number) {
 
 const filters: Array<{ id: Filter; label: string }> = [
   { id: 'all', label: 'Svi' }, { id: 'active', label: 'Aktivni' }, { id: 'expiring', label: 'Ističu' },
-  { id: 'expired', label: 'Istekli' }, { id: 'recovered', label: 'Oporavljeni' },
+  { id: 'expired', label: 'Istekli' }, { id: 'recovered', label: 'Obnovljeni u PULSE' },
 ];
 
 const outcomeLabels: Record<RecoveryOutcome, string> = {
@@ -62,7 +62,7 @@ const viewMeta: Record<View, { eyebrow: string; title: string; subtitle: string 
   dashboard: { eyebrow: 'DANAŠNJI PREGLED', title: 'Pregled članarina', subtitle: 'Prihod u riziku i članovi kojima članarina ističe ili je već istekla.' },
   staff: { eyebrow: 'RADNI PROSTOR RECEPCIJE', title: 'Danas na recepciji', subtitle: 'Pronađite člana, zabilježite ishod kontakta i završite današnje prioritete.' },
   members: { eyebrow: 'BAZA ČLANOVA', title: 'Članovi', subtitle: 'Pretražite članove, provjerite članarinu i otvorite sljedeću akciju.' },
-  radar: { eyebrow: 'SIGNALI RIZIKA', title: 'Signali rizika', subtitle: 'Prioriteti izračunati iz datuma isteka i vrijednosti članarine.' },
+  radar: { eyebrow: 'PRIORITETI IZ CSV-A', title: 'Prioriteti članarina', subtitle: 'Prioriteti izračunati samo iz datuma isteka i cijene članarine.' },
 };
 
 function euro(value: number) {
@@ -433,16 +433,16 @@ export default function Home() {
           {workspace === 'owner' ? <>
           <NavButton active={view === 'dashboard'} icon={<LayoutDashboard />} label="Vlasnički pregled" onClick={() => goTo('dashboard')} />
           <NavButton active={view === 'members'} icon={<Users />} label={t.nav.members} count={members.length} onClick={() => goTo('members')} />
-          <NavButton active={view === 'radar'} icon={<Radar />} label={t.nav.radar} count={riskMembers.length} onClick={() => goTo('radar')} />
+          <NavButton active={view === 'radar'} icon={<Radar />} label="Prioriteti članarina" count={riskMembers.length} onClick={() => goTo('radar')} />
           </> : <>
           <NavButton active={view === 'staff'} icon={<CheckCircle2 />} label="Dnevni pregled" count={riskMembers.length} onClick={() => goTo('staff')} />
           <NavButton active={view === 'members'} icon={<Users />} label={t.nav.members} count={members.length} onClick={() => goTo('members')} />
-          <NavButton active={view === 'radar'} icon={<Radar />} label="Signali rizika" count={riskMembers.length} onClick={() => goTo('radar')} />
+          <NavButton active={view === 'radar'} icon={<Radar />} label="Prioriteti članarina" count={riskMembers.length} onClick={() => goTo('radar')} />
           </>}
         </nav>
         <div className={`sidebar-insight ${workspace === 'staff' ? 'reception-insight' : ''}`}>
           <span className="pulse-dot" />
-          {workspace === 'owner' ? <div><strong>{euro(metrics.recoveredRevenue)}</strong><small>oporavljeno kroz PULSE</small></div> : <div><strong>{riskMembers.filter((member) => !member.recoveryOutcome).length}</strong><small>prioriteta preostalo</small></div>}
+          {workspace === 'owner' ? <div><strong>{euro(metrics.recoveredRevenue)}</strong><small>evidentirano nakon obnove</small></div> : <div><strong>{riskMembers.filter((member) => !member.recoveryOutcome).length}</strong><small>prioriteta preostalo</small></div>}
         </div>
         {workspace === 'owner' && <button className="demo-reset-button" onClick={() => setResetOpen(true)}><RotateCcw /> Resetuj demo</button>}
         <div className="gym-card"><span className="gym-monogram">PD</span><span><strong>{t.gymName}</strong><small>CSV demo · 4 obavezna polja</small></span><Settings2 /></div>
@@ -510,8 +510,8 @@ export default function Home() {
 
       <Dialog open={pilotOpen} onOpenChange={setPilotOpen}>
         <DialogContent className="pilot-dialog">
-          <DialogHeader><Badge className="pilot-badge">PILOT SA VAŠIM PODACIMA</Badge><DialogTitle>Provjerite koliko prihoda PULSE može vratiti vašoj teretani.</DialogTitle><DialogDescription>Za početak je dovoljan običan CSV iz Excela ili postojećeg sistema. Nije potrebna promjena načina rada.</DialogDescription></DialogHeader>
-          <div className="pilot-steps"><div><span>01</span><p><strong>Uvezemo članove</strong>Ime, telefon, cijena i datum isteka su dovoljni. Status nije potreban.</p></div><div><span>02</span><p><strong>PULSE računa status i rizik</strong>Datum isteka automatski određuje ko je aktivan, kome uskoro ističe i kome je članarina istekla.</p></div><div><span>03</span><p><strong>Tim prati rezultat</strong>Kontakt, odgovor, praćenje, obnova i oporavljeni prihod ostaju sačuvani u PULSE toku.</p></div></div>
+          <DialogHeader><Badge className="pilot-badge">PILOT SA VAŠIM PODACIMA</Badge><DialogTitle>Pogledajte koje članarine zahtijevaju pažnju.</DialogTitle><DialogDescription>Za početak je dovoljan običan CSV sa četiri polja. PULSE ne koristi istoriju dolazaka, plaćanja ili prethodnih obnova.</DialogDescription></DialogHeader>
+          <div className="pilot-steps"><div><span>01</span><p><strong>Uvezemo CSV</strong>Ime, telefon, cijena i datum isteka su dovoljni.</p></div><div><span>02</span><p><strong>PULSE računa status i prioritet</strong>Datum isteka određuje ko je aktivan, kome ističe u narednih 7 dana i kome je članarina već istekla.</p></div><div><span>03</span><p><strong>Tim bilježi akcije</strong>Kontakt, odgovor i obnova postoje tek kada ih tim zabilježi unutar PULSE-a.</p></div></div>
           <div className="pilot-note"><ShieldAlert /><span><strong>PULSE provjerava CSV prije zamjene podataka.</strong>Ako nedostaje ime, telefon, cijena ili datum isteka, postojeći podaci ostaju netaknuti i dobićete jasan opis greške.</span></div>
           <DialogFooter><Button variant="outline" onClick={() => setPilotOpen(false)}>Zatvori</Button><Button className="pulse-button" onClick={() => { setPilotOpen(false); setView('members'); setWorkspace('owner'); setSuccess('Otvoren je ekran za uvoz članova iz CSV-a.'); }}><Upload /> Pogledaj kako izgleda uvoz</Button></DialogFooter>
         </DialogContent>
@@ -588,10 +588,10 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
     <section className="owner-hero" aria-labelledby="owner-risk-title">
       <span className="owner-hero-frame-pulse" aria-hidden="true" />
       <div className="owner-hero-copy">
-        <p className="eyebrow">PRIHOD U RIZIKU</p>
+        <p className="eyebrow">VRIJEDNOST ČLANARINA ZA PRAĆENJE</p>
         <h2 id="owner-risk-title">{euro(metrics.riskRevenue)}</h2>
-        <p className="hero-statement">zahtijeva tvoju pažnju</p>
-        <p className="actionable-copy">Od toga je <strong>{euro(metrics.actionableRevenue)}</strong> vezano za članove visokog prioriteta koje možeš kontaktirati danas.</p>
+        <p className="hero-statement">istekle ili ističu u narednih 7 dana</p>
+        <p className="actionable-copy">Od toga je <strong>{euro(metrics.actionableRevenue)}</strong> vrijednost članarina koje su već istekle.</p>
         <div className="mode-note"><span>CSV</span>Ime · telefon · cijena · datum isteka</div>
         <button type="button" className="hero-link" onClick={() => onNavigate('radar')}>Pogledaj članove <ArrowRight /></button>
         <dl className="hero-outcomes">
@@ -608,13 +608,13 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
           <h2 id="priority-title">Danas — članovi koji trebaju pažnju</h2>
           <p>Najvažniji članovi za današnji kontakt, poredani za brz pregled i akciju.</p>
         </div>
-        <span className="today-queue__count"><strong>{highRiskMembers.length}</strong> visoki prioritet</span>
+        <span className="today-queue__count"><strong>{highRiskMembers.length}</strong> već isteklo</span>
       </header>
 
       {highRiskMembers.length ? <div className="today-queue__list" role="list">
         <div className="today-queue__columns" aria-hidden="true">
           <span>Član</span>
-          <span>Rizik</span>
+          <span>Prioritet</span>
           <span>Zašto treba pažnju</span>
           <span>Članarina</span>
           <span>Akcija</span>
@@ -631,7 +631,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
             </div>
 
             <div className="today-queue__risk">
-              <span className={riskClass(member.risk)}><i />{member.risk === 'high' ? 'Visok rizik' : 'Srednji rizik'}</span>
+              <span className={riskClass(member.risk)}><i />{member.risk === 'high' ? 'Visoki prioritet' : 'Srednji prioritet'}</span>
             </div>
 
             <div className="today-queue__reason">
@@ -683,7 +683,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
       <Metric label="Aktivni članovi" value={String(metrics.active)} hint="trenutni skup članova" />
       <Metric label="Ističe za 7 dana" value={String(metrics.expiring)} hint="za kontakt prije isteka" tone="warning" />
       <Metric label="Izvor podataka" value="CSV" hint="članovi i članarine" />
-      <Metric label="Visoki rizik" value={String(metrics.highRisk)} hint="akcija danas" tone="danger" />
+      <Metric label="Istekle članarine" value={String(metrics.highRisk)} hint="prioritet za kontakt" tone="danger" />
       <Metric label="Obnove u PULSE" value={String(metrics.recoveredCount)} hint="nastaje tek nakon akcije tima" tone="success" />
       <Metric label="Evidentiran prihod" value={euro(metrics.recoveredRevenue)} hint="nastaje tek nakon potvrde obnove" tone="success" />
     </section>
@@ -705,7 +705,7 @@ function StaffBoard({ members, onOpenMember, onOutcome, onAddMember, onFindMembe
       <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${member.recoveryOutcome || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
         <span className="task-priority">{String(index + 1).padStart(2, '0')}</span>
         <div className="task-person"><span className="avatar large">{initials(member)}</span><span><span className="task-name"><h3>{fullName(member)}</h3><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : 'Srednji'}</span></span><small><Phone /> {member.phone} · {euro(member.price)}</small></span></div>
-        <div className="task-reason"><small>RAZLOG RIZIKA</small><p>{member.riskReason}</p></div>
+        <div className="task-reason"><small>RAZLOG PRIORITETA</small><p>{member.riskReason}</p></div>
         <div className="task-next"><small>PREDLOŽENA AKCIJA</small><p>{member.nextAction}</p></div>
         <div className="task-actions">
           {member.status === 'recovered' ? <span className="task-done"><CheckCircle2 /> Obnovljeno</span> : member.recoveryOutcome ? <><span className={`outcome-badge outcome-${member.recoveryOutcome}`}><Check /> {outcomeLabels[member.recoveryOutcome]}</span><button onClick={() => onOpenMember(member)}>Nastavi <ArrowRight /></button></> : <><button className="task-primary" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button><button onClick={() => onOutcome(member.id, 'no_answer')}><Phone /> Bez odgovora</button><button onClick={() => onOutcome(member.id, 'replied')}><MessageCircle /> Odgovorio/la</button><button onClick={() => onOutcome(member.id, 'follow_up')}><Clock3 /> Prati sjutra</button></>}
@@ -727,13 +727,13 @@ function MembersScreen({ members, total, filter, search, onFilter, onSearch, onO
     <section className="panel-card table-card">
       {members.length ? <>
         <div className="members-table-wrap"><table className="members-table">
-          <thead><tr><th>Član</th><th>Status</th><th>Cijena</th><th>Ističe</th><th>Rizik</th><th><span className="sr-only">Otvori</span></th></tr></thead>
+          <thead><tr><th>Član</th><th>Status</th><th>Cijena</th><th>Ističe</th><th>Prioritet</th><th><span className="sr-only">Otvori</span></th></tr></thead>
           <tbody>{members.map((member, index) => <tr className="member-list-item" style={{ '--member-reveal-delay': getMemberRevealDelay(index, members.length) } as CSSProperties} key={member.id} onClick={() => onOpenMember(member)}>
             <td><div className="table-member"><span className="avatar">{initials(member)}</span><span><strong>{fullName(member)}</strong><small>{member.phone}</small></span></div></td>
             <td><span className={`status-pill ${statusClass(member.status)}`}>{(t.statuses[member.status] ?? 'Provjeriti')}</span></td>
             <td><strong>{euro(member.price)}</strong></td>
             <td>{prettyDate(member.endDate)}</td>
-            <td><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nizak'}</span></td>
+            <td><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nema'}</span></td>
             <td><button type="button" className="row-open-button" aria-label={`Otvori profil: ${fullName(member)}`} onClick={(event) => { event.stopPropagation(); onOpenMember(member); }}><ChevronRight /></button></td>
           </tr>)}</tbody>
         </table></div>
@@ -767,7 +767,7 @@ function MemberProfile({ member, channel, message, renewing, renewalAmount, onCh
 }) {
   return <div className="profile-layout">
     <div className="profile-main">
-      <DialogHeader className="profile-header"><div className="avatar profile-avatar">{initials(member)}</div><div><div className="profile-badges"><span className={`status-pill ${statusClass(member.status)}`}>{(t.statuses[member.status] ?? 'Provjeriti')}</span><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki rizik' : member.risk === 'medium' ? 'Srednji rizik' : 'Nizak rizik'}</span></div><DialogTitle>{fullName(member)}</DialogTitle><DialogDescription>{member.phone} · {euro(member.price)}</DialogDescription></div></DialogHeader>
+      <DialogHeader className="profile-header"><div className="avatar profile-avatar">{initials(member)}</div><div><div className="profile-badges"><span className={`status-pill ${statusClass(member.status)}`}>{(t.statuses[member.status] ?? 'Provjeriti')}</span><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki prioritet' : member.risk === 'medium' ? 'Srednji prioritet' : 'Bez prioriteta'}</span></div><DialogTitle>{fullName(member)}</DialogTitle><DialogDescription>{member.phone} · {euro(member.price)}</DialogDescription></div></DialogHeader>
       <div className="profile-quick-actions"><Button variant="outline" onClick={onEdit}><Pencil /> Uredi podatke</Button></div>
     </div>
     <section className="profile-context">
@@ -790,7 +790,7 @@ function MemberProfile({ member, channel, message, renewing, renewalAmount, onCh
       <div className="recovery-divider"><span>NAKON OBNOVE</span></div>
       {!renewing ? <Button variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}><CheckCircle2 /> {member.status === 'recovered' ? 'Već je obnovljeno' : t.actions.renew}</Button> : <form className="renew-form" onSubmit={onMarkRenewed}><div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div><p>Ovaj iznos će biti zabilježen u PULSE tek nakon vaše potvrde.</p><div><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div></form>}
     </aside>
-    <div className="profile-history-grid"><section><div className="subsection-title"><FileSpreadsheet /><h3>Izvor signala</h3></div><p className="muted-empty">PULSE koristi samo cijenu članarine i datum isteka. Ne pretpostavlja istoriju obnova, dolazaka ili ponašanja člana.</p></section></div>
+    <div className="profile-history-grid"><section><div className="subsection-title"><FileSpreadsheet /><h3>Izvor signala</h3></div><p className="muted-empty">PULSE koristi samo cijenu članarine i datum isteka za ovaj signal. Ne pretpostavlja istoriju obnova, dolazaka, plaćanja ili ponašanja člana.</p></section></div>
   </div>;
 }
 
