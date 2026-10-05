@@ -17,6 +17,7 @@ test('CSV import only replaces member data after successful validation', () => {
 });
 
 test('CSV guidance describes the true minimum pilot input', () => {
-  assert.match(page, /Status nije potreban/);
+  assert.match(page, /četiri potrebna polja|četiri polja/i);
   assert.match(page, /Ime.*telefon.*cijena.*datum isteka/is);
+  assert.match(page, /status i prioritet/i);
 });
