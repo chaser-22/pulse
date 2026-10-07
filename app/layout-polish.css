@@ -2369,7 +2369,7 @@ body {
 .hero-risk-breakdown strong {
   color: var(--foreground);
   font-variant-numeric: tabular-nums;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .hero-priority-summary {
@@ -2402,7 +2402,7 @@ body {
   color: var(--primary-foreground);
   background: var(--primary);
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .hero-primary-action:hover {
@@ -2564,7 +2564,7 @@ body {
 
 .task-reason p {
   color: #d4dadd;
-  font-weight: 550;
+  font-weight: 600;
 }
 
 .task-next p {
@@ -2697,7 +2697,7 @@ body {
   border-radius: 10px;
   color: #06140f;
   background: var(--success);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .contact-confirm-button:hover {
@@ -2724,7 +2724,7 @@ body {
 .contact-confirmed-state strong {
   color: var(--success);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .page-atmosphere--ambient canvas {
