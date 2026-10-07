@@ -15,5 +15,5 @@ test('initial app entrance is temporary and finishes quickly after the loader', 
 test('post-loader entrance reveals the whole product immediately instead of staggering business content', () => {
   assert.match(css, /\.app-shell\.app-shell-entering\s*\{[\s\S]*?pulse-app-shell-enter 280ms/);
   assert.match(css, /\.app-shell\.app-shell-entering :is\([\s\S]*?\.screen-stack[\s\S]*?animation:\s*none !important/);
-  assert.match(css, /opacity:\s*1 !important/);
+  assert.match(css, /\.app-shell\.app-shell-entering \.scroll-reveal\s*\{[\s\S]*?opacity:\s*1 !important[\s\S]*?filter:\s*none !important[\s\S]*?transform:\s*none !important/);
 });
