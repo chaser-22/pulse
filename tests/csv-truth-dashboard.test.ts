@@ -19,9 +19,11 @@ test('CSV import replaces the demo member dataset instead of appending to it', (
 });
 
 test('owner dashboard keeps only member-derived and PULSE-tracked recovery metrics', () => {
+  assert.match(page, /Metric label="Ukupno članova" value=\{String\(metrics\.total\)\}/);
   assert.match(page, /Metric label="Aktivni članovi" value=\{String\(metrics\.active\)\}/);
   assert.match(page, /Metric label="Ističe za 7 dana" value=\{String\(metrics\.expiring\)\}/);
   assert.match(page, /Metric label="Istekle članarine" value=\{String\(metrics\.highRisk\)\}/);
   assert.match(page, /Metric label="Obnove u PULSE" value=\{String\(metrics\.recoveredCount\)\}/);
   assert.match(page, /Metric label="Evidentiran prihod" value=\{euro\(metrics\.recoveredRevenue\)\}/);
+  assert.doesNotMatch(page, /Metric label="Izvor podataka" value="CSV"/);
 });

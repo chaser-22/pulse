@@ -3,38 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta id="theme-color" name="theme-color" content="#0e0f10" />
+    <meta id="theme-color" name="theme-color" content="#05070d" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <script>
-      (() => {
-        const key = 'pulse-color-theme';
-        let theme = 'dark';
-        try {
-          const stored = localStorage.getItem(key);
-          theme = stored === 'light' || stored === 'dark'
-            ? stored
-            : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        } catch {
-          theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
-        document.documentElement.classList.add(theme);
-        document.documentElement.style.colorScheme = theme;
-        document.querySelector('#theme-color')?.setAttribute('content', theme === 'dark' ? '#0e0f10' : '#f5f3ef');
-      })();
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
     </script>
-    <meta name="description" content="PULSE prepoznaje članove koje teretana može izgubiti i pomaže da se prihod oporavi na vrijeme." />
-    <meta property="og:title" content="PULSE — Revenue Recovery" />
-    <meta property="og:description" content="Prepoznaj rizik. Vrati člana. Sačuvaj prihod teretane." />
+    <meta name="description" content="PULSE koristi CSV sa imenom, telefonom, cijenom i datumom isteka da napravi dnevnu listu za kontakt i evidentira obnove članarina." />
+    <meta property="og:title" content="PULSE — Obnove članarina iz CSV-a" />
+    <meta property="og:description" content="CSV → prioriteti za kontakt → evidentirane obnove članarina." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/og.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="PULSE — Revenue Recovery" />
-    <meta name="twitter:description" content="Prepoznaj rizik. Vrati člana. Sačuvaj prihod teretane." />
+    <meta name="twitter:title" content="PULSE — Obnove članarina iz CSV-a" />
+    <meta name="twitter:description" content="CSV → prioriteti za kontakt → evidentirane obnove članarina." />
     <meta name="twitter:image" content="/og.png" />
     <link rel="icon" href="/favicon.svg" />
-    <title>PULSE — Revenue Recovery</title>
+    <title>PULSE — Obnove članarina</title>
   </head>
   <body>
     <div id="root"></div>

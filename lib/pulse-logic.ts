@@ -59,6 +59,7 @@ export function getPulseMetrics(members: Member[]) {
   const recovered = members.filter((member) => member.status === 'recovered');
 
   return {
+    total: members.length,
     active: members.filter((member) => member.status !== 'expired').length,
     expiring: members.filter((member) => member.status === 'expiring').length,
     highRisk: riskMembers.filter((member) => member.risk === 'high').length,

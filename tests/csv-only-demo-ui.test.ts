@@ -30,8 +30,8 @@ test('manual member form asks only for minimum CSV fields', () => {
   assert.match(page, /<Field label="Ime"/);
   assert.match(page, /<Field label="Prezime"/);
   assert.match(page, /<Field label="Telefon"/);
-  assert.match(page, /<Field label="Mjesečna cijena"/);
-  assert.match(page, /<Field label="Ističe"/);
+  assert.match(page, /<Field label="Cijena članarine"/);
+  assert.match(page, /<Field label="Datum isteka"/);
 });
 
 test('search does not rely on optional email data', () => {

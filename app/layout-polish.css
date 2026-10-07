@@ -1922,3 +1922,298 @@
     min-width: 760px;
   }
 }
+
+
+/* World-class pilot refinement: quieter surfaces, faster hierarchy, restrained motion. */
+.dark {
+  --primary: #22c7e8;
+  --primary-foreground: #031218;
+  --accent: #6f61d9;
+  --success: #2ecc9d;
+  --border: #163247;
+  --border-strong: #24536c;
+  --surface: #07111ad9;
+  --surface-2: #0a1722;
+  --surface-active: #0c202e;
+  --surface-subtle: #091722;
+  --sidebar: #050a11e8;
+  --topbar: #060c14e8;
+}
+
+body {
+  background:
+    radial-gradient(circle at 50% -12%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 34rem),
+    linear-gradient(135deg, #05070d 0%, #060910 56%, #03050a 100%);
+}
+
+.app-shell {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--primary) 2%, transparent) 1px, transparent 1px),
+    linear-gradient(0deg, color-mix(in srgb, var(--primary) 2%, transparent) 1px, transparent 1px),
+    transparent;
+  background-size: 96px 96px;
+}
+
+.app-shell::before {
+  opacity: .22;
+  background: radial-gradient(circle at 50% 24%, color-mix(in srgb, var(--primary) 5%, transparent), transparent 28rem);
+  mix-blend-mode: normal;
+}
+
+.sidebar,
+.topbar,
+.panel-card,
+.owner-hero,
+.staff-queue,
+.risk-queue,
+.reception-search,
+.reception-secondary,
+.member-dialog,
+.form-dialog,
+.pilot-dialog,
+.confirm-dialog,
+.recovery-panel {
+  border-color: color-mix(in srgb, var(--primary) 16%, var(--border));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 94%, transparent), color-mix(in srgb, #05070d 78%, transparent));
+  box-shadow:
+    inset 0 1px 0 #ffffff0a,
+    0 14px 42px #00000024;
+  backdrop-filter: blur(16px) saturate(1.12);
+}
+
+.sidebar {
+  border-radius: 18px;
+}
+
+.topbar {
+  min-height: 88px;
+  border-radius: 18px;
+}
+
+.gym-card {
+  grid-template-columns: 36px minmax(0, 1fr);
+}
+
+.brand-word,
+.page-title h1,
+.owner-hero h2 {
+  text-shadow: none;
+}
+
+.nav-item.active {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-active));
+  box-shadow: none;
+}
+
+.nav-item.active svg {
+  color: var(--primary);
+}
+
+.workspace-switch button.active,
+.filter-tabs button.active {
+  color: var(--primary-foreground);
+  background: var(--primary);
+  box-shadow: none;
+}
+
+.pulse-button,
+.task-actions .task-primary {
+  color: var(--primary-foreground);
+  background: var(--primary);
+  box-shadow: none;
+}
+
+.pulse-button:hover,
+.task-actions .task-primary:hover {
+  background: color-mix(in srgb, var(--primary) 88%, white);
+  box-shadow: none;
+}
+
+.page-atmosphere canvas {
+  opacity: .14;
+  filter: saturate(1.06);
+}
+
+.page-atmosphere--ambient canvas {
+  opacity: .18;
+  transform: translateY(-1%) scale(1.03);
+  filter: none;
+}
+
+.page-atmosphere--ambient::after {
+  background:
+    radial-gradient(ellipse at 50% 20%, transparent 0%, color-mix(in srgb, var(--background) 28%, transparent) 48%, color-mix(in srgb, var(--background) 84%, transparent) 100%);
+}
+
+.owner-hero {
+  min-height: 340px;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 32%),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface) 88%, transparent), color-mix(in srgb, #030712 92%, transparent));
+}
+
+.owner-hero::before {
+  inset: 14px;
+  border-color: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-radius: 15px;
+  background: radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--primary) 7%, transparent), transparent 52%);
+  animation: none;
+}
+
+.owner-hero::after {
+  display: none;
+}
+
+.owner-hero-frame-pulse {
+  display: none !important;
+}
+
+.owner-hero-copy {
+  width: min(760px, 100%);
+  padding-top: clamp(28px, 3.3vw, 42px);
+  padding-bottom: clamp(24px, 3vw, 38px);
+}
+
+.owner-hero h2 {
+  font-size: clamp(56px, 6.8vw, 88px);
+  font-weight: 700;
+  letter-spacing: -.065em;
+}
+
+.hero-statement {
+  margin: 12px 0 18px;
+  font-size: clamp(17px, 1.7vw, 21px);
+}
+
+.actionable-copy {
+  max-width: 540px;
+  font-size: 14px;
+  line-height: 1.58;
+}
+
+.hero-link {
+  margin-top: 16px;
+}
+
+.hero-outcomes {
+  gap: clamp(24px, 4vw, 52px);
+  margin-top: 26px;
+  padding-top: 18px;
+}
+
+.eyebrow,
+th,
+dt,
+.reception-search small,
+.mobile-member-meta b {
+  letter-spacing: .05em;
+}
+
+.page-title h1 {
+  font-weight: 700;
+}
+
+.section-heading h2,
+.today-queue__heading h2,
+.recovery-activity h2,
+.radar-summary h2 {
+  font-weight: 700;
+}
+
+.task-outcome-label {
+  align-self: center;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.task-contacted {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--success);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.task-contacted svg {
+  width: 15px;
+  height: 15px;
+}
+
+.task-outcome-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.task-outcome-actions button {
+  min-height: 42px;
+}
+
+.app-shell.app-shell-entering {
+  animation: pulse-app-shell-enter 280ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.app-shell.app-shell-entering .scroll-reveal {
+  opacity: 1 !important;
+  filter: none !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+.app-shell.app-shell-entering :is(
+  .sidebar,
+  .topbar,
+  .screen-stack,
+  .main-panel > .page-atmosphere,
+  .main-panel > .page-atmosphere-static,
+  .screen-stack > .scroll-reveal.is-visible,
+  .screen-stack > .scroll-reveal.is-visible > *,
+  .hero-outcomes > *,
+  .metrics-grid > *,
+  .lower-grid > *,
+  .staff-task-list > *,
+  .risk-cards > *,
+  .mobile-member-list > *,
+  .members-table tbody tr
+) {
+  opacity: 1 !important;
+  filter: none !important;
+  transform: none !important;
+  animation: none !important;
+  transition-delay: 0ms !important;
+}
+
+@keyframes pulse-app-shell-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .page-atmosphere,
+  .page-atmosphere-static {
+    display: none !important;
+  }
+
+  .owner-hero {
+    min-height: 0;
+  }
+
+  .owner-hero h2 {
+    font-size: clamp(50px, 15vw, 68px);
+  }
+
+  .task-outcome-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.app-shell-entering {
+    animation: none !important;
+  }
+}
