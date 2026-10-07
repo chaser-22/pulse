@@ -10,6 +10,7 @@ const atmosphere = readFileSync(new URL('../components/page-atmosphere.tsx', imp
 
 test('pilot uses a short first-session intro and immediate repeat loads', () => {
   assert.match(page, /const INTRO_SESSION_KEY = 'pulse-intro-seen-v1';/);
+  assert.match(page, /const \[members, setMembers\] = useState<Member\[\]>\(\(\) => \{[\s\S]*?localStorage\.getItem\(STORAGE_KEY\)[\s\S]*?return parsed\.members/);
   assert.match(page, /const LOADER_TOTAL_DURATION_MS = 1800;/);
   assert.match(page, /const LOADER_EXIT_DURATION_MS = 250;/);
   assert.match(page, /sessionStorage\.getItem\(INTRO_SESSION_KEY\)/);
