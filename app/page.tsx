@@ -687,9 +687,9 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
     </section>
 
     <section className="owner-metrics panel-card" aria-label="Ključne operativne metrike">
+      <Metric label="Ukupno članova" value={String(metrics.total)} hint="trenutni CSV skup" />
       <Metric label="Aktivni članovi" value={String(metrics.active)} hint="trenutni skup članova" />
       <Metric label="Ističe za 7 dana" value={String(metrics.expiring)} hint="za kontakt prije isteka" tone="warning" />
-      <Metric label="Izvor podataka" value="CSV" hint="članovi i članarine" />
       <Metric label="Istekle članarine" value={String(metrics.highRisk)} hint="prioritet za kontakt" tone="danger" />
       <Metric label="Obnove u PULSE" value={String(metrics.recoveredCount)} hint="nastaje tek nakon akcije tima" tone="success" />
       <Metric label="Evidentiran prihod" value={euro(metrics.recoveredRevenue)} hint="nastaje tek nakon potvrde obnove" tone="success" />
