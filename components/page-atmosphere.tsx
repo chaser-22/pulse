@@ -21,15 +21,24 @@ export function PageAtmosphere({
   const [reducedMotion, setReducedMotion] = useState(() =>
     window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
+  const [compactViewport, setCompactViewport] = useState(() =>
+    window.matchMedia('(max-width: 768px)').matches,
+  );
 
   useEffect(() => {
-    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const sync = () => setReducedMotion(query.matches);
-    query.addEventListener('change', sync);
-    return () => query.removeEventListener('change', sync);
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const compactQuery = window.matchMedia('(max-width: 768px)');
+    const syncMotion = () => setReducedMotion(motionQuery.matches);
+    const syncCompact = () => setCompactViewport(compactQuery.matches);
+    motionQuery.addEventListener('change', syncMotion);
+    compactQuery.addEventListener('change', syncCompact);
+    return () => {
+      motionQuery.removeEventListener('change', syncMotion);
+      compactQuery.removeEventListener('change', syncCompact);
+    };
   }, []);
 
-  if (reducedMotion) return <div className="page-atmosphere-static" aria-hidden="true" />;
+  if (reducedMotion || compactViewport) return <div className="page-atmosphere-static" aria-hidden="true" />;
 
   return (
     <Suspense fallback={<div className="page-atmosphere-static" aria-hidden="true" />}>
