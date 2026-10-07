@@ -5,7 +5,7 @@ import {
   ArrowRight, Check, CheckCircle2,
   ChevronRight, CircleGauge, Clock3, FileSpreadsheet,
   LayoutDashboard, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
-  Moon, RotateCcw, Send, Settings2, ShieldAlert, Sparkles, Sun, Upload, Users, X,
+  RotateCcw, Send, ShieldAlert, Sparkles, Upload, Users, X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
   copy,
-  type Channel, type Member, type MemberStatus, type RecoveryOutcome, type RiskLevel,
+  type Member, type MemberStatus, type RecoveryOutcome, type RiskLevel,
 } from '@/lib/pulse-data';
 import { createDemoMembers } from '@/lib/demo-data';
 import {
@@ -30,7 +30,6 @@ import {
   type RecoveryActivity,
 } from '@/lib/pulse-logic';
 import { addDaysIso, inferMembershipState, parseMemberCsv, toLocalIsoDate } from '@/lib/csv-import';
-import { getThemeClassName, getThemeColor, nextTheme, THEME_STORAGE_KEY, type Theme } from '@/lib/theme';
 import { useScrollReveal } from '@/hooks/use-scroll-reveal';
 
 type View = 'dashboard' | 'staff' | 'members' | 'radar';
@@ -39,8 +38,9 @@ type Filter = 'all' | MemberStatus;
 type MemberForm = Pick<Member, 'firstName' | 'lastName' | 'phone' | 'price' | 'endDate'>;
 
 const STORAGE_KEY = 'pulse-csv-only-demo-v2';
-const LOADER_TOTAL_DURATION_MS = 3500;
-const LOADER_EXIT_DURATION_MS = 500;
+const INTRO_SESSION_KEY = 'pulse-intro-seen-v1';
+const LOADER_TOTAL_DURATION_MS = 1800;
+const LOADER_EXIT_DURATION_MS = 250;
 const LOADER_PROGRESS_DURATION_MS = LOADER_TOTAL_DURATION_MS - LOADER_EXIT_DURATION_MS;
 const { me: t } = copy;
 
@@ -62,7 +62,7 @@ const outcomeLabels: Record<RecoveryOutcome, string> = {
 };
 
 const viewMeta: Record<View, { eyebrow: string; title: string; subtitle: string }> = {
-  dashboard: { eyebrow: 'DANAŠNJI PREGLED', title: 'Pregled članarina', subtitle: 'Vrijednost članarina koje su istekle ili ističu u narednih 7 dana.' },
+  dashboard: { eyebrow: 'DANAŠNJI PREGLED', title: 'Pregled članarina', subtitle: 'PULSE pretvara vaš CSV u dnevnu listu članova za kontakt i prati šta se obnovilo.' },
   staff: { eyebrow: 'RADNI PROSTOR RECEPCIJE', title: 'Danas na recepciji', subtitle: 'Pronađite člana, zabilježite ishod kontakta i završite današnje prioritete.' },
   members: { eyebrow: 'BAZA ČLANOVA', title: 'Članovi', subtitle: 'Pretražite članove, provjerite članarinu i otvorite sljedeću akciju.' },
   radar: { eyebrow: 'PRIORITETI IZ CSV-A', title: 'Prioriteti članarina', subtitle: 'Prioriteti izračunati samo iz datuma isteka i cijene članarine.' },
@@ -171,13 +171,18 @@ export default function Home() {
   const [members, setMembers] = useState<Member[]>(() => createDemoMembers());
   const [ready, setReady] = useState(false);
   const [loaderLeaving, setLoaderLeaving] = useState(false);
-  const [loaderVisible, setLoaderVisible] = useState(true);
+  const [loaderVisible, setLoaderVisible] = useState(() => {
+    try {
+      return sessionStorage.getItem(INTRO_SESSION_KEY) !== '1';
+    } catch {
+      return true;
+    }
+  });
   const [appEntering, setAppEntering] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
-  const [channel, setChannel] = useState<Channel>('Poruka');
   const [message, setMessage] = useState('');
   const [renewing, setRenewing] = useState(false);
   const [renewalAmount, setRenewalAmount] = useState('35');
@@ -189,31 +194,29 @@ export default function Home() {
   const [success, setSuccess] = useState('');
   const [importError, setImportError] = useState('');
   const [recoveryPulse, setRecoveryPulse] = useState(0);
-  const [theme, setTheme] = useState<Theme>(() => document.documentElement.classList.contains('light') ? 'light' : 'dark');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  function toggleTheme() {
-    const next = nextTheme(theme);
-    const root = document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(getThemeClassName(next));
-    root.style.colorScheme = next;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', getThemeColor(next));
-    localStorage.setItem(THEME_STORAGE_KEY, next);
-    setTheme(next);
-  }
 
   useEffect(() => {
     let storedMembers: Member[] | undefined;
+    let introSeen = false;
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as { members?: Member[] };
         if (parsed.members?.length) storedMembers = parsed.members;
       }
+      introSeen = sessionStorage.getItem(INTRO_SESSION_KEY) === '1';
     } catch {
-      // A corrupt local demo snapshot should never prevent the prototype from loading.
+      // Storage availability should never prevent the prototype from loading.
     }
+
+    if (introSeen) {
+      if (storedMembers) setMembers(storedMembers);
+      setReady(true);
+      setLoaderVisible(false);
+      return;
+    }
+
     let exitTimer = 0;
     let entranceTimer = 0;
     const timer = window.setTimeout(() => {
@@ -221,11 +224,17 @@ export default function Home() {
       setReady(true);
       setLoaderLeaving(true);
       exitTimer = window.setTimeout(() => {
+        try {
+          sessionStorage.setItem(INTRO_SESSION_KEY, '1');
+        } catch {
+          // The intro can still complete when session storage is unavailable.
+        }
         setLoaderVisible(false);
         setAppEntering(true);
-        entranceTimer = window.setTimeout(() => setAppEntering(false), 2400);
+        entranceTimer = window.setTimeout(() => setAppEntering(false), 320);
       }, LOADER_EXIT_DURATION_MS);
     }, LOADER_PROGRESS_DURATION_MS);
+
     return () => {
       window.clearTimeout(timer);
       window.clearTimeout(exitTimer);
@@ -302,7 +311,6 @@ export default function Home() {
 
   function openMember(member: Member) {
     setSelectedMemberId(member.id);
-    setChannel(member.preferredChannel);
     setMessage(member.queuedMessage?.text ?? newMessage(member));
     setRenewalAmount(String(member.price));
     setRenewing(false);
@@ -311,9 +319,9 @@ export default function Home() {
   function queueMessage() {
     if (!selectedMember || !message.trim()) return;
     setMembers((current) => current.map((member) => member.id === selectedMember.id ? {
-      ...member, preferredChannel: channel, queuedMessage: { channel, text: message.trim(), queuedAt: formatActionTimestamp() },
+      ...member, preferredChannel: 'Poruka', queuedMessage: { channel: 'Poruka', text: message.trim(), queuedAt: formatActionTimestamp() },
     } : member));
-    setSuccess(`Nacrt poruke za ${selectedMember.firstName} je sačuvan za kanal: ${channel}.`);
+    setSuccess(`Nacrt poruke za ${selectedMember.firstName} je sačuvan.`);
   }
 
   function markRenewed(event: SyntheticEvent<HTMLFormElement>) {
@@ -443,12 +451,11 @@ export default function Home() {
           <NavButton active={view === 'radar'} icon={<Radar />} label="Prioriteti članarina" count={riskMembers.length} onClick={() => goTo('radar')} />
           </>}
         </nav>
-        <div className={`sidebar-insight ${workspace === 'staff' ? 'reception-insight' : ''}`}>
-          <span className="pulse-dot" />
-          {workspace === 'owner' ? <div><strong>{euro(metrics.recoveredRevenue)}</strong><small>evidentirano nakon obnove</small></div> : <div><strong>{riskMembers.filter((member) => !member.recoveryOutcome).length}</strong><small>prioriteta preostalo</small></div>}
-        </div>
+        {workspace === 'owner'
+          ? metrics.recoveredRevenue > 0 && <div className="sidebar-insight"><span className="pulse-dot" /><div><strong>{euro(metrics.recoveredRevenue)}</strong><small>evidentirano nakon obnove</small></div></div>
+          : <div className="sidebar-insight reception-insight"><span className="pulse-dot" /><div><strong>{riskMembers.filter((member) => !member.recoveryOutcome).length}</strong><small>prioriteta preostalo</small></div></div>}
         {workspace === 'owner' && <button className="demo-reset-button" onClick={() => setResetOpen(true)}><RotateCcw /> Resetuj demo</button>}
-        <div className="gym-card"><span className="gym-monogram">PD</span><span><strong>{t.gymName}</strong><small>CSV demo · 4 obavezna polja</small></span><Settings2 /></div>
+        <div className="gym-card"><span className="gym-monogram">PD</span><span><strong>{t.gymName}</strong><small>CSV demo · 4 obavezna polja</small></span></div>
       </aside>
 
       {mobileNav && <button className="nav-backdrop" aria-label="Zatvori meni" onClick={() => setMobileNav(false)} />}
@@ -459,12 +466,11 @@ export default function Home() {
           <button className="mobile-menu" aria-label="Otvori meni" onClick={() => setMobileNav(true)}><Menu /></button>
           <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1><p>{viewMeta[view].subtitle}</p></div>
           <div className="top-actions">
-            <button type="button" className="theme-toggle" aria-label={theme === 'dark' ? 'Uključi svijetlu temu' : 'Uključi tamnu temu'} title={theme === 'dark' ? 'Svijetla tema' : 'Tamna tema'} aria-pressed={theme === 'light'} onClick={toggleTheme}>
-              <span className="theme-toggle-glow" aria-hidden="true" /><Sun className="theme-sun" aria-hidden="true" /><Moon className="theme-moon" aria-hidden="true" />
-            </button>
             <fieldset className="workspace-switch"><legend className="sr-only">Izaberite radni prostor</legend><button type="button" aria-pressed={workspace === 'owner'} className={workspace === 'owner' ? 'active' : ''} onClick={() => switchWorkspace('owner')}><LayoutDashboard /> Vlasnik</button><button type="button" aria-pressed={workspace === 'staff'} className={workspace === 'staff' ? 'active' : ''} onClick={() => switchWorkspace('staff')}><Users /> Recepcija</button></fieldset>
-            {workspace === 'owner' && view === 'members' && <Button variant="outline" className="dark-outline" onClick={() => fileInputRef.current?.click()}><Upload /> {t.actions.import}</Button>}
-            <Button className="pulse-button" onClick={() => openMemberForm()}><Plus /> {t.actions.add}</Button>
+            {workspace === 'owner' ? <>
+              <Button className="pulse-button csv-primary-action" onClick={() => fileInputRef.current?.click()}><Upload /> Uvezi CSV</Button>
+              <Button variant="outline" className="dark-outline" onClick={() => openMemberForm()}><Plus /> {t.actions.add}</Button>
+            </> : <Button className="pulse-button" onClick={() => openMemberForm()}><Plus /> {t.actions.add}</Button>}
           </div>
           <input ref={fileInputRef} hidden type="file" accept=".csv,text/csv" onChange={(event) => { const file = event.target.files?.[0]; if (file) importCsv(file); event.target.value = ''; }} />
         </header>
@@ -479,8 +485,8 @@ export default function Home() {
         <DialogContent className="member-dialog" showCloseButton>
           {selectedMember && (
             <MemberProfile
-              member={selectedMember} channel={channel} message={message} renewing={renewing} renewalAmount={renewalAmount}
-              onChannel={setChannel} onMessage={setMessage} onQueue={queueMessage}
+              member={selectedMember} message={message} renewing={renewing} renewalAmount={renewalAmount}
+              onMessage={setMessage} onQueue={queueMessage}
               onEdit={() => openMemberForm(selectedMember)} onRenew={() => setRenewing(true)} onCancelRenew={() => setRenewing(false)}
               onRenewalAmount={setRenewalAmount} onMarkRenewed={markRenewed}
             />
@@ -496,8 +502,8 @@ export default function Home() {
               <Field label="Ime" required><Input value={memberForm.firstName} onChange={(e) => setMemberForm({ ...memberForm, firstName: e.target.value })} /></Field>
               <Field label="Prezime" required><Input value={memberForm.lastName} onChange={(e) => setMemberForm({ ...memberForm, lastName: e.target.value })} /></Field>
               <Field label="Telefon" required><Input required value={memberForm.phone} onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })} /></Field>
-              <Field label="Mjesečna cijena" required><div className="amount-input"><Input required type="number" min="1" value={memberForm.price} onChange={(e) => setMemberForm({ ...memberForm, price: Number(e.target.value) })} /><span>€</span></div></Field>
-              <Field label="Ističe" required><Input required type="date" value={memberForm.endDate} onChange={(e) => setMemberForm({ ...memberForm, endDate: e.target.value })} /></Field>
+              <Field label="Cijena članarine" required><div className="amount-input"><Input required type="number" min="1" value={memberForm.price} onChange={(e) => setMemberForm({ ...memberForm, price: Number(e.target.value) })} /><span>€</span></div></Field>
+              <Field label="Datum isteka" required><Input required type="date" value={memberForm.endDate} onChange={(e) => setMemberForm({ ...memberForm, endDate: e.target.value })} /></Field>
             </div>
             <DialogFooter className="form-footer"><Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Odustani</Button><Button type="submit" className="pulse-button">{editingId ? 'Sačuvaj izmjene' : 'Dodaj člana'}</Button></DialogFooter>
           </form>
@@ -513,10 +519,10 @@ export default function Home() {
 
       <Dialog open={pilotOpen} onOpenChange={setPilotOpen}>
         <DialogContent className="pilot-dialog">
-          <DialogHeader><Badge className="pilot-badge">PILOT SA VAŠIM PODACIMA</Badge><DialogTitle>Pogledajte koje članarine zahtijevaju pažnju.</DialogTitle><DialogDescription>Za početak je dovoljan običan CSV sa četiri polja. PULSE ne koristi istoriju dolazaka, plaćanja ili prethodnih obnova.</DialogDescription></DialogHeader>
+          <DialogHeader><Badge className="pilot-badge">PILOT SA VAŠIM PODACIMA</Badge><DialogTitle>Četiri polja su dovoljna za početak.</DialogTitle><DialogDescription>Ime, telefon, cijena članarine i datum isteka pretvaraju se u dnevnu listu prioriteta za kontakt.</DialogDescription></DialogHeader>
           <div className="pilot-steps"><div><span>01</span><p><strong>Uvezemo CSV</strong>Ime, telefon, cijena i datum isteka su dovoljni.</p></div><div><span>02</span><p><strong>PULSE računa status i prioritet</strong>Datum isteka određuje ko je aktivan, kome ističe u narednih 7 dana i kome je članarina već istekla.</p></div><div><span>03</span><p><strong>Tim bilježi akcije</strong>Kontakt, odgovor i obnova postoje tek kada ih tim zabilježi unutar PULSE-a.</p></div></div>
-          <div className="pilot-note"><ShieldAlert /><span><strong>PULSE provjerava CSV prije zamjene podataka.</strong>Ako nedostaje ime, telefon, cijena ili datum isteka, postojeći podaci ostaju netaknuti i dobićete jasan opis greške.</span></div>
-          <DialogFooter><Button variant="outline" onClick={() => setPilotOpen(false)}>Zatvori</Button><Button className="pulse-button" onClick={() => { setPilotOpen(false); setView('members'); setWorkspace('owner'); setSuccess('Otvoren je ekran za uvoz članova iz CSV-a.'); }}><Upload /> Pogledaj kako izgleda uvoz</Button></DialogFooter>
+          <div className="pilot-note"><ShieldAlert /><span><strong>PULSE koristi samo podatke koje imate.</strong>Ne pretpostavlja istoriju dolazaka, plaćanja ili prethodnih obnova, a neispravan CSV neće zamijeniti postojeće podatke.</span></div>
+          <DialogFooter><Button variant="outline" onClick={() => setPilotOpen(false)}>Zatvori</Button><Button className="pulse-button" onClick={() => { setPilotOpen(false); fileInputRef.current?.click(); }}><Upload /> Uvezi svoj CSV</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -689,7 +695,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
       <Metric label="Obnove u PULSE" value={String(metrics.recoveredCount)} hint="nastaje tek nakon akcije tima" tone="success" />
       <Metric label="Evidentiran prihod" value={euro(metrics.recoveredRevenue)} hint="nastaje tek nakon potvrde obnove" tone="success" />
     </section>
-    <section className="pilot-footer"><div><strong>CSV pilot bez integracija</strong><span>Za početak su dovoljni članovi, telefoni, cijene i datumi isteka članarine.</span></div><Button variant="outline" onClick={onPilot}>Pogledaj pilot proces <ArrowRight /></Button></section>
+    <section className="pilot-footer"><div><strong>CSV pilot bez integracija</strong><span>Za početak su dovoljni članovi, telefoni, cijene i datumi isteka članarine.</span></div><Button variant="outline" onClick={onPilot}>Kako radi pilot <ArrowRight /></Button></section>
   </div>;
 }
 
