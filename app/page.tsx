@@ -35,8 +35,13 @@ type View = 'dashboard' | 'staff' | 'members' | 'radar';
 type Workspace = 'owner' | 'staff';
 type Filter = 'all' | MemberStatus;
 type MemberForm = Pick<Member, 'firstName' | 'lastName' | 'phone' | 'price' | 'endDate'>;
+type ImportPhase = 'idle' | 'reading' | 'validating';
+type ImportSummary = { members: number; priorities: number; riskRevenue: number };
+type RenewalReveal = { name: string; amount: number };
 
 const STORAGE_KEY = 'pulse-csv-only-demo-v2';
+const ONBOARDING_KEY = 'pulse-onboarding-seen-v1';
+const IMPORT_PROGRESS_DELAY_MS = 350;
 const { me: t } = copy;
 
 function getMemberRevealDelay(index: number, total: number) {
@@ -65,6 +70,35 @@ const viewMeta: Record<View, { eyebrow: string; title: string; subtitle: string 
 
 function euro(value: number) {
   return `${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(value)} €`;
+}
+
+function AnimatedCurrency({ value, className }: { value: number; className?: string }) {
+  const previousRef = useRef(value);
+  const [displayValue, setDisplayValue] = useState(value);
+
+  useEffect(() => {
+    const from = previousRef.current;
+    previousRef.current = value;
+
+    if (from === value || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayValue(value);
+      return;
+    }
+
+    let frame = 0;
+    const startedAt = performance.now();
+    const duration = 520;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(Math.round(from + (value - from) * eased));
+      if (progress < 1) frame = window.requestAnimationFrame(tick);
+    };
+    frame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frame);
+  }, [value]);
+
+  return <span className={className}>{euro(displayValue)}</span>;
 }
 
 function prettyDate(value: string) {
@@ -202,10 +236,23 @@ export default function Home() {
   const [memberForm, setMemberForm] = useState<MemberForm>(blankMemberForm());
   const [resetOpen, setResetOpen] = useState(false);
   const [pilotOpen, setPilotOpen] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(() => {
+    try {
+      return localStorage.getItem(ONBOARDING_KEY) !== '1';
+    } catch {
+      return false;
+    }
+  });
   const [success, setSuccess] = useState('');
   const [importError, setImportError] = useState('');
+  const [importPhase, setImportPhase] = useState<ImportPhase>('idle');
+  const [showImportProgress, setShowImportProgress] = useState(false);
+  const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
+  const [renewalReveal, setRenewalReveal] = useState<RenewalReveal | null>(null);
   const [recoveryPulse, setRecoveryPulse] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const importProgressTimerRef = useRef<number | null>(null);
+  const renewalTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ members }));
@@ -223,6 +270,13 @@ export default function Home() {
     return () => window.clearTimeout(timer);
   }, [importError]);
 
+  useEffect(() => {
+    return () => {
+      if (importProgressTimerRef.current !== null) window.clearTimeout(importProgressTimerRef.current);
+      if (renewalTimerRef.current !== null) window.clearTimeout(renewalTimerRef.current);
+    };
+  }, []);
+
   useScrollReveal(true, `${workspace}:${view}`);
 
   const selectedMember = members.find((member) => member.id === selectedMemberId) ?? null;
@@ -238,6 +292,30 @@ export default function Home() {
       return matchesFilter && memberMatchesSearch(member, search);
     });
   }, [members, filter, search]);
+
+  function completeOnboarding() {
+    try {
+      localStorage.setItem(ONBOARDING_KEY, '1');
+    } catch {
+      // Onboarding can still continue when storage is unavailable.
+    }
+    setOnboardingOpen(false);
+  }
+
+  function startDemo() {
+    setWorkspace('owner');
+    setView('dashboard');
+    completeOnboarding();
+  }
+
+  function finishImportProgress() {
+    if (importProgressTimerRef.current !== null) {
+      window.clearTimeout(importProgressTimerRef.current);
+      importProgressTimerRef.current = null;
+    }
+    setShowImportProgress(false);
+    setImportPhase('idle');
+  }
 
   function goTo(nextView: View) {
     setView(nextView);
@@ -316,6 +394,7 @@ export default function Home() {
     if (!Number.isFinite(amount) || amount <= 0) return;
     const memberName = fullName(selectedMember);
     const today = toLocalIsoDate();
+
     setMembers((current) => current.map((member) => member.id === selectedMember.id ? {
       ...member,
       contactedAt: member.contactedAt ?? formatActionTimestamp(),
@@ -323,11 +402,18 @@ export default function Home() {
       startDate: today, endDate: addDaysIso(today, 30), riskReason: `Članarina obnovljena ${prettyDate(today)} uz pomoć PULSE recovery toka.`,
       nextAction: 'Nije potrebna akcija.',
     } : member));
-    setRecoveryPulse((current) => current + 1);
-    setSuccess(`${memberName} je obnovio članarinu. ${euro(amount)} je dodato evidentiranom prihodu.`);
-    setSelectedMemberId(null);
     setRenewing(false);
-    setView('dashboard');
+    setRenewalReveal({ name: memberName, amount });
+    setRecoveryPulse((current) => current + 1);
+
+    if (renewalTimerRef.current !== null) window.clearTimeout(renewalTimerRef.current);
+    renewalTimerRef.current = window.setTimeout(() => {
+      setSelectedMemberId(null);
+      setRenewalReveal(null);
+      setView(workspace === 'owner' ? 'dashboard' : 'staff');
+      setSuccess(`${memberName} je obnovio članarinu. ${euro(amount)} je dodato evidentiranom prihodu.`);
+      renewalTimerRef.current = null;
+    }, 900);
   }
 
   function openMemberForm(member?: Member) {
@@ -396,24 +482,49 @@ export default function Home() {
   }
 
   function importCsv(file: File) {
+    setImportSummary(null);
+    setImportError('');
+    setImportPhase('reading');
+    setShowImportProgress(false);
+
+    if (importProgressTimerRef.current !== null) window.clearTimeout(importProgressTimerRef.current);
+    importProgressTimerRef.current = window.setTimeout(() => {
+      setShowImportProgress(true);
+      importProgressTimerRef.current = null;
+    }, IMPORT_PROGRESS_DELAY_MS);
+
     const reader = new FileReader();
     reader.onload = () => {
+      setImportPhase('validating');
       const text = typeof reader.result === 'string' ? reader.result : '';
       const result = parseMemberCsv(text, members, toLocalIsoDate());
 
       if (result.errors.length) {
+        finishImportProgress();
         setSuccess('');
         setImportError(`CSV nije uvezen. ${result.errors.slice(0, 3).join(' ')}`);
         return;
       }
 
+      const importedMetrics = getPulseMetrics(result.members);
+      const importedPriorities = getRiskMembers(result.members).length;
+
       setMembers(result.members);
       setSelectedMemberId(null);
       setRecoveryPulse(0);
+      setWorkspace('owner');
+      setView('dashboard');
       setImportError('');
-      setSuccess(`Uvezeno je ${result.members.length} ${result.members.length === 1 ? 'član' : 'članova'} iz CSV fajla.`);
+      finishImportProgress();
+      setImportSummary({
+        members: result.members.length,
+        priorities: importedPriorities,
+        riskRevenue: importedMetrics.riskRevenue,
+      });
+      if (onboardingOpen) completeOnboarding();
     };
     reader.onerror = () => {
+      finishImportProgress();
       setSuccess('');
       setImportError('CSV nije uvezen. Fajl nije moguće pročitati.');
     };
@@ -465,9 +576,9 @@ export default function Home() {
         {view === 'radar' && <RadarScreen members={riskMembers} onOpenMember={openMember} />}
       </section>
 
-      <Dialog open={Boolean(selectedMember)} onOpenChange={(open) => { if (!open) setSelectedMemberId(null); }}>
-        <DialogContent className="member-dialog" showCloseButton>
-          {selectedMember && (
+      <Dialog open={Boolean(selectedMember)} onOpenChange={(open) => { if (!open && !renewalReveal) setSelectedMemberId(null); }}>
+        <DialogContent className={renewalReveal ? 'member-dialog renewal-reveal-dialog' : 'member-dialog'} showCloseButton={!renewalReveal}>
+          {renewalReveal ? <RenewalConfirmation name={renewalReveal.name} amount={renewalReveal.amount} /> : selectedMember && (
             <MemberProfile
               member={selectedMember} message={message} renewing={renewing} renewalAmount={renewalAmount}
               onMessage={setMessage} onCopy={copyMessage} onQueue={queueMessage} onContacted={() => markContacted(selectedMember.id)}
@@ -494,6 +605,27 @@ export default function Home() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={Boolean(importSummary)} onOpenChange={(open) => { if (!open) setImportSummary(null); }}>
+        <DialogContent className="import-reveal-dialog">
+          {importSummary && <>
+            <DialogHeader>
+              <div className="import-reveal-icon"><CheckCircle2 /></div>
+              <p className="eyebrow">CSV JE SPREMAN</p>
+              <DialogTitle>Pregled je spreman</DialogTitle>
+              <DialogDescription>PULSE je provjerio podatke i izdvojio članarine koje zahtijevaju pažnju.</DialogDescription>
+            </DialogHeader>
+            <dl className="import-reveal-metrics">
+              <div><dt>Učitano članova</dt><dd>{importSummary.members}</dd></div>
+              <div><dt>Za pažnju</dt><dd>{importSummary.priorities}</dd></div>
+              <div className="risk"><dt>Prihod pod rizikom</dt><dd>{euro(importSummary.riskRevenue)}</dd></div>
+            </dl>
+            <DialogFooter>
+              <Button className="pulse-button" onClick={() => setImportSummary(null)}>Otvori pregled <ArrowRight /></Button>
+            </DialogFooter>
+          </>}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={resetOpen} onOpenChange={setResetOpen}>
         <DialogContent className="confirm-dialog">
           <DialogHeader><span className="confirm-icon"><RotateCcw /></span><DialogTitle>Resetovati demo?</DialogTitle><DialogDescription>Sve probne poruke, ishodi i obnove biće vraćeni na početno stanje. Ovo utiče samo na podatke u ovom pregledaču.</DialogDescription></DialogHeader>
@@ -510,10 +642,55 @@ export default function Home() {
         </DialogContent>
       </Dialog>
 
+      {onboardingOpen && <OnboardingExperience onStartDemo={startDemo} onImport={() => fileInputRef.current?.click()} />}
+      {showImportProgress && importPhase !== 'idle' && <MicroLoadingState phase={importPhase} />}
       {success && <output className={`success-toast ${success.includes('obnovio članarinu') ? 'is-recovery' : ''}`} aria-live="polite"><CheckCircle2 /><span>{success}</span></output>}
       {importError && <output className="success-toast is-error" aria-live="assertive"><ShieldAlert /><span>{importError}</span></output>}
     </main>
   );
+}
+
+function OnboardingExperience({ onStartDemo, onImport }: { onStartDemo: () => void; onImport: () => void }) {
+  return <section className="onboarding-overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+    <div className="onboarding-card">
+      <div className="onboarding-brand"><PulseLogo compact /><span>PULSE</span></div>
+      <div className="onboarding-signal" aria-hidden="true"><i /><span /></div>
+      <p className="eyebrow">REVENUE RECOVERY ZA TERETANE</p>
+      <h1 id="onboarding-title">Vidite šta je pod rizikom. Znajte koga treba kontaktirati.</h1>
+      <p className="onboarding-copy">PULSE pretvara jednostavan CSV u dnevne prioritete za obnovu članarina i prati šta ste uspjeli zadržati.</p>
+      <div className="onboarding-value">
+        <span><Check /> prihod pod rizikom</span>
+        <span><Check /> jasni prioriteti</span>
+        <span><Check /> evidentirane obnove</span>
+      </div>
+      <div className="onboarding-actions">
+        <Button className="pulse-button" onClick={onStartDemo}>Pokreni demo <ArrowRight /></Button>
+        <Button variant="outline" className="dark-outline" onClick={onImport}><Upload /> Uvezi svoj CSV</Button>
+      </div>
+      <small>Za pilot su dovoljni ime, telefon, cijena i datum isteka članarine.</small>
+    </div>
+  </section>;
+}
+
+function MicroLoadingState({ phase }: { phase: Exclude<ImportPhase, 'idle'> }) {
+  return <section className="micro-loading-overlay" role="status" aria-live="polite" aria-label="PULSE obrađuje CSV">
+    <div className="micro-loading-card">
+      <div className="micro-loading-brand">PULSE</div>
+      <div className="micro-loading-signal" aria-hidden="true"><i /><span /></div>
+      <strong>{phase === 'reading' ? 'Čitamo CSV' : 'Provjeravamo podatke'}</strong>
+      <p>{phase === 'reading' ? 'Učitavamo članove i podatke o članarinama.' : 'Provjeravamo datume i računamo prioritete.'}</p>
+    </div>
+  </section>;
+}
+
+function RenewalConfirmation({ name, amount }: RenewalReveal) {
+  return <section className="renewal-confirmation" role="status" aria-live="polite">
+    <div className="renewal-confirmation-mark"><Check /></div>
+    <p className="eyebrow">OBNOVA EVIDENTIRANA</p>
+    <h2>+{euro(amount)}</h2>
+    <strong>{name}</strong>
+    <span>PULSE je odmah ažurirao prihod pod rizikom i evidentirani prihod.</span>
+  </section>;
 }
 
 function NavButton({ active, icon, label, count, onClick }: { active: boolean; icon: React.ReactNode; label: string; count?: number; onClick: () => void }) {
@@ -540,7 +717,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
     <section className="owner-hero" aria-labelledby="owner-risk-title">
       <div className="owner-hero-copy">
         <p className="eyebrow">PRIHOD POD RIZIKOM</p>
-        <h2 id="owner-risk-title" className="number-shift" key={metrics.riskRevenue}>{euro(metrics.riskRevenue)}</h2>
+        <h2 id="owner-risk-title"><AnimatedCurrency value={metrics.riskRevenue} className="number-shift" /></h2>
         <p className="hero-statement">prihoda koji možete zadržati pravovremenim kontaktom</p>
         <div className="hero-risk-breakdown">
           <span><strong>{euro(metrics.actionableRevenue)}</strong> već isteklo</span>
@@ -549,7 +726,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
         <div className="hero-priority-summary"><strong>{metrics.highRisk} hitno</strong><span>·</span><strong>{metrics.expiring} za praćenje</strong></div>
         <button type="button" className="hero-link hero-primary-action" onClick={() => onNavigate('radar')}>Otvori {signalCount} prioriteta <ArrowRight /></button>
         <dl className="hero-outcomes">
-          <div><dt>Obnovljeno kroz PULSE</dt><dd className="number-shift" key={metrics.recoveredRevenue}>{euro(metrics.recoveredRevenue)}</dd></div>
+          <div><dt>Obnovljeno kroz PULSE</dt><dd><AnimatedCurrency value={metrics.recoveredRevenue} className="number-shift" /></dd></div>
           <div><dt>Zabilježene obnove</dt><dd>{metrics.recoveredCount}</dd></div>
         </dl>
       </div>
@@ -629,7 +806,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
         <div><dt>Kontaktirano</dt><dd>{recoveryActivity.contacted}</dd></div>
         <div><dt>Za praćenje</dt><dd>{recoveryActivity.followUps}</dd></div>
         <div><dt>Obnovljeno</dt><dd>{recoveryActivity.renewed}</dd></div>
-        <div className="positive"><dt>Evidentirani iznos obnove</dt><dd className="number-shift" key={recoveryActivity.recoveredAmount}>{euro(recoveryActivity.recoveredAmount)}</dd></div>
+        <div className="positive"><dt>Evidentirani iznos obnove</dt><dd><AnimatedCurrency value={recoveryActivity.recoveredAmount} className="number-shift" /></dd></div>
       </dl> : <div className="recovery-zero-state"><strong>Još nema evidentiranih kontakata.</strong><span>Kontaktirajte prvi prioritet da PULSE počne pratiti rezultat obnove.</span></div>}
     </section>
 
@@ -762,7 +939,7 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
       {member.queuedMessage && <div className="queued-state"><CheckCircle2 /><span><strong>Nacrt poruke je sačuvan</strong>{member.queuedMessage.queuedAt}</span></div>}
       <div className="message-actions">
         <Button variant="outline" className="dark-outline" onClick={onCopy} disabled={!message.trim()}><Copy /> Kopiraj poruku</Button>
-        <Button className="pulse-button" onClick={onQueue} disabled={!message.trim()}><Send /> Sačuvaj nacrt</Button>
+        <Button className="pulse-button" onClick={onQueue} disabled={!message.trim() || member.queuedMessage?.text === message.trim()}>{member.queuedMessage?.text === message.trim() ? <><Check /> Nacrt sačuvan</> : <><Send /> Sačuvaj nacrt</>}</Button>
       </div>
       <div className="fake-service-note"><ShieldAlert /> Nacrt ne znači da je član kontaktiran. Poruku pošaljite ručno, zatim potvrdite kontakt.</div>
       {member.queuedMessage && !member.contactedAt && member.status !== 'recovered' && <Button className="contact-confirm-button" onClick={onContacted}><CheckCircle2 /> Označi kao kontaktirano</Button>}
