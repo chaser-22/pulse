@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type SyntheticEvent } from 'react';
 import {
-  ArrowRight, Check, CheckCircle2,
+  ArrowRight, Check, CheckCircle2, Copy,
   ChevronRight, CircleGauge, Clock3, FileSpreadsheet,
   LayoutDashboard, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
   RotateCcw, Send, ShieldAlert, Sparkles, Upload, Users, X,
@@ -10,7 +10,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PageAtmosphere } from '@/components/page-atmosphere';
-import { PulseLoaderScene } from '@/components/pulse-loader-scene';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -38,10 +37,6 @@ type Filter = 'all' | MemberStatus;
 type MemberForm = Pick<Member, 'firstName' | 'lastName' | 'phone' | 'price' | 'endDate'>;
 
 const STORAGE_KEY = 'pulse-csv-only-demo-v2';
-const INTRO_SESSION_KEY = 'pulse-intro-seen-v1';
-const LOADER_TOTAL_DURATION_MS = 1800;
-const LOADER_EXIT_DURATION_MS = 250;
-const LOADER_PROGRESS_DURATION_MS = LOADER_TOTAL_DURATION_MS - LOADER_EXIT_DURATION_MS;
 const { me: t } = copy;
 
 function getMemberRevealDelay(index: number, total: number) {
@@ -126,6 +121,21 @@ function fullName(member: Member) {
   return `${member.firstName} ${member.lastName}`;
 }
 
+function membershipUrgencyLabel(member: Member) {
+  if (member.status === 'expired') {
+    return member.riskReason
+      .replace(/^Članarina je istekla prije\s*/i, 'Isteklo · ')
+      .replace(/^Članarina je istekla\s*/i, 'Isteklo · ')
+      .replace(/\.$/, '');
+  }
+  if (member.status === 'expiring') {
+    return member.riskReason
+      .replace(/^Članarina ističe\s*/i, 'Ističe · ')
+      .replace(/\.$/, '');
+  }
+  return t.statuses[member.status] ?? 'Provjeriti';
+}
+
 function newMessage(member: Member) {
   if (member.status === 'expired') return `Zdravo ${member.firstName}, primijetili smo da je tvoja članarina istekla. Ako želiš da nastaviš, javi nam i pripremićemo obnovu.`;
   if (member.status === 'expiring') return `Zdravo ${member.firstName}, samo mali podsjetnik: tvoja članarina ističe ${prettyDate(member.endDate)} Javi nam ako želiš da je produžimo.`;
@@ -180,16 +190,6 @@ export default function Home() {
     }
     return createDemoMembers();
   });
-  const [ready, setReady] = useState(false);
-  const [loaderLeaving, setLoaderLeaving] = useState(false);
-  const [loaderVisible, setLoaderVisible] = useState(() => {
-    try {
-      return sessionStorage.getItem(INTRO_SESSION_KEY) !== '1';
-    } catch {
-      return true;
-    }
-  });
-  const [appEntering, setAppEntering] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
@@ -208,55 +208,8 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    let storedMembers: Member[] | undefined;
-    let introSeen = false;
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as { members?: Member[] };
-        if (parsed.members?.length) storedMembers = parsed.members;
-      }
-      introSeen = sessionStorage.getItem(INTRO_SESSION_KEY) === '1';
-    } catch {
-      // Storage availability should never prevent the prototype from loading.
-    }
-
-    if (introSeen) {
-      if (storedMembers) setMembers(storedMembers);
-      setReady(true);
-      setLoaderVisible(false);
-      return;
-    }
-
-    let exitTimer = 0;
-    let entranceTimer = 0;
-    const timer = window.setTimeout(() => {
-      if (storedMembers) setMembers(storedMembers);
-      setReady(true);
-      setLoaderLeaving(true);
-      exitTimer = window.setTimeout(() => {
-        try {
-          sessionStorage.setItem(INTRO_SESSION_KEY, '1');
-        } catch {
-          // The intro can still complete when session storage is unavailable.
-        }
-        setLoaderVisible(false);
-        setAppEntering(true);
-        entranceTimer = window.setTimeout(() => setAppEntering(false), 320);
-      }, LOADER_EXIT_DURATION_MS);
-    }, LOADER_PROGRESS_DURATION_MS);
-
-    return () => {
-      window.clearTimeout(timer);
-      window.clearTimeout(exitTimer);
-      window.clearTimeout(entranceTimer);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ members }));
-  }, [members, ready]);
+  }, [members]);
 
   useEffect(() => {
     if (!success) return;
@@ -270,7 +223,7 @@ export default function Home() {
     return () => window.clearTimeout(timer);
   }, [importError]);
 
-  useScrollReveal(ready, `${workspace}:${view}`);
+  useScrollReveal(true, `${workspace}:${view}`);
 
   const selectedMember = members.find((member) => member.id === selectedMemberId) ?? null;
 
@@ -302,6 +255,7 @@ export default function Home() {
     if (!member) return;
     setMembers((current) => current.map((item) => item.id === memberId ? {
       ...item,
+      contactedAt: item.contactedAt ?? formatActionTimestamp(),
       recoveryOutcome: outcome,
       followUpAt: outcome === 'follow_up' ? formatFollowUpTimestamp() : undefined,
     } : item));
@@ -327,12 +281,32 @@ export default function Home() {
     setRenewing(false);
   }
 
+  async function copyMessage() {
+    if (!selectedMember || !message.trim()) return;
+    try {
+      await navigator.clipboard.writeText(message.trim());
+      setSuccess(`Poruka za ${selectedMember.firstName} je kopirana.`);
+    } catch {
+      setSuccess('Kopiranje nije uspjelo. Označite tekst poruke i kopirajte ga ručno.');
+    }
+  }
+
   function queueMessage() {
     if (!selectedMember || !message.trim()) return;
     setMembers((current) => current.map((member) => member.id === selectedMember.id ? {
       ...member, preferredChannel: 'Poruka', queuedMessage: { channel: 'Poruka', text: message.trim(), queuedAt: formatActionTimestamp() },
     } : member));
-    setSuccess(`Nacrt poruke za ${selectedMember.firstName} je sačuvan.`);
+    setSuccess(`Nacrt poruke za ${selectedMember.firstName} je sačuvan. Kontakt nije evidentiran dok ga ručno ne potvrdite.`);
+  }
+
+  function markContacted(memberId: string) {
+    const member = members.find((item) => item.id === memberId);
+    if (!member) return;
+    setMembers((current) => current.map((item) => item.id === memberId ? {
+      ...item,
+      contactedAt: item.contactedAt ?? formatActionTimestamp(),
+    } : item));
+    setSuccess(`${fullName(member)} je evidentiran/a kao kontaktiran/a.`);
   }
 
   function markRenewed(event: SyntheticEvent<HTMLFormElement>) {
@@ -344,6 +318,7 @@ export default function Home() {
     const today = toLocalIsoDate();
     setMembers((current) => current.map((member) => member.id === selectedMember.id ? {
       ...member,
+      contactedAt: member.contactedAt ?? formatActionTimestamp(),
       status: 'recovered', risk: 'low', price: amount, recoveredAmount: amount, recoveredAt: today,
       startDate: today, endDate: addDaysIso(today, 30), riskReason: `Članarina obnovljena ${prettyDate(today)} uz pomoć PULSE recovery toka.`,
       nextAction: 'Nije potrebna akcija.',
@@ -446,8 +421,7 @@ export default function Home() {
   }
 
   return (
-    <>
-    <main className={`app-shell ${appEntering ? 'app-shell-entering' : ''} ${loaderVisible ? 'app-shell-loader-covered' : ''}`}>
+    <main className="app-shell">
       <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
         <div className="brand"><PulseLogo /><span className="brand-word">PULSE</span></div>
         <button className="sidebar-close" aria-label="Zatvori meni" onClick={() => setMobileNav(false)}><X /></button>
@@ -457,14 +431,13 @@ export default function Home() {
           <NavButton active={view === 'members'} icon={<Users />} label={t.nav.members} count={members.length} onClick={() => goTo('members')} />
           <NavButton active={view === 'radar'} icon={<Radar />} label="Prioriteti članarina" count={riskMembers.length} onClick={() => goTo('radar')} />
           </> : <>
-          <NavButton active={view === 'staff'} icon={<CheckCircle2 />} label="Dnevni pregled" count={riskMembers.length} onClick={() => goTo('staff')} />
+          <NavButton active={view === 'staff'} icon={<CheckCircle2 />} label="Danas" count={riskMembers.length} onClick={() => goTo('staff')} />
           <NavButton active={view === 'members'} icon={<Users />} label={t.nav.members} count={members.length} onClick={() => goTo('members')} />
-          <NavButton active={view === 'radar'} icon={<Radar />} label="Prioriteti članarina" count={riskMembers.length} onClick={() => goTo('radar')} />
           </>}
         </nav>
         {workspace === 'owner'
           ? metrics.recoveredRevenue > 0 && <div className="sidebar-insight"><span className="pulse-dot" /><div><strong>{euro(metrics.recoveredRevenue)}</strong><small>evidentirano nakon obnove</small></div></div>
-          : <div className="sidebar-insight reception-insight"><span className="pulse-dot" /><div><strong>{riskMembers.filter((member) => !member.recoveryOutcome).length}</strong><small>prioriteta preostalo</small></div></div>}
+          : <div className="sidebar-insight reception-insight"><span className="pulse-dot" /><div><strong>{riskMembers.filter((member) => !member.recoveryOutcome && member.status !== 'recovered').length}</strong><small>kontakata preostalo</small></div></div>}
         {workspace === 'owner' && <button className="demo-reset-button" onClick={() => setResetOpen(true)}><RotateCcw /> Resetuj demo</button>}
         <div className="gym-card"><span className="gym-monogram">PD</span><span><strong>{t.gymName}</strong><small>CSV demo · 4 obavezna polja</small></span></div>
       </aside>
@@ -472,22 +445,22 @@ export default function Home() {
       {mobileNav && <button className="nav-backdrop" aria-label="Zatvori meni" onClick={() => setMobileNav(false)} />}
 
       <section className="main-panel">
-        <PageAtmosphere view={view} workspace={workspace} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} surface="ambient" />
+        {workspace === 'owner' && view === 'dashboard' && <PageAtmosphere view={view} workspace={workspace} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} urgentCount={highRiskMembers.length} surface="ambient" />}
         <header className="topbar">
           <button className="mobile-menu" aria-label="Otvori meni" onClick={() => setMobileNav(true)}><Menu /></button>
           <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1><p>{viewMeta[view].subtitle}</p></div>
           <div className="top-actions">
             <fieldset className="workspace-switch"><legend className="sr-only">Izaberite radni prostor</legend><button type="button" aria-pressed={workspace === 'owner'} className={workspace === 'owner' ? 'active' : ''} onClick={() => switchWorkspace('owner')}><LayoutDashboard /> Vlasnik</button><button type="button" aria-pressed={workspace === 'staff'} className={workspace === 'staff' ? 'active' : ''} onClick={() => switchWorkspace('staff')}><Users /> Recepcija</button></fieldset>
             {workspace === 'owner' ? <>
-              <Button className="pulse-button csv-primary-action" onClick={() => fileInputRef.current?.click()}><Upload /> Uvezi CSV</Button>
+              <Button variant="outline" className="dark-outline csv-primary-action" onClick={() => fileInputRef.current?.click()}><Upload /> Ažuriraj CSV</Button>
               <Button variant="outline" className="dark-outline" onClick={() => openMemberForm()}><Plus /> {t.actions.add}</Button>
-            </> : <Button className="pulse-button" onClick={() => openMemberForm()}><Plus /> {t.actions.add}</Button>}
+            </> : <Button variant="outline" className="dark-outline" onClick={() => openMemberForm()}><Plus /> {t.actions.add}</Button>}
           </div>
           <input ref={fileInputRef} hidden type="file" accept=".csv,text/csv" onChange={(event) => { const file = event.target.files?.[0]; if (file) importCsv(file); event.target.value = ''; }} />
         </header>
 
-        {view === 'dashboard' && <Dashboard metrics={metrics} recoveryActivity={recoveryActivity} highRiskMembers={highRiskMembers} members={members} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} onOpenMember={openMember} onNavigate={goTo} onPilot={() => setPilotOpen(true)} />}
-        {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onOutcome={recordOutcome} onAddMember={() => openMemberForm()} onFindMember={() => goTo('members')} />}
+        {view === 'dashboard' && <Dashboard metrics={metrics} recoveryActivity={recoveryActivity} highRiskMembers={highRiskMembers} signalCount={riskMembers.length} onOpenMember={openMember} onNavigate={goTo} onPilot={() => setPilotOpen(true)} />}
+        {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onContacted={markContacted} onOutcome={recordOutcome} onAddMember={() => openMemberForm()} onFindMember={() => goTo('members')} />}
         {view === 'members' && <MembersScreen members={filteredMembers} total={members.length} filter={filter} search={search} onFilter={setFilter} onSearch={setSearch} onOpenMember={openMember} onImport={() => fileInputRef.current?.click()} />}
         {view === 'radar' && <RadarScreen members={riskMembers} onOpenMember={openMember} />}
       </section>
@@ -497,7 +470,7 @@ export default function Home() {
           {selectedMember && (
             <MemberProfile
               member={selectedMember} message={message} renewing={renewing} renewalAmount={renewalAmount}
-              onMessage={setMessage} onQueue={queueMessage}
+              onMessage={setMessage} onCopy={copyMessage} onQueue={queueMessage} onContacted={() => markContacted(selectedMember.id)}
               onEdit={() => openMemberForm(selectedMember)} onRenew={() => setRenewing(true)} onCancelRenew={() => setRenewing(false)}
               onRenewalAmount={setRenewalAmount} onMarkRenewed={markRenewed}
             />
@@ -540,8 +513,6 @@ export default function Home() {
       {success && <output className={`success-toast ${success.includes('obnovio članarinu') ? 'is-recovery' : ''}`} aria-live="polite"><CheckCircle2 /><span>{success}</span></output>}
       {importError && <output className="success-toast is-error" aria-live="assertive"><ShieldAlert /><span>{importError}</span></output>}
     </main>
-    {loaderVisible && <LoadingState leaving={loaderLeaving} />}
-    </>
   );
 }
 
@@ -553,45 +524,6 @@ function Field({ label, required, children }: { label: string; required?: boolea
   return <label className="field"><span>{label}{required && ' *'}</span>{children}</label>;
 }
 
-function LoadingState({ leaving = false }: { leaving?: boolean }) {
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    const startedAt = performance.now();
-    const timer = window.setInterval(() => {
-      const elapsed = performance.now() - startedAt;
-      const next = Math.min(100, Math.floor((elapsed / LOADER_PROGRESS_DURATION_MS) * 100));
-      setProgress(next);
-      if (next >= 100) window.clearInterval(timer);
-    }, 40);
-
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const visibleProgress = leaving ? 100 : progress;
-
-  return <main className={`pulse-loader pulse-loader-centered ${leaving ? 'is-leaving' : ''}`} aria-live="polite" aria-busy={!leaving}>
-    <div className="pulse-loader-grid" aria-hidden="true" />
-    <div className="pulse-loader-vignette" aria-hidden="true" />
-    <PulseLoaderScene />
-
-    <section className="pulse-loader-center" aria-label={`PULSE se učitava ${visibleProgress}%`}>
-      <div className="pulse-loader-wordmark" aria-hidden="true">
-        <h1>PULSE</h1>
-      </div>
-
-      <div className="pulse-loader-meter">
-        <div className="pulse-loader-progress" aria-hidden="true">
-          <span style={{ width: `${visibleProgress}%` }} />
-        </div>
-        <output className="pulse-loader-percent" aria-label={`${visibleProgress} procenata`}>
-          {visibleProgress}<span>%</span>
-        </output>
-      </div>
-    </section>
-  </main>;
-}
-
 function RecoveryLifecycle({ member }: { member: Member }) {
   const current = getRecoveryLifecycle(member);
   const steps = [['detected', 'Otkriveno'], ['contacted', 'Kontaktirano'], ['renewed', 'Obnovljeno']] as const;
@@ -599,22 +531,26 @@ function RecoveryLifecycle({ member }: { member: Member }) {
   return <ol className="recovery-lifecycle" aria-label="Tok u PULSE">{steps.map(([id, label], index) => <li className={index <= currentIndex ? 'complete' : ''} aria-current={id === current ? 'step' : undefined} key={id}><i />{label}</li>)}</ol>;
 }
 
-function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, signalCount, onOpenMember, onNavigate, onPilot }: {
+function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, onOpenMember, onNavigate, onPilot }: {
   metrics: ReturnType<typeof getPulseMetrics>;
   recoveryActivity: RecoveryActivity;
-  highRiskMembers: Member[]; members: Member[]; recoveryPulse: number; signalCount: number; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void; onPilot: () => void;
+  highRiskMembers: Member[]; signalCount: number; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void; onPilot: () => void;
 }) {
   return <div className="screen-stack dashboard-screen">
     <section className="owner-hero" aria-labelledby="owner-risk-title">
       <div className="owner-hero-copy">
-        <p className="eyebrow">VRIJEDNOST ČLANARINA ZA PRAĆENJE</p>
-        <h2 id="owner-risk-title">{euro(metrics.riskRevenue)}</h2>
-        <p className="hero-statement">istekle ili ističu u narednih 7 dana</p>
-        <p className="actionable-copy">Od toga je <strong>{euro(metrics.actionableRevenue)}</strong> vrijednost članarina koje su već istekle.</p>
-        <button type="button" className="hero-link" onClick={() => onNavigate('radar')}>Pogledaj članove <ArrowRight /></button>
+        <p className="eyebrow">PRIHOD POD RIZIKOM</p>
+        <h2 id="owner-risk-title" className="number-shift" key={metrics.riskRevenue}>{euro(metrics.riskRevenue)}</h2>
+        <p className="hero-statement">prihoda koji možete zadržati pravovremenim kontaktom</p>
+        <div className="hero-risk-breakdown">
+          <span><strong>{euro(metrics.actionableRevenue)}</strong> već isteklo</span>
+          <span><strong>{euro(Math.max(0, metrics.riskRevenue - metrics.actionableRevenue))}</strong> ističe u narednih 7 dana</span>
+        </div>
+        <div className="hero-priority-summary"><strong>{metrics.highRisk} hitno</strong><span>·</span><strong>{metrics.expiring} za praćenje</strong></div>
+        <button type="button" className="hero-link hero-primary-action" onClick={() => onNavigate('radar')}>Otvori {signalCount} prioriteta <ArrowRight /></button>
         <dl className="hero-outcomes">
-          <div><dt>Evidentirano u PULSE</dt><dd className="number-shift" key={metrics.recoveredRevenue}>{euro(metrics.recoveredRevenue)}</dd></div>
-          <div><dt>Obnove zabilježene</dt><dd>{metrics.recoveredCount}</dd></div>
+          <div><dt>Obnovljeno kroz PULSE</dt><dd className="number-shift" key={metrics.recoveredRevenue}>{euro(metrics.recoveredRevenue)}</dd></div>
+          <div><dt>Zabilježene obnove</dt><dd>{metrics.recoveredCount}</dd></div>
         </dl>
       </div>
     </section>
@@ -632,7 +568,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
       {highRiskMembers.length ? <div className="today-queue__list" role="list">
         <div className="today-queue__columns" aria-hidden="true">
           <span>Član</span>
-          <span>Prioritet</span>
+          <span>Status</span>
           <span>Zašto treba pažnju</span>
           <span>Članarina</span>
           <span>Akcija</span>
@@ -649,7 +585,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
             </div>
 
             <div className="today-queue__risk">
-              <span className={riskClass(member.risk)}><i />{member.risk === 'high' ? 'Visoki prioritet' : 'Srednji prioritet'}</span>
+              <span className={riskClass(member.risk)}><i />{membershipUrgencyLabel(member)}</span>
             </div>
 
             <div className="today-queue__reason">
@@ -668,7 +604,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
           </div>
 
           <div className="today-queue__rail">
-            <RecoveryLifecycle member={member} />
+            {(member.contactedAt || member.recoveryOutcome || member.status === 'recovered') && <RecoveryLifecycle member={member} />}
             <details className="today-queue__details">
               <summary>Detalji prioriteta</summary>
               <div className="today-queue__details-panel">
@@ -689,27 +625,25 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
 
     <section className="recovery-activity" aria-labelledby="activity-title">
       <div><p className="eyebrow">AKTIVNOST TIMA</p><h2 id="activity-title">Rezultat kontakata</h2></div>
-      <dl>
+      {recoveryActivity.contacted || recoveryActivity.followUps || recoveryActivity.renewed ? <dl>
         <div><dt>Kontaktirano</dt><dd>{recoveryActivity.contacted}</dd></div>
         <div><dt>Za praćenje</dt><dd>{recoveryActivity.followUps}</dd></div>
         <div><dt>Obnovljeno</dt><dd>{recoveryActivity.renewed}</dd></div>
-        <div className="positive"><dt>Evidentirani iznos obnove</dt><dd>{euro(recoveryActivity.recoveredAmount)}</dd></div>
-      </dl>
+        <div className="positive"><dt>Evidentirani iznos obnove</dt><dd className="number-shift" key={recoveryActivity.recoveredAmount}>{euro(recoveryActivity.recoveredAmount)}</dd></div>
+      </dl> : <div className="recovery-zero-state"><strong>Još nema evidentiranih kontakata.</strong><span>Kontaktirajte prvi prioritet da PULSE počne pratiti rezultat obnove.</span></div>}
     </section>
 
     <section className="owner-metrics panel-card" aria-label="Ključne operativne metrike">
-      <Metric label="Ukupno članova" value={String(metrics.total)} hint="trenutni CSV skup" />
-      <Metric label="Aktivni članovi" value={String(metrics.active)} hint="trenutni skup članova" />
-      <Metric label="Ističe za 7 dana" value={String(metrics.expiring)} hint="za kontakt prije isteka" tone="warning" />
-      <Metric label="Istekle članarine" value={String(metrics.highRisk)} hint="prioritet za kontakt" tone="danger" />
-      <Metric label="Obnove u PULSE" value={String(metrics.recoveredCount)} hint="nastaje tek nakon akcije tima" tone="success" />
-      <Metric label="Evidentiran prihod" value={euro(metrics.recoveredRevenue)} hint="nastaje tek nakon potvrde obnove" tone="success" />
+      <Metric label="Istekle članarine" value={String(metrics.highRisk)} hint="za kontakt danas" tone="danger" />
+      <Metric label="Ističe za 7 dana" value={String(metrics.expiring)} hint="kontakt prije isteka" tone="warning" />
+      <Metric label="Obnove u PULSE" value={String(metrics.recoveredCount)} hint="potvrđene obnove" tone="success" />
+      <Metric label="Evidentiran prihod" value={euro(metrics.recoveredRevenue)} hint="nakon potvrde obnove" tone="success" />
     </section>
     <section className="pilot-footer"><div><strong>CSV pilot bez integracija</strong><span>Za početak su dovoljni članovi, telefoni, cijene i datumi isteka članarine.</span></div><Button variant="outline" onClick={onPilot}>Kako radi pilot <ArrowRight /></Button></section>
   </div>;
 }
 
-function StaffBoard({ members, onOpenMember, onOutcome, onAddMember, onFindMember }: { members: Member[]; onOpenMember: (member: Member) => void; onOutcome: (memberId: string, outcome: RecoveryOutcome) => void; onAddMember: () => void; onFindMember: () => void }) {
+function StaffBoard({ members, onOpenMember, onContacted, onOutcome, onAddMember, onFindMember }: { members: Member[]; onOpenMember: (member: Member) => void; onContacted: (memberId: string) => void; onOutcome: (memberId: string, outcome: RecoveryOutcome) => void; onAddMember: () => void; onFindMember: () => void }) {
   const completed = members.filter((member) => member.recoveryOutcome || member.status === 'recovered').length;
   const followUps = members.filter((member) => member.recoveryOutcome === 'follow_up').length;
   return <div className="screen-stack staff-screen">
@@ -723,15 +657,15 @@ function StaffBoard({ members, onOpenMember, onOutcome, onAddMember, onFindMembe
       <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${member.recoveryOutcome || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
         <span className="task-priority">{String(index + 1).padStart(2, '0')}</span>
         <div className="task-person"><span className="avatar large">{initials(member)}</span><span><span className="task-name"><h3>{fullName(member)}</h3><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : 'Srednji'}</span></span><small><Phone /> {member.phone} · {euro(member.price)}</small></span></div>
-        <div className="task-reason"><small>RAZLOG PRIORITETA</small><p>{member.riskReason}</p></div>
-        <div className="task-next"><small>PREDLOŽENA AKCIJA</small><p>{member.nextAction}</p></div>
+        <div className="task-reason"><small>ZAŠTO DANAS</small><p>{membershipUrgencyLabel(member)}</p></div>
+        <div className="task-next"><small>SLJEDEĆI POTEZ</small><p>{member.nextAction}</p></div>
         <div className="task-actions">
           {member.status === 'recovered'
             ? <span className="task-done"><CheckCircle2 /> Obnovljeno</span>
             : member.recoveryOutcome
               ? <><span className={`outcome-badge outcome-${member.recoveryOutcome}`}><Check /> {outcomeLabels[member.recoveryOutcome]}</span><button onClick={() => onOpenMember(member)}>Nastavi <ArrowRight /></button></>
-              : member.queuedMessage ? <>
-                  <span className="task-contacted"><CheckCircle2 /> Kontakt započet</span>
+              : member.contactedAt ? <>
+                  <span className="task-contacted"><CheckCircle2 /> Kontakt potvrđen</span>
                   <span className="task-outcome-label">Zabilježi ishod</span>
                   <div className="task-outcome-actions">
                     <button onClick={() => onOutcome(member.id, 'no_answer')}><Phone /> Bez odgovora</button>
@@ -739,7 +673,11 @@ function StaffBoard({ members, onOpenMember, onOutcome, onAddMember, onFindMembe
                     <button onClick={() => onOutcome(member.id, 'follow_up')}><Clock3 /> Prati sjutra</button>
                   </div>
                 </>
-                : <button className="task-primary" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button>}
+                : member.queuedMessage ? <>
+                    <span className="task-draft-ready"><CheckCircle2 /> Nacrt spreman</span>
+                    <button className="task-primary" onClick={() => onContacted(member.id)}>Označi kao kontaktirano <ArrowRight /></button>
+                  </>
+                  : <button className="task-primary" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button>}
         </div>
       </article>)}</div>
     </section>
@@ -762,20 +700,19 @@ function MembersScreen({ members, total, filter, search, onFilter, onSearch, onO
     <section className="panel-card table-card">
       {members.length ? <>
         <div className="members-table-wrap"><table className="members-table">
-          <thead><tr><th>Član</th><th>Status</th><th>Cijena</th><th>Ističe</th><th>Prioritet</th><th><span className="sr-only">Otvori</span></th></tr></thead>
+          <thead><tr><th>Član</th><th>Članarina</th><th>Ističe</th><th>Vrijednost</th><th><span className="sr-only">Otvori</span></th></tr></thead>
           <tbody>{members.map((member, index) => <tr className="member-list-item" style={{ '--member-reveal-delay': getMemberRevealDelay(index, members.length) } as CSSProperties} key={member.id} onClick={() => onOpenMember(member)}>
             <td><div className="table-member"><span className="avatar">{initials(member)}</span><span><strong>{fullName(member)}</strong><small>{member.phone}</small></span></div></td>
-            <td><span className={`status-pill ${statusClass(member.status)}`}>{(t.statuses[member.status] ?? 'Provjeriti')}</span></td>
-            <td><strong>{euro(member.price)}</strong></td>
+            <td><span className={`status-pill ${statusClass(member.status)}`}>{membershipUrgencyLabel(member)}</span></td>
             <td>{prettyDate(member.endDate)}</td>
-            <td><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nema'}</span></td>
+            <td><strong>{euro(member.price)}</strong></td>
             <td><button type="button" className="row-open-button" aria-label={`Otvori profil: ${fullName(member)}`} onClick={(event) => { event.stopPropagation(); onOpenMember(member); }}><ChevronRight /></button></td>
           </tr>)}</tbody>
         </table></div>
-        <div className="mobile-member-list">{members.map((member, index) => <button type="button" className="mobile-member-card member-list-item" style={{ '--member-reveal-delay': getMemberRevealDelay(index, members.length) } as CSSProperties} key={member.id} onClick={() => onOpenMember(member)}><span className="avatar">{initials(member)}</span><span className="mobile-member-main"><span><strong>{fullName(member)}</strong><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nema'}</span></span><small>{member.phone}</small><span className="mobile-member-meta"><span><b>Status</b>{(t.statuses[member.status] ?? 'Provjeriti')}</span><span><b>Ističe</b>{prettyDate(member.endDate)}</span><span><b>Cijena</b>{euro(member.price)}</span></span></span><ChevronRight /></button>)}</div>
+        <div className="mobile-member-list">{members.map((member, index) => <button type="button" className="mobile-member-card member-list-item" style={{ '--member-reveal-delay': getMemberRevealDelay(index, members.length) } as CSSProperties} key={member.id} onClick={() => onOpenMember(member)}><span className="avatar">{initials(member)}</span><span className="mobile-member-main"><span><strong>{fullName(member)}</strong><span className={`status-pill ${statusClass(member.status)}`}>{membershipUrgencyLabel(member)}</span></span><small>{member.phone}</small><span className="mobile-member-meta"><span><b>Ističe</b>{prettyDate(member.endDate)}</span><span><b>Cijena</b>{euro(member.price)}</span></span></span><ChevronRight /></button>)}</div>
       </> : <EmptyState icon={<Search />} title="Nema rezultata" text="Pokušajte drugi izraz ili uklonite aktivni filter." action="Uvezi članove iz CSV-a" onAction={onImport} />}
     </section>
-    <div className="csv-note"><FileSpreadsheet /><span><strong>Četiri potrebna polja: ime, telefon, cijena i datum isteka.</strong> Status, prioritet i razlog signala PULSE računa samo iz tih podataka.</span></div>
+    <details className="csv-note csv-note-collapsible"><summary><FileSpreadsheet /> Kako se računaju prioriteti?</summary><p>Za ovaj pilot dovoljna su četiri polja: ime, telefon, cijena i datum isteka. PULSE status i prioritet računa samo iz tih podataka.</p></details>
   </div>;
 }
 
@@ -790,7 +727,7 @@ function RadarScreen({ members, onOpenMember }: { members: Member[]; onOpenMembe
     <section className="radar-summary panel-card" aria-label="Sažetak prioriteta"><div><p className="eyebrow">RED ZA AKCIJU</p><h2>Prioriteti članarina</h2><p>Istekle članarine prvo, zatim one koje ističu u narednih 7 dana. Prioritet se računa samo iz datuma isteka i cijene članarine.</p></div><dl><div><dt>Ukupno</dt><dd>{priorityMembers.length}</dd></div><div className="high"><dt>Hitno</dt><dd>{high.length}</dd></div><div className="medium"><dt>Za praćenje</dt><dd>{medium.length}</dd></div></dl></section>
     <section className="risk-queue panel-card">
       <div className="section-heading"><div><p className="eyebrow">LISTA ZA TIM</p><h2>{priorityMembers.length} članova za provjeru</h2></div><span className="sorted-label"><CircleGauge /> Članarina i datum isteka</span></div>
-      {members.length ? <div className="risk-cards">{priorityMembers.map((member, index) => <article className={`risk-member-card ${member.risk === 'high' ? 'is-high' : ''}`} key={member.id}><span className="risk-order">{String(index + 1).padStart(2, '0')}</span><div className="risk-member-identity"><span className="avatar large">{initials(member)}</span><span><h3>{fullName(member)}</h3><span className={`status-pill ${statusClass(member.status)}`}>{(t.statuses[member.status] ?? 'Provjeriti')}</span></span></div><div className="risk-reason"><small>RAZLOG</small><p>{member.riskReason}</p></div><div className="risk-next"><small>PREDLOŽENA AKCIJA</small><p>{member.nextAction}</p></div><div className="risk-value"><small>ČLANARINA</small><strong>{euro(member.price)}</strong></div><Button variant="outline" onClick={() => onOpenMember(member)}>Otvori profil <ChevronRight /></Button></article>)}</div> : <EmptyState icon={<CheckCircle2 />} title="Lista je čista" text="Nijedna članarina trenutno ne zahtijeva prioritetnu akciju." />}
+      {members.length ? <div className="risk-cards">{priorityMembers.map((member, index) => <article className={`risk-member-card ${member.risk === 'high' ? 'is-high' : ''}`} key={member.id}><span className="risk-order">{String(index + 1).padStart(2, '0')}</span><div className="risk-member-identity"><span className="avatar large">{initials(member)}</span><span><h3>{fullName(member)}</h3><span className={`status-pill ${statusClass(member.status)}`}>{membershipUrgencyLabel(member)}</span></span></div><div className="risk-reason"><small>ZAŠTO DANAS</small><p>{member.riskReason}</p></div><div className="risk-value"><small>VRIJEDNOST</small><strong>{euro(member.price)}</strong></div><div className="risk-next"><small>SLJEDEĆI POTEZ</small><p>{member.nextAction}</p></div><Button variant="outline" onClick={() => onOpenMember(member)}>Otvori profil <ChevronRight /></Button></article>)}</div> : <EmptyState icon={<CheckCircle2 />} title="Lista je čista" text="Nijedna članarina trenutno ne zahtijeva prioritetnu akciju." />}
     </section>
   </div>;
 }
@@ -799,20 +736,20 @@ function EmptyState({ icon, title, text, action, onAction }: { icon: React.React
   return <div className="empty-state"><span>{icon}</span><h3>{title}</h3><p>{text}</p>{action && <Button variant="outline" onClick={onAction}>{action}</Button>}</div>;
 }
 
-function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onQueue, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
+function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onQueue, onContacted, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
   member: Member; message: string; renewing: boolean; renewalAmount: string;
-  onMessage: (message: string) => void; onQueue: () => void; onEdit: () => void;
+  onMessage: (message: string) => void; onCopy: () => void; onQueue: () => void; onContacted: () => void; onEdit: () => void;
   onRenew: () => void; onCancelRenew: () => void; onRenewalAmount: (amount: string) => void; onMarkRenewed: (event: SyntheticEvent<HTMLFormElement>) => void;
 }) {
   return <div className="profile-layout">
     <div className="profile-main">
-      <DialogHeader className="profile-header"><div className="avatar profile-avatar">{initials(member)}</div><div><div className="profile-badges"><span className={`status-pill ${statusClass(member.status)}`}>{(t.statuses[member.status] ?? 'Provjeriti')}</span><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki prioritet' : member.risk === 'medium' ? 'Srednji prioritet' : 'Bez prioriteta'}</span></div><DialogTitle>{fullName(member)}</DialogTitle><DialogDescription>{member.phone} · {euro(member.price)}</DialogDescription></div></DialogHeader>
+      <DialogHeader className="profile-header"><div className="avatar profile-avatar">{initials(member)}</div><div><div className="profile-badges"><span className={`status-pill ${statusClass(member.status)}`}>{membershipUrgencyLabel(member)}</span></div><DialogTitle>{fullName(member)}</DialogTitle><DialogDescription>{member.phone} · {euro(member.price)}</DialogDescription></div></DialogHeader>
       <div className="profile-quick-actions"><Button variant="outline" onClick={onEdit}><Pencil /> Uredi podatke</Button></div>
     </div>
     <section className="profile-context">
       <section className={`profile-risk ${riskClass(member.risk)}`}>
         <div><p className="eyebrow">RAZLOG PRIORITETA</p><h3>{member.risk === 'high' ? 'Članarina je istekla' : member.risk === 'medium' ? 'Članarina uskoro ističe' : 'Članarina je aktivna'}</h3></div>
-        <details open={member.risk === 'high' ? true : undefined}><summary>Zašto?</summary><p>{member.riskReason}</p><dl><div><dt>Cijena</dt><dd>{euro(member.price)}</dd></div><div><dt>Ističe</dt><dd>{prettyDate(member.endDate)}</dd></div></dl><span><strong>Preporučeni potez</strong>{member.nextAction}</span></details>
+        <details open={member.risk === 'high' ? true : undefined}><summary>Zašto treba pažnju</summary><p>{member.riskReason}</p><dl><div><dt>Cijena</dt><dd>{euro(member.price)}</dd></div><div><dt>Ističe</dt><dd>{prettyDate(member.endDate)}</dd></div></dl><span><strong>Preporučeni potez</strong>{member.nextAction}</span></details>
       </section>
       <section className="member-recovery-path" aria-labelledby="member-recovery-title"><p className="eyebrow" id="member-recovery-title">TOK U PULSE</p><RecoveryLifecycle member={member} /></section>
       <div className="profile-info-grid"><section><h3>Podaci iz CSV-a</h3><dl className="profile-info-list"><Detail label="Telefon" value={member.phone} sub="iz CSV-a" /><Detail label="Cijena članarine" value={euro(member.price)} sub={`ističe ${prettyDate(member.endDate)}`} /><Detail label="Status" value={(t.statuses[member.status] ?? 'Provjeriti')} sub="izračunato iz datuma isteka" /></dl></section></div>
@@ -823,8 +760,13 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
       <label className="message-field"><span>PORUKA ZA {member.firstName.toLocaleUpperCase('me')}</span><Textarea value={message} onChange={(event) => onMessage(event.target.value)} rows={7} /></label>
       <div className="message-meta"><span>{message.length} znakova</span><span><Sparkles /> PULSE prijedlog</span></div>
       {member.queuedMessage && <div className="queued-state"><CheckCircle2 /><span><strong>Nacrt poruke je sačuvan</strong>{member.queuedMessage.queuedAt}</span></div>}
-      <Button className="pulse-button queue-button" onClick={onQueue} disabled={!message.trim()}><Send /> Sačuvaj nacrt</Button>
-      <div className="fake-service-note"><ShieldAlert /> Ovo je nacrt poruke. Tim ga šalje ručno koristeći broj telefona iz CSV-a.</div>
+      <div className="message-actions">
+        <Button variant="outline" className="dark-outline" onClick={onCopy} disabled={!message.trim()}><Copy /> Kopiraj poruku</Button>
+        <Button className="pulse-button" onClick={onQueue} disabled={!message.trim()}><Send /> Sačuvaj nacrt</Button>
+      </div>
+      <div className="fake-service-note"><ShieldAlert /> Nacrt ne znači da je član kontaktiran. Poruku pošaljite ručno, zatim potvrdite kontakt.</div>
+      {member.queuedMessage && !member.contactedAt && member.status !== 'recovered' && <Button className="contact-confirm-button" onClick={onContacted}><CheckCircle2 /> Označi kao kontaktirano</Button>}
+      {member.contactedAt && member.status !== 'recovered' && <div className="contact-confirmed-state"><CheckCircle2 /><span><strong>Kontakt potvrđen</strong>{member.contactedAt}</span></div>}
       <div className="recovery-divider"><span>NAKON OBNOVE</span></div>
       {!renewing ? <Button variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}><CheckCircle2 /> {member.status === 'recovered' ? 'Već je obnovljeno' : t.actions.renew}</Button> : <form className="renew-form" onSubmit={onMarkRenewed}><div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div><p>Ovaj iznos će biti zabilježen u PULSE tek nakon vaše potvrde.</p><div><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div></form>}
     </aside>
