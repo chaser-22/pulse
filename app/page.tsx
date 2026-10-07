@@ -39,6 +39,9 @@ type Filter = 'all' | MemberStatus;
 type MemberForm = Pick<Member, 'firstName' | 'lastName' | 'phone' | 'price' | 'endDate'>;
 
 const STORAGE_KEY = 'pulse-csv-only-demo-v2';
+const LOADER_TOTAL_DURATION_MS = 3500;
+const LOADER_EXIT_DURATION_MS = 500;
+const LOADER_PROGRESS_DURATION_MS = LOADER_TOTAL_DURATION_MS - LOADER_EXIT_DURATION_MS;
 const { me: t } = copy;
 
 function getMemberRevealDelay(index: number, total: number) {
@@ -221,8 +224,8 @@ export default function Home() {
         setLoaderVisible(false);
         setAppEntering(true);
         entranceTimer = window.setTimeout(() => setAppEntering(false), 2400);
-      }, 900);
-    }, 5000);
+      }, LOADER_EXIT_DURATION_MS);
+    }, LOADER_PROGRESS_DURATION_MS);
     return () => {
       window.clearTimeout(timer);
       window.clearTimeout(exitTimer);
@@ -540,7 +543,7 @@ function LoadingState({ leaving = false }: { leaving?: boolean }) {
     const startedAt = performance.now();
     const timer = window.setInterval(() => {
       const elapsed = performance.now() - startedAt;
-      const next = Math.min(100, Math.floor((elapsed / 5000) * 100));
+      const next = Math.min(100, Math.floor((elapsed / LOADER_PROGRESS_DURATION_MS) * 100));
       setProgress(next);
       if (next >= 100) window.clearInterval(timer);
     }, 40);
@@ -592,7 +595,6 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
         <h2 id="owner-risk-title">{euro(metrics.riskRevenue)}</h2>
         <p className="hero-statement">istekle ili ističu u narednih 7 dana</p>
         <p className="actionable-copy">Od toga je <strong>{euro(metrics.actionableRevenue)}</strong> vrijednost članarina koje su već istekle.</p>
-        <div className="mode-note"><span>CSV</span>Ime · telefon · cijena · datum isteka</div>
         <button type="button" className="hero-link" onClick={() => onNavigate('radar')}>Pogledaj članove <ArrowRight /></button>
         <dl className="hero-outcomes">
           <div><dt>Evidentirano u PULSE</dt><dd className="number-shift" key={metrics.recoveredRevenue}>{euro(metrics.recoveredRevenue)}</dd></div>
