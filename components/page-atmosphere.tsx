@@ -8,6 +8,7 @@ type Props = {
   workspace: Workspace;
   recoveryPulse?: number;
   signalCount?: number;
+  urgentCount?: number;
   surface?: 'ambient' | 'hero';
 };
 
@@ -16,6 +17,7 @@ export function PageAtmosphere({
   workspace,
   recoveryPulse = 0,
   signalCount = 0,
+  urgentCount = 0,
   surface = 'hero',
 }: Props) {
   const [reducedMotion, setReducedMotion] = useState(() =>
@@ -47,6 +49,7 @@ export function PageAtmosphere({
         workspace={workspace}
         recoveryPulse={recoveryPulse}
         signalCount={signalCount}
+        urgentCount={urgentCount}
         surface={surface}
       />
     </Suspense>
