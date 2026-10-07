@@ -569,7 +569,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
         <div className="today-queue__columns" aria-hidden="true">
           <span>Član</span>
           <span>Status</span>
-          <span>Zašto treba pažnju</span>
+          <span>Sljedeći potez</span>
           <span>Članarina</span>
           <span>Akcija</span>
         </div>
@@ -589,8 +589,8 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
             </div>
 
             <div className="today-queue__reason">
-              <small className="today-queue__mobile-label">Zašto treba pažnju</small>
-              <p>{member.riskReason}</p>
+              <small className="today-queue__mobile-label">Sljedeći potez</small>
+              <p>{member.nextAction}</p>
             </div>
 
             <div className="today-queue__value">
@@ -656,7 +656,7 @@ function StaffBoard({ members, onOpenMember, onContacted, onOutcome, onAddMember
       <div className="section-heading"><div><p className="eyebrow">RED ZA DANAS</p><h2>Današnji kontakti</h2></div><span className="summary-count">{members.length - completed} preostalo</span></div>
       <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${member.recoveryOutcome || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
         <span className="task-priority">{String(index + 1).padStart(2, '0')}</span>
-        <div className="task-person"><span className="avatar large">{initials(member)}</span><span><span className="task-name"><h3>{fullName(member)}</h3><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : 'Srednji'}</span></span><small><Phone /> {member.phone} · {euro(member.price)}</small></span></div>
+        <div className="task-person"><span className="avatar large">{initials(member)}</span><span><span className="task-name"><h3>{fullName(member)}</h3></span><small><Phone /> {member.phone} · {euro(member.price)}</small></span></div>
         <div className="task-reason"><small>ZAŠTO DANAS</small><p>{membershipUrgencyLabel(member)}</p></div>
         <div className="task-next"><small>SLJEDEĆI POTEZ</small><p>{member.nextAction}</p></div>
         <div className="task-actions">
