@@ -38,7 +38,10 @@ export function useScrollReveal(enabled: boolean, scopeKey: string) {
         element.classList.add('scroll-reveal');
         element.style.setProperty('--reveal-delay', `${Math.min(index, 5) * 45}ms`);
 
-        if (reducedMotion) {
+        const bounds = element.getBoundingClientRect();
+        const alreadyInViewport = bounds.top < window.innerHeight * 0.92 && bounds.bottom > 0;
+
+        if (reducedMotion || alreadyInViewport) {
           element.classList.add('is-visible');
         } else {
           observer.observe(element);
