@@ -318,6 +318,7 @@ export function parseMemberCsv(
       recoveredAmount: existing?.recoveredAmount,
       recoveredAt: existing?.recoveredAt,
       queuedMessage: existing?.queuedMessage,
+      contactedAt: existing?.contactedAt,
       recoveryOutcome: existing?.recoveryOutcome,
       followUpAt: existing?.followUpAt,
     });
