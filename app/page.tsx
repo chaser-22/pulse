@@ -168,7 +168,18 @@ function blankMemberForm(): MemberForm {
 export default function Home() {
   const [view, setView] = useState<View>('dashboard');
   const [workspace, setWorkspace] = useState<Workspace>('owner');
-  const [members, setMembers] = useState<Member[]>(() => createDemoMembers());
+  const [members, setMembers] = useState<Member[]>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as { members?: Member[] };
+        if (parsed.members?.length) return parsed.members;
+      }
+    } catch {
+      // A corrupt or unavailable snapshot falls back to the CSV-generated demo.
+    }
+    return createDemoMembers();
+  });
   const [ready, setReady] = useState(false);
   const [loaderLeaving, setLoaderLeaving] = useState(false);
   const [loaderVisible, setLoaderVisible] = useState(() => {
