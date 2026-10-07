@@ -15,7 +15,7 @@ test('pilot uses a short first-session intro and immediate repeat loads', () => 
   assert.match(page, /sessionStorage\.getItem\(INTRO_SESSION_KEY\)/);
   assert.match(page, /sessionStorage\.setItem\(INTRO_SESSION_KEY, '1'\)/);
   assert.doesNotMatch(page, /setAppEntering\(false\), 2400/);
-  assert.match(globals, /\.app-shell\.app-shell-entering\s*\{[\s\S]*?animation:\s*pulse-app-shell-enter 280ms/);
+  assert.match(polish, /\.app-shell\.app-shell-entering\s*\{[\s\S]*?animation:\s*pulse-app-shell-enter 280ms/);
 });
 
 test('pilot ships one deliberate dark theme without a public theme switch', () => {
@@ -72,7 +72,7 @@ test('copy and small affordances are tightened for the pilot', () => {
   assert.match(page, /Cijena članarine/);
   assert.match(page, /Datum isteka/);
   assert.match(page, /Istekle članarine prvo, zatim one koje ističu u narednih 7 dana\./);
-  assert.match(html, /CSV.*datum isteka.*obnov/i);
+  assert.match(html, /CSV.*datum(?:om)? isteka.*obnov/i);
   assert.doesNotMatch(html, /Prepoznaj rizik|može izgubiti/);
 });
 
