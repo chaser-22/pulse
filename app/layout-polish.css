@@ -2158,6 +2158,13 @@ dt,
   animation: pulse-app-shell-enter 280ms cubic-bezier(.2, .8, .2, 1) both;
 }
 
+.app-shell.app-shell-entering .scroll-reveal {
+  opacity: 1 !important;
+  filter: none !important;
+  transform: none !important;
+  transition: none !important;
+}
+
 .app-shell.app-shell-entering :is(
   .sidebar,
   .topbar,
