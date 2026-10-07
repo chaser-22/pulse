@@ -29,8 +29,8 @@ test('risk queue excludes recovered members', () => {
 });
 
 test('lifecycle advances from detected to contacted to renewed', () => {
-  const detected = { ...initialMembers[0], queuedMessage: undefined, recoveryOutcome: undefined };
-  const contacted = { ...detected, recoveryOutcome: 'replied' as const };
+  const detected = { ...initialMembers[0], queuedMessage: undefined, contactedAt: undefined, recoveryOutcome: undefined };
+  const contacted = { ...detected, contactedAt: '05.10. · 10:00' };
   const renewed = { ...contacted, status: 'recovered' as const, risk: 'low' as const };
   assert.equal(getRecoveryLifecycle(detected), 'detected');
   assert.equal(getRecoveryLifecycle(contacted), 'contacted');
@@ -40,10 +40,10 @@ test('lifecycle advances from detected to contacted to renewed', () => {
 test('activity uses only recorded member state', () => {
   const members: Member[] = [
     { ...initialMembers[0], queuedMessage: { channel: 'Poruka', text: 'Test', queuedAt: 'Danas' } },
-    { ...initialMembers[1], recoveryOutcome: 'follow_up', followUpAt: 'Sjutra' },
+    { ...initialMembers[1], contactedAt: '05.10. · 10:00', recoveryOutcome: 'follow_up', followUpAt: 'Sjutra' },
     { ...initialMembers[2], status: 'recovered', risk: 'low', recoveredAmount: 40 },
   ];
-  assert.deepEqual(getRecoveryActivity(members), { contacted: 2, followUps: 1, renewed: 1, recoveredAmount: 40 });
+  assert.deepEqual(getRecoveryActivity(members), { contacted: 1, followUps: 1, renewed: 1, recoveredAmount: 40 });
 });
 
 
