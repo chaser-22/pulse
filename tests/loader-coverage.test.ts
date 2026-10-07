@@ -13,6 +13,6 @@ test('app content stays hidden while the loader is mounted', () => {
 test('app entrance starts only after the loader exit completes', () => {
   assert.match(
     page,
-    /exitTimer\s*=\s*window\.setTimeout\(\(\)\s*=>\s*\{[\s\S]*?setLoaderVisible\(false\)[\s\S]*?setAppEntering\(true\)[\s\S]*?\},\s*900\)/,
+    /exitTimer\s*=\s*window\.setTimeout\(\(\)\s*=>\s*\{[\s\S]*?setLoaderVisible\(false\)[\s\S]*?setAppEntering\(true\)[\s\S]*?\},\s*LOADER_EXIT_DURATION_MS\)/,
   );
 });
