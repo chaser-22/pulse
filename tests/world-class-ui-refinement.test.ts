@@ -3,14 +3,15 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 
 const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
-const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+const globals = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+const polish = readFileSync(new URL('../app/layout-polish.css', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 test('post-loader dashboard becomes usable immediately', () => {
   assert.match(page, /setAppEntering\(true\)/);
   assert.match(page, /setAppEntering\(false\), 320/);
-  assert.match(css, /\.app-shell\.app-shell-entering\s*\{[\s\S]*?animation:\s*pulse-app-shell-enter 280ms/);
-  assert.match(css, /transition-delay:\s*0ms !important/);
+  assert.match(polish, /\.app-shell\.app-shell-entering\s*\{[\s\S]*?animation:\s*pulse-app-shell-enter 280ms/);
+  assert.match(polish, /transition-delay:\s*0ms !important/);
 });
 
 test('owner exposes CSV import as the primary pilot action', () => {
@@ -47,11 +48,11 @@ test('copy and metadata align with the CSV-only product', () => {
 });
 
 test('visual system is restrained while preserving the existing identity', () => {
-  assert.match(css, /\.page-atmosphere--ambient canvas\s*\{[\s\S]*?opacity:\s*\.18/);
-  assert.match(css, /\.owner-hero\s*\{[\s\S]*?min-height:\s*340px/);
-  assert.match(css, /\.owner-hero h2\s*\{[\s\S]*?font-size:\s*clamp\(56px, 6\.8vw, 88px\)/);
-  assert.match(css, /\.pulse-button,[\s\S]*?background:\s*var\(--primary\)/);
-  assert.match(css, /@media \(max-width: 768px\)[\s\S]*?\.page-atmosphere,[\s\S]*?display:\s*none !important/);
+  assert.match(polish, /\.page-atmosphere--ambient canvas\s*\{[\s\S]*?opacity:\s*\.18/);
+  assert.match(polish, /\.owner-hero\s*\{[\s\S]*?min-height:\s*340px/);
+  assert.match(polish, /\.owner-hero h2\s*\{[\s\S]*?font-size:\s*clamp\(56px, 6\.8vw, 88px\)/);
+  assert.match(globals, /\.pulse-button,[\s\S]*?background:\s*var\(--primary\)/);
+  assert.match(polish, /@media \(max-width: 768px\)[\s\S]*?\.page-atmosphere,[\s\S]*?display:\s*none !important/);
 });
 
 test('minor pilot polish removes fake affordances and ambiguous labels', () => {
