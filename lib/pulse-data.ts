@@ -30,8 +30,8 @@ export const copy = {
   me: {
     gymName: 'PULSE Demo',
     location: 'CSV demo',
-    nav: { dashboard: 'Pregled', members: 'Članovi', radar: 'Signali rizika' },
+    nav: { dashboard: 'Pregled', members: 'Članovi', radar: 'Prioriteti članarina' },
     actions: { add: 'Dodaj člana', import: 'Uvezi CSV', renew: 'Označi kao obnovljeno' },
-    statuses: { active: 'Aktivan', expiring: 'Ističe', expired: 'Istekao', recovered: 'Oporavljen' } as Record<MemberStatus, string>,
+    statuses: { active: 'Aktivan', expiring: 'Ističe', expired: 'Istekao', recovered: 'Obnovljen' } as Record<MemberStatus, string>,
   },
 };
