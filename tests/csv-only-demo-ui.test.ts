@@ -57,3 +57,9 @@ test('demo chrome does not pretend to know owner or gym location from CSV', () =
   assert.doesNotMatch(page, /Dobro jutro, Marko\./);
   assert.doesNotMatch(page, /Podgorica/);
 });
+
+
+test('owner hero does not repeat the minimum CSV fields in a decorative pill', () => {
+  assert.doesNotMatch(page, /className="mode-note"/);
+  assert.doesNotMatch(page, /<span>CSV<\/span>Ime · telefon · cijena · datum isteka/);
+});
