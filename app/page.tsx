@@ -564,7 +564,7 @@ function LoadingState({ leaving = false }: { leaving?: boolean }) {
     <div className="pulse-loader-vignette" aria-hidden="true" />
     <PulseLoaderScene />
 
-    <section className="pulse-loader-center" aria-label={`PULSE loading ${visibleProgress}%`}>
+    <section className="pulse-loader-center" aria-label={`PULSE se učitava ${visibleProgress}%`}>
       <div className="pulse-loader-wordmark" aria-hidden="true">
         <h1>PULSE</h1>
       </div>
@@ -573,7 +573,7 @@ function LoadingState({ leaving = false }: { leaving?: boolean }) {
         <div className="pulse-loader-progress" aria-hidden="true">
           <span style={{ width: `${visibleProgress}%` }} />
         </div>
-        <output className="pulse-loader-percent" aria-label={`${visibleProgress} percent`}>
+        <output className="pulse-loader-percent" aria-label={`${visibleProgress} procenata`}>
           {visibleProgress}<span>%</span>
         </output>
       </div>
@@ -700,7 +700,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, recoveryPulse, 
 }
 
 function StaffBoard({ members, onOpenMember, onOutcome, onAddMember, onFindMember }: { members: Member[]; onOpenMember: (member: Member) => void; onOutcome: (memberId: string, outcome: RecoveryOutcome) => void; onAddMember: () => void; onFindMember: () => void }) {
-  const completed = members.filter((member) => member.recoveryOutcome || member.queuedMessage).length;
+  const completed = members.filter((member) => member.recoveryOutcome || member.status === 'recovered').length;
   const followUps = members.filter((member) => member.recoveryOutcome === 'follow_up').length;
   return <div className="screen-stack staff-screen">
     <section className="reception-search-shell" aria-labelledby="reception-search-title">
@@ -716,7 +716,20 @@ function StaffBoard({ members, onOpenMember, onOutcome, onAddMember, onFindMembe
         <div className="task-reason"><small>RAZLOG PRIORITETA</small><p>{member.riskReason}</p></div>
         <div className="task-next"><small>PREDLOŽENA AKCIJA</small><p>{member.nextAction}</p></div>
         <div className="task-actions">
-          {member.status === 'recovered' ? <span className="task-done"><CheckCircle2 /> Obnovljeno</span> : member.recoveryOutcome ? <><span className={`outcome-badge outcome-${member.recoveryOutcome}`}><Check /> {outcomeLabels[member.recoveryOutcome]}</span><button onClick={() => onOpenMember(member)}>Nastavi <ArrowRight /></button></> : <><button className="task-primary" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button><button onClick={() => onOutcome(member.id, 'no_answer')}><Phone /> Bez odgovora</button><button onClick={() => onOutcome(member.id, 'replied')}><MessageCircle /> Odgovorio/la</button><button onClick={() => onOutcome(member.id, 'follow_up')}><Clock3 /> Prati sjutra</button></>}
+          {member.status === 'recovered'
+            ? <span className="task-done"><CheckCircle2 /> Obnovljeno</span>
+            : member.recoveryOutcome
+              ? <><span className={`outcome-badge outcome-${member.recoveryOutcome}`}><Check /> {outcomeLabels[member.recoveryOutcome]}</span><button onClick={() => onOpenMember(member)}>Nastavi <ArrowRight /></button></>
+              : member.queuedMessage ? <>
+                  <span className="task-contacted"><CheckCircle2 /> Kontakt započet</span>
+                  <span className="task-outcome-label">Zabilježi ishod</span>
+                  <div className="task-outcome-actions">
+                    <button onClick={() => onOutcome(member.id, 'no_answer')}><Phone /> Bez odgovora</button>
+                    <button onClick={() => onOutcome(member.id, 'replied')}><MessageCircle /> Odgovorio/la</button>
+                    <button onClick={() => onOutcome(member.id, 'follow_up')}><Clock3 /> Prati sjutra</button>
+                  </div>
+                </>
+                : <button className="task-primary" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button>}
         </div>
       </article>)}</div>
     </section>
@@ -749,7 +762,7 @@ function MembersScreen({ members, total, filter, search, onFilter, onSearch, onO
             <td><button type="button" className="row-open-button" aria-label={`Otvori profil: ${fullName(member)}`} onClick={(event) => { event.stopPropagation(); onOpenMember(member); }}><ChevronRight /></button></td>
           </tr>)}</tbody>
         </table></div>
-        <div className="mobile-member-list">{members.map((member, index) => <button type="button" className="mobile-member-card member-list-item" style={{ '--member-reveal-delay': getMemberRevealDelay(index, members.length) } as CSSProperties} key={member.id} onClick={() => onOpenMember(member)}><span className="avatar">{initials(member)}</span><span className="mobile-member-main"><span><strong>{fullName(member)}</strong><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nizak'}</span></span><small>{member.phone}</small><span className="mobile-member-meta"><span><b>Status</b>{(t.statuses[member.status] ?? 'Provjeriti')}</span><span><b>Ističe</b>{prettyDate(member.endDate)}</span><span><b>Cijena</b>{euro(member.price)}</span></span></span><ChevronRight /></button>)}</div>
+        <div className="mobile-member-list">{members.map((member, index) => <button type="button" className="mobile-member-card member-list-item" style={{ '--member-reveal-delay': getMemberRevealDelay(index, members.length) } as CSSProperties} key={member.id} onClick={() => onOpenMember(member)}><span className="avatar">{initials(member)}</span><span className="mobile-member-main"><span><strong>{fullName(member)}</strong><span className={`risk-pill ${riskClass(member.risk)}`}><i />{member.risk === 'high' ? 'Visoki' : member.risk === 'medium' ? 'Srednji' : 'Nema'}</span></span><small>{member.phone}</small><span className="mobile-member-meta"><span><b>Status</b>{(t.statuses[member.status] ?? 'Provjeriti')}</span><span><b>Ističe</b>{prettyDate(member.endDate)}</span><span><b>Cijena</b>{euro(member.price)}</span></span></span><ChevronRight /></button>)}</div>
       </> : <EmptyState icon={<Search />} title="Nema rezultata" text="Pokušajte drugi izraz ili uklonite aktivni filter." action="Uvezi članove iz CSV-a" onAction={onImport} />}
     </section>
     <div className="csv-note"><FileSpreadsheet /><span><strong>Četiri potrebna polja: ime, telefon, cijena i datum isteka.</strong> Status, prioritet i razlog signala PULSE računa samo iz tih podataka.</span></div>
@@ -757,13 +770,17 @@ function MembersScreen({ members, total, filter, search, onFilter, onSearch, onO
 }
 
 function RadarScreen({ members, onOpenMember }: { members: Member[]; onOpenMember: (member: Member) => void }) {
-  const high = members.filter((member) => member.risk === 'high');
-  const medium = members.filter((member) => member.risk === 'medium');
+  const priorityMembers = [...members].sort((a, b) => {
+    const priorityDelta = (a.risk === 'high' ? 0 : 1) - (b.risk === 'high' ? 0 : 1);
+    return priorityDelta || a.endDate.localeCompare(b.endDate);
+  });
+  const high = priorityMembers.filter((member) => member.risk === 'high');
+  const medium = priorityMembers.filter((member) => member.risk === 'medium');
   return <div className="screen-stack radar-screen">
-    <section className="radar-summary panel-card" aria-label="Sažetak prioriteta"><div><p className="eyebrow">RED ZA AKCIJU</p><h2>Članovi sa signalima članarine</h2><p>PULSE računa status i prioritet samo iz datuma isteka i cijene članarine iz CSV fajla.</p></div><dl><div><dt>Ukupno</dt><dd>{members.length}</dd></div><div className="high"><dt>Hitno</dt><dd>{high.length}</dd></div><div className="medium"><dt>Za praćenje</dt><dd>{medium.length}</dd></div></dl></section>
+    <section className="radar-summary panel-card" aria-label="Sažetak prioriteta"><div><p className="eyebrow">RED ZA AKCIJU</p><h2>Članovi sa signalima članarine</h2><p>Istekle članarine prvo, zatim one koje ističu u narednih 7 dana. Prioritet se računa samo iz datuma isteka i cijene članarine.</p></div><dl><div><dt>Ukupno</dt><dd>{priorityMembers.length}</dd></div><div className="high"><dt>Hitno</dt><dd>{high.length}</dd></div><div className="medium"><dt>Za praćenje</dt><dd>{medium.length}</dd></div></dl></section>
     <section className="risk-queue panel-card">
-      <div className="section-heading"><div><p className="eyebrow">LISTA ZA TIM</p><h2>{members.length} članova za provjeru</h2></div><span className="sorted-label"><CircleGauge /> Članarina i datum isteka</span></div>
-      {members.length ? <div className="risk-cards">{members.map((member, index) => <article className={`risk-member-card ${member.risk === 'high' ? 'is-high' : ''}`} key={member.id}><span className="risk-order">{String(index + 1).padStart(2, '0')}</span><div className="risk-member-identity"><span className="avatar large">{initials(member)}</span><span><h3>{fullName(member)}</h3><span className={`status-pill ${statusClass(member.status)}`}>{(t.statuses[member.status] ?? 'Provjeriti')}</span></span></div><div className="risk-reason"><small>SIGNAL</small><p>{member.riskReason}</p></div><div className="risk-next"><small>PREDLOŽENA AKCIJA</small><p>{member.nextAction}</p></div><div className="risk-value"><small>ČLANARINA</small><strong>{euro(member.price)}</strong></div><Button variant="outline" onClick={() => onOpenMember(member)}>Otvori profil <ChevronRight /></Button></article>)}</div> : <EmptyState icon={<CheckCircle2 />} title="Lista je čista" text="Nijedan član trenutno nema aktivan signal." />}
+      <div className="section-heading"><div><p className="eyebrow">LISTA ZA TIM</p><h2>{priorityMembers.length} članova za provjeru</h2></div><span className="sorted-label"><CircleGauge /> Članarina i datum isteka</span></div>
+      {members.length ? <div className="risk-cards">{priorityMembers.map((member, index) => <article className={`risk-member-card ${member.risk === 'high' ? 'is-high' : ''}`} key={member.id}><span className="risk-order">{String(index + 1).padStart(2, '0')}</span><div className="risk-member-identity"><span className="avatar large">{initials(member)}</span><span><h3>{fullName(member)}</h3><span className={`status-pill ${statusClass(member.status)}`}>{(t.statuses[member.status] ?? 'Provjeriti')}</span></span></div><div className="risk-reason"><small>SIGNAL</small><p>{member.riskReason}</p></div><div className="risk-next"><small>PREDLOŽENA AKCIJA</small><p>{member.nextAction}</p></div><div className="risk-value"><small>ČLANARINA</small><strong>{euro(member.price)}</strong></div><Button variant="outline" onClick={() => onOpenMember(member)}>Otvori profil <ChevronRight /></Button></article>)}</div> : <EmptyState icon={<CheckCircle2 />} title="Lista je čista" text="Nijedan član trenutno nema aktivan signal." />}
     </section>
   </div>;
 }
@@ -772,9 +789,9 @@ function EmptyState({ icon, title, text, action, onAction }: { icon: React.React
   return <div className="empty-state"><span>{icon}</span><h3>{title}</h3><p>{text}</p>{action && <Button variant="outline" onClick={onAction}>{action}</Button>}</div>;
 }
 
-function MemberProfile({ member, channel, message, renewing, renewalAmount, onChannel, onMessage, onQueue, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
-  member: Member; channel: Channel; message: string; renewing: boolean; renewalAmount: string;
-  onChannel: (channel: Channel) => void; onMessage: (message: string) => void; onQueue: () => void; onEdit: () => void;
+function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onQueue, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
+  member: Member; message: string; renewing: boolean; renewalAmount: string;
+  onMessage: (message: string) => void; onQueue: () => void; onEdit: () => void;
   onRenew: () => void; onCancelRenew: () => void; onRenewalAmount: (amount: string) => void; onMarkRenewed: (event: SyntheticEvent<HTMLFormElement>) => void;
 }) {
   return <div className="profile-layout">
@@ -784,19 +801,18 @@ function MemberProfile({ member, channel, message, renewing, renewalAmount, onCh
     </div>
     <section className="profile-context">
       <section className={`profile-risk ${riskClass(member.risk)}`}>
-        <div><p className="eyebrow">PULSE SIGNAL</p><h3>{member.risk === 'high' ? 'Članarina je istekla' : member.risk === 'medium' ? 'Članarina uskoro ističe' : 'Članarina je aktivna'}</h3></div>
+        <div><p className="eyebrow">RAZLOG PRIORITETA</p><h3>{member.risk === 'high' ? 'Članarina je istekla' : member.risk === 'medium' ? 'Članarina uskoro ističe' : 'Članarina je aktivna'}</h3></div>
         <details open={member.risk === 'high' ? true : undefined}><summary>Zašto?</summary><p>{member.riskReason}</p><dl><div><dt>Cijena</dt><dd>{euro(member.price)}</dd></div><div><dt>Ističe</dt><dd>{prettyDate(member.endDate)}</dd></div></dl><span><strong>Preporučeni potez</strong>{member.nextAction}</span></details>
       </section>
       <section className="member-recovery-path" aria-labelledby="member-recovery-title"><p className="eyebrow" id="member-recovery-title">TOK U PULSE</p><RecoveryLifecycle member={member} /></section>
       <div className="profile-info-grid"><section><h3>Podaci iz CSV-a</h3><dl className="profile-info-list"><Detail label="Telefon" value={member.phone} sub="iz CSV-a" /><Detail label="Cijena članarine" value={euro(member.price)} sub={`ističe ${prettyDate(member.endDate)}`} /><Detail label="Status" value={(t.statuses[member.status] ?? 'Provjeriti')} sub="izračunato iz datuma isteka" /></dl></section></div>
     </section>
     <aside className="recovery-panel">
-      <div className="recovery-panel-title"><span><MessageCircle /></span><div><p className="eyebrow">AKCIJA OPORAVKA</p><h2>Pripremi poruku</h2></div></div>
-      <p className="panel-copy">Prijedlog koristi samo ime i status članarine. Slanje se u pilotu obavlja ručno.</p>
-      <fieldset className="channel-tabs"><legend className="sr-only">Izaberite kanal</legend>{(['Telefon','Poruka'] as Channel[]).map((item) => <button type="button" className={channel === item ? 'active' : ''} key={item} onClick={() => onChannel(item)}>{item}</button>)}</fieldset>
+      <div className="recovery-panel-title"><span><MessageCircle /></span><div><p className="eyebrow">KONTAKT I OBNOVA</p><h2>Pripremi poruku</h2></div></div>
+      <p className="panel-copy">Prijedlog poruke koristi samo ime i status članarine. Slanje se u pilotu obavlja ručno.</p>
       <label className="message-field"><span>PORUKA ZA {member.firstName.toLocaleUpperCase('me')}</span><Textarea value={message} onChange={(event) => onMessage(event.target.value)} rows={7} /></label>
       <div className="message-meta"><span>{message.length} znakova</span><span><Sparkles /> PULSE prijedlog</span></div>
-      {member.queuedMessage && <div className="queued-state"><CheckCircle2 /><span><strong>Nacrt je sačuvan</strong>{member.queuedMessage.channel} · {member.queuedMessage.queuedAt}</span></div>}
+      {member.queuedMessage && <div className="queued-state"><CheckCircle2 /><span><strong>Nacrt poruke je sačuvan</strong>{member.queuedMessage.queuedAt}</span></div>}
       <Button className="pulse-button queue-button" onClick={onQueue} disabled={!message.trim()}><Send /> Sačuvaj nacrt</Button>
       <div className="fake-service-note"><ShieldAlert /> Ovo je nacrt poruke. Tim ga šalje ručno koristeći broj telefona iz CSV-a.</div>
       <div className="recovery-divider"><span>NAKON OBNOVE</span></div>
