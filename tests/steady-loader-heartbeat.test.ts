@@ -15,7 +15,8 @@ test('3D loader heartbeat runs at a steady rate independent from loading progres
   assert.doesNotMatch(scene, /progressEnergy/);
 });
 
-test('five second loading duration remains unchanged', () => {
-  assert.match(page, /elapsed \/ 5000/);
-  assert.match(page, /\}, 5000\);/);
+test('steady heartbeat remains independent from the shorter loader duration', () => {
+  assert.match(page, /LOADER_TOTAL_DURATION_MS = 3500/);
+  assert.match(page, /elapsed \/ LOADER_PROGRESS_DURATION_MS/);
+  assert.doesNotMatch(page, /elapsed \/ 5000/);
 });

@@ -3,12 +3,17 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 
 const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 const scene = readFileSync(new URL('../components/pulse-loader-scene.tsx', import.meta.url), 'utf8');
 
-test('loader progress and handoff use a five second loading duration', () => {
-  assert.match(page, /elapsed \/ 5000/);
-  assert.match(page, /\}, 5000\);/);
-  assert.doesNotMatch(page, /elapsed \/ 4000/);
+test('loading screen is visible for three and a half seconds total', () => {
+  assert.match(page, /const LOADER_TOTAL_DURATION_MS = 3500;/);
+  assert.match(page, /const LOADER_EXIT_DURATION_MS = 500;/);
+  assert.match(page, /const LOADER_PROGRESS_DURATION_MS = LOADER_TOTAL_DURATION_MS - LOADER_EXIT_DURATION_MS;/);
+  assert.match(page, /elapsed \/ LOADER_PROGRESS_DURATION_MS/);
+  assert.match(page, /\}, LOADER_PROGRESS_DURATION_MS\);/);
+  assert.match(page, /\}, LOADER_EXIT_DURATION_MS\);/);
+  assert.match(css, /\.pulse-loader\.is-leaving\s*\{[\s\S]*?animation:\s*pulse-loader-exit 500ms/);
 });
 
 test('3D heartbeat no longer renders expanding pulse torus rings', () => {

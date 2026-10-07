@@ -3334,21 +3334,21 @@ body:has(.pulse-loader) { overflow: hidden; }
 .pulse-loader.is-leaving {
   pointer-events: none;
   transform-origin: 50% 20%;
-  animation: pulse-loader-exit 900ms cubic-bezier(.76, 0, .24, 1) forwards;
+  animation: pulse-loader-exit 500ms cubic-bezier(.76, 0, .24, 1) forwards;
 }
 
 .pulse-loader.is-leaving .pulse-loader-canvas {
-  animation: pulse-loader-core-exit 900ms cubic-bezier(.2, .75, .2, 1) forwards;
+  animation: pulse-loader-core-exit 500ms cubic-bezier(.2, .75, .2, 1) forwards;
 }
 
 .pulse-loader.is-leaving .pulse-loader-copy {
-  animation: pulse-loader-copy-exit 620ms cubic-bezier(.4, 0, 1, 1) forwards;
+  animation: pulse-loader-copy-exit 360ms cubic-bezier(.4, 0, 1, 1) forwards;
 }
 
 .pulse-loader.is-leaving .pulse-loader-brand,
 .pulse-loader.is-leaving .pulse-loader-hud,
 .pulse-loader.is-leaving .pulse-loader-footer {
-  animation: pulse-loader-chrome-exit 520ms ease-in forwards;
+  animation: pulse-loader-chrome-exit 300ms ease-in forwards;
 }
 
 .app-shell.app-shell-entering .sidebar {
