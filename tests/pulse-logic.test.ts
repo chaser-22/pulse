@@ -49,6 +49,7 @@ test('activity uses only recorded member state', () => {
 
 test('dashboard metrics come only from the current member dataset', () => {
   assert.deepEqual(getPulseMetrics(initialMembers), {
+    total: 11,
     active: 9,
     expiring: 5,
     highRisk: 2,
