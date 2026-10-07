@@ -22,6 +22,7 @@ export type Member = {
   recoveredAmount?: number;
   recoveredAt?: string;
   queuedMessage?: { channel: Channel; text: string; queuedAt: string };
+  contactedAt?: string;
   recoveryOutcome?: RecoveryOutcome;
   followUpAt?: string;
 };

@@ -12,6 +12,7 @@ type Props = {
   workspace: Workspace;
   recoveryPulse: number;
   signalCount: number;
+  urgentCount: number;
   surface: 'ambient' | 'hero';
 };
 
@@ -21,8 +22,8 @@ const COLORS = {
   teal: new THREE.Color(0x2ecc9d),
   mint: new THREE.Color(0x7be7c8),
   amber: new THREE.Color(0xf8bd62),
-  violet: new THREE.Color(0x8b5cf6),
-  cyan: new THREE.Color(0x00d5ff),
+  risk: new THREE.Color(0xf46c68),
+  cyan: new THREE.Color(0x28cfe3),
   ink: new THREE.Color(0x19211d),
 };
 
@@ -35,14 +36,15 @@ export default function PageAtmosphereScene({
   workspace,
   recoveryPulse,
   signalCount,
+  urgentCount,
   surface,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const latestRef = useRef({ view, workspace, recoveryPulse, signalCount, surface });
+  const latestRef = useRef({ view, workspace, recoveryPulse, signalCount, urgentCount, surface });
 
   useEffect(() => {
-    latestRef.current = { view, workspace, recoveryPulse, signalCount, surface };
-  }, [view, workspace, recoveryPulse, signalCount, surface]);
+    latestRef.current = { view, workspace, recoveryPulse, signalCount, urgentCount, surface };
+  }, [view, workspace, recoveryPulse, signalCount, urgentCount, surface]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -73,21 +75,21 @@ export default function PageAtmosphereScene({
     const ambientMaterial = new THREE.LineBasicMaterial({
       color: COLORS.cyan,
       transparent: true,
-      opacity: 0.28,
+      opacity: 0.22,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
-    const ambientAccentMaterial = new THREE.LineBasicMaterial({
-      color: COLORS.violet,
+    const urgentMaterial = new THREE.LineBasicMaterial({
+      color: COLORS.risk,
       transparent: true,
-      opacity: 0.2,
+      opacity: 0.24,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
-    const ambientLines = Array.from({ length: 13 }, (_, lineIndex) => {
+    const ambientLines = Array.from({ length: 12 }, (_, lineIndex) => {
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(96 * 3), 3));
-      const line = new THREE.Line(geometry, lineIndex % 4 === 0 ? ambientAccentMaterial : ambientMaterial);
+      const line = new THREE.Line(geometry, ambientMaterial);
       line.userData.offset = seeded(lineIndex, 31);
       line.userData.lane = lineIndex - 6;
       ambientGroup.add(line);
@@ -128,7 +130,7 @@ export default function PageAtmosphereScene({
       return line;
     });
 
-    const ribbonMaterials = [COLORS.coralSoft, COLORS.cyan, COLORS.violet, COLORS.mint].map((color, index) => new THREE.LineBasicMaterial({
+    const ribbonMaterials = [COLORS.coralSoft, COLORS.cyan, COLORS.mint, COLORS.cyan].map((color, index) => new THREE.LineBasicMaterial({
       color,
       transparent: true,
       opacity: index === 0 ? 0.22 : 0.3,
@@ -188,7 +190,9 @@ export default function PageAtmosphereScene({
       boardGroup.scale.setScalar(preset === 'member-field' ? 0.92 : 1);
 
       if (ambient) {
-        ambientLines.forEach((line) => {
+        ambientLines.forEach((line, lineIndex) => {
+          line.visible = lineIndex < current.signalCount;
+          line.material = lineIndex < current.urgentCount ? urgentMaterial : ambientMaterial;
           const positions = line.geometry.attributes.position;
           const lane = Number(line.userData.lane);
           const offset = Number(line.userData.offset);
@@ -229,8 +233,8 @@ export default function PageAtmosphereScene({
           }
           positions.needsUpdate = true;
         });
-        ambientMaterial.opacity = 0.16 + motion.signal * 0.14;
-        ambientAccentMaterial.opacity = 0.1 + motion.energy * 0.16;
+        ambientMaterial.opacity = 0.11 + motion.signal * 0.09;
+        urgentMaterial.opacity = 0.13 + motion.energy * 0.11;
         ambientPointMaterial.opacity = 0.34 + motion.energy * 0.22;
         gridMaterial.opacity = 0.08 + motion.energy * 0.06;
 
@@ -302,7 +306,7 @@ export default function PageAtmosphereScene({
       ambientLines.forEach((line) => line.geometry.dispose());
       gridLines.forEach((line) => line.geometry.dispose());
       ambientMaterial.dispose();
-      ambientAccentMaterial.dispose();
+      urgentMaterial.dispose();
       gridMaterial.dispose();
       ambientPointGeometry.dispose();
       ambientPointMaterial.dispose();

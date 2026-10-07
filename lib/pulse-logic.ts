@@ -38,13 +38,13 @@ export function getActionableRevenue(members: Member[]) {
 
 export function getRecoveryLifecycle(member: Member): RecoveryLifecycle {
   if (member.status === 'recovered') return 'renewed';
-  if (member.queuedMessage || member.recoveryOutcome) return 'contacted';
+  if (member.contactedAt || member.recoveryOutcome) return 'contacted';
   return 'detected';
 }
 
 export function getRecoveryActivity(members: Member[]): RecoveryActivity {
   return {
-    contacted: members.filter((member) => member.queuedMessage || member.recoveryOutcome).length,
+    contacted: members.filter((member) => member.contactedAt || member.recoveryOutcome).length,
     followUps: members.filter((member) => member.recoveryOutcome === 'follow_up').length,
     renewed: members.filter((member) => member.status === 'recovered').length,
     recoveredAmount: members.reduce(
