@@ -6,14 +6,14 @@ const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 const scene = readFileSync(new URL('../components/pulse-loader-scene.tsx', import.meta.url), 'utf8');
 
-test('loading screen is visible for three and a half seconds total', () => {
-  assert.match(page, /const LOADER_TOTAL_DURATION_MS = 3500;/);
-  assert.match(page, /const LOADER_EXIT_DURATION_MS = 500;/);
+test('first-session loading screen is brief and its exit fits inside 1.8 seconds total', () => {
+  assert.match(page, /const LOADER_TOTAL_DURATION_MS = 1800;/);
+  assert.match(page, /const LOADER_EXIT_DURATION_MS = 250;/);
   assert.match(page, /const LOADER_PROGRESS_DURATION_MS = LOADER_TOTAL_DURATION_MS - LOADER_EXIT_DURATION_MS;/);
   assert.match(page, /elapsed \/ LOADER_PROGRESS_DURATION_MS/);
   assert.match(page, /\}, LOADER_PROGRESS_DURATION_MS\);/);
   assert.match(page, /\}, LOADER_EXIT_DURATION_MS\);/);
-  assert.match(css, /\.pulse-loader\.is-leaving\s*\{[\s\S]*?animation:\s*pulse-loader-exit 500ms/);
+  assert.match(css, /\.pulse-loader\.is-leaving\s*\{[\s\S]*?animation:\s*pulse-loader-exit 250ms/);
 });
 
 test('3D heartbeat no longer renders expanding pulse torus rings', () => {
