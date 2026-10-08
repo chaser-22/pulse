@@ -5,7 +5,7 @@ import {
   ArrowRight, Check, CheckCircle2, Copy,
   ChevronRight, Clock3,
   LayoutDashboard, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
-  RotateCcw, Send, ShieldAlert, Upload, Users, X,
+  RotateCcw, Send, ShieldAlert, Smartphone, Upload, Users, X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { SmsHandoffQr } from '@/components/sms-handoff-qr';
+import { normalizePhone, smsLink, whatsappLink, isMobileMessagingDevice } from '@/lib/message-handoff';
 import {
   copy,
   type Member, type MemberStatus, type RecoveryOutcome, type RiskLevel,
@@ -390,6 +392,19 @@ export default function Home() {
     }
   }
 
+  function beginMessageHandoff(channel: 'WhatsApp' | 'SMS' | 'Viber') {
+    if (!selectedMember || !message.trim()) return;
+    // Only preserve the draft. A handoff is NOT a delivered message or confirmed contact.
+    setMembers((current) => current.map((member) => {
+      if (member.id !== selectedMember.id) return member;
+      if (member.queuedMessage?.text === message.trim()) return member;
+      return {
+        ...member,
+        queuedMessage: { channel: 'Poruka', text: message.trim(), queuedAt: formatActionTimestamp() },
+      };
+    }));
+  }
+
   function queueMessage() {
     if (!selectedMember || !message.trim()) return;
     setMembers((current) => current.map((member) => member.id === selectedMember.id ? {
@@ -614,8 +629,8 @@ export default function Home() {
         <DialogContent className={renewalReveal ? 'member-dialog renewal-reveal-dialog' : 'member-dialog member-command-sheet'} showCloseButton={!renewalReveal}>
           {renewalReveal ? <RenewalConfirmation name={renewalReveal.name} amount={renewalReveal.amount} /> : selectedMember && (
             <MemberProfile
-              member={selectedMember} message={message} renewing={renewing} renewalAmount={renewalAmount}
-              onMessage={setMessage} onCopy={copyMessage} onQueue={queueMessage} onContacted={() => markContacted(selectedMember.id)} onOutcome={(outcome) => recordOutcome(selectedMember.id, outcome)}
+              key={selectedMember.id} member={selectedMember} message={message} renewing={renewing} renewalAmount={renewalAmount}
+              onMessage={setMessage} onCopy={copyMessage} onQueue={queueMessage} onHandoff={beginMessageHandoff} onContacted={() => markContacted(selectedMember.id)} onOutcome={(outcome) => recordOutcome(selectedMember.id, outcome)}
               onEdit={() => openMemberForm(selectedMember)} onRenew={() => setRenewing(true)} onCancelRenew={() => setRenewing(false)}
               onRenewalAmount={setRenewalAmount} onMarkRenewed={markRenewed}
             />
@@ -927,11 +942,34 @@ function EmptyState({ icon, title, text, action, onAction }: { icon: React.React
   return <div className="empty-state"><span>{icon}</span><h3>{title}</h3><p>{text}</p>{action && <Button variant="outline" onClick={onAction}>{action}</Button>}</div>;
 }
 
-function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onQueue, onContacted, onOutcome, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
+function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onQueue, onHandoff, onContacted, onOutcome, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
   member: Member; message: string; renewing: boolean; renewalAmount: string;
-  onMessage: (message: string) => void; onCopy: () => void; onQueue: () => void; onContacted: () => void; onOutcome: (outcome: RecoveryOutcome) => void; onEdit: () => void;
+  onMessage: (message: string) => void; onCopy: () => void; onQueue: () => void; onHandoff: (channel: 'WhatsApp' | 'SMS' | 'Viber') => void; onContacted: () => void; onOutcome: (outcome: RecoveryOutcome) => void; onEdit: () => void;
   onRenew: () => void; onCancelRenew: () => void; onRenewalAmount: (amount: string) => void; onMarkRenewed: (event: SyntheticEvent<HTMLFormElement>) => void;
 }) {
+  const [handoff, setHandoff] = useState<'sms' | 'viber' | 'whatsapp' | null>(null);
+  const whatsapp = whatsappLink(member.phone, message);
+  const sms = smsLink(member.phone, message);
+  const normalizedPhone = normalizePhone(member.phone);
+
+  function openSms() {
+    if (!sms) return;
+    onHandoff('SMS');
+    if (isMobileMessagingDevice(navigator.userAgent, navigator.maxTouchPoints)) {
+      setHandoff('sms');
+      window.location.href = sms;
+    } else {
+      setHandoff('sms');
+    }
+  }
+
+  function openViber() {
+    if (!message.trim()) return;
+    onHandoff('Viber');
+    onCopy();
+    setHandoff('viber');
+  }
+
   return <div className="profile-layout">
     <div className="profile-main">
       <DialogHeader className="profile-header"><div className="avatar profile-avatar">{initials(member)}</div><div><div className="profile-badges"><span className={`status-pill ${statusClass(member.status)}`}>{membershipUrgencyLabel(member)}</span></div><DialogTitle>{fullName(member)}</DialogTitle><DialogDescription>{member.phone} · {euro(member.price)}</DialogDescription></div></DialogHeader>
@@ -948,11 +986,37 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
     <aside className="recovery-panel">
       <div className="recovery-panel-title"><span><MessageCircle /></span><div><h2>Poruka</h2></div></div>
       <label className="message-field"><span>ZA {member.firstName.toLocaleUpperCase('me')}</span><Textarea value={message} onChange={(event) => onMessage(event.target.value)} rows={7} /></label>
+      <div className="message-channel-title">OTVORI PORUKU</div>
+      <div className="message-channel-actions">
+        {whatsapp
+          ? <a className="message-channel message-channel-whatsapp" href={whatsapp} target="_blank" rel="noopener noreferrer" onClick={() => { onHandoff('WhatsApp'); setHandoff('whatsapp'); }}><MessageCircle />WhatsApp<ArrowRight /></a>
+          : <button type="button" className="message-channel" disabled aria-label="WhatsApp nije dostupan: provjerite telefonski broj"><MessageCircle />WhatsApp</button>}
+        <button type="button" className="message-channel" onClick={openSms} disabled={!sms}><Smartphone />SMS<ArrowRight /></button>
+        <button type="button" className="message-channel" onClick={openViber} disabled={!message.trim()}><MessageCircle />Viber<ArrowRight /></button>
+      </div>
+      {!normalizedPhone && <p className="message-handoff-warning">Provjerite broj telefona u profilu da biste otvorili WhatsApp ili SMS.</p>}
+      {handoff === 'sms' && sms && !isMobileMessagingDevice(navigator.userAgent, navigator.maxTouchPoints) && <section className="sms-handoff" aria-label="SMS preko telefona">
+        <div className="sms-handoff-top"><strong>SMS preko telefona</strong><button type="button" aria-label="Zatvori QR prikaz" onClick={() => setHandoff(null)}><X /></button></div>
+        <div className="sms-handoff-body">
+          <SmsHandoffQr uri={sms} memberName={fullName(member)} />
+          <div>
+            <p>Skenirajte QR kod telefonom da otvorite SMS za <strong>{member.phone}</strong>.</p>
+            <p className="message-handoff-secondary">Ako kamera ne prepoznaje SMS QR, kopirajte poruku i unesite broj ručno.</p>
+            <a className="sms-open-on-device" href={sms}>Otvori SMS na ovom uređaju <ArrowRight /></a>
+          </div>
+        </div>
+      </section>}
+      {handoff === 'viber' && <section className="viber-handoff" aria-label="Poruka za Viber">
+        <strong>Viber — poruka kopirana</strong>
+        <p>Otvorite Viber, pronađite <strong>{member.phone}</strong> i nalijepite poruku. Direktno otvaranje privatnog razgovora nije pouzdano na svim uređajima.</p>
+        {normalizedPhone && <a href={`viber://chat?number=${encodeURIComponent(normalizedPhone)}`} className="sms-open-on-device">Pokušaj otvoriti Viber <ArrowRight /></a>}
+      </section>}
+      {handoff === 'whatsapp' && <p className="message-handoff-status">WhatsApp je otvoren u novoj kartici ili aplikaciji. Provjerite da je poruka poslata.</p>}
       <div className="message-actions">
-        <Button variant="outline" className="dark-outline" onClick={onCopy} disabled={!message.trim()}><Copy /> Kopiraj poruku</Button>
+        <Button variant="outline" className="dark-outline" onClick={onCopy} disabled={!message.trim()}><Copy /> Kopiraj</Button>
         <Button className="pulse-button" onClick={onQueue} disabled={!message.trim() || member.queuedMessage?.text === message.trim()}>{member.queuedMessage?.text === message.trim() ? <><Check /> Nacrt sačuvan</> : <><Send /> Sačuvaj nacrt</>}</Button>
       </div>
-      <div className="fake-service-note"><ShieldAlert /> Slanje je ručno. Nakon slanja potvrdite kontakt.</div>
+      <div className="fake-service-note"><ShieldAlert /> PULSE ne šalje poruke automatski. Pošaljite u aplikaciji, pa potvrdite kontakt.</div>
       {member.queuedMessage && !member.contactedAt && member.status !== 'recovered' && <Button className="contact-confirm-button" onClick={onContacted}><CheckCircle2 /> Označi kao kontaktirano</Button>}
       {member.contactedAt && member.status !== 'recovered' && <>
         <div className="contact-confirmed-state"><CheckCircle2 /><span><strong>Kontakt potvrđen</strong>{member.contactedAt}</span></div>
