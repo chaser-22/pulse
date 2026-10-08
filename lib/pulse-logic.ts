@@ -38,18 +38,18 @@ export function getActionableRevenue(members: Member[]) {
 
 export function getRecoveryLifecycle(member: Member): RecoveryLifecycle {
   if (member.status === 'recovered') return 'renewed';
-  // An outcome or a prepared message is not proof that staff confirmed contact.
-  if (member.contactedAt) return 'contacted';
+  // Legacy timestamps, outcomes and drafts are not proof of explicit staff confirmation.
+  if (member.contactConfirmedAt) return 'contacted';
   return 'detected';
 }
 
 export function getRecoveryActivity(members: Member[]): RecoveryActivity {
   return {
     // Counts are member-level totals for the current dataset, not messages sent or daily totals.
-    contacted: members.filter((member) => Boolean(member.contactedAt)).length,
+    contacted: members.filter((member) => Boolean(member.contactConfirmedAt)).length,
     // Completed renewals are never outstanding follow-ups, even if a prior outcome was follow_up.
     followUps: members.filter((member) =>
-      member.status !== 'recovered' && Boolean(member.contactedAt) && member.recoveryOutcome === 'follow_up',
+      member.status !== 'recovered' && Boolean(member.contactConfirmedAt) && member.recoveryOutcome === 'follow_up',
     ).length,
     renewed: members.filter((member) => member.status === 'recovered').length,
     // Amounts are staff-entered renewal records, not verified payments.
