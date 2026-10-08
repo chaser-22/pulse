@@ -747,8 +747,13 @@ function Field({ label, required, children }: { label: string; required?: boolea
 function RecoveryLifecycle({ member }: { member: Member }) {
   const current = getRecoveryLifecycle(member);
   const steps = [['detected', 'Otkriveno'], ['contacted', 'Kontaktirano'], ['renewed', 'Obnovljeno']] as const;
-  const currentIndex = steps.findIndex(([id]) => id === current);
-  return <ol className="recovery-lifecycle" aria-label="Tok u PULSE">{steps.map(([id, label], index) => <li className={index <= currentIndex ? 'complete' : ''} aria-current={id === current ? 'step' : undefined} key={id}><i />{label}</li>)}</ol>;
+  // A renewal can happen without confirmed outreach. Display each actual event independently.
+  const recorded = {
+    detected: true,
+    contacted: Boolean(member.contactedAt),
+    renewed: member.status === 'recovered',
+  };
+  return <ol className="recovery-lifecycle" aria-label="Tok u PULSE">{steps.map(([id, label]) => <li className={recorded[id] ? 'complete' : ''} aria-current={id === current ? 'step' : undefined} key={id}><i />{label}</li>)}</ol>;
 }
 
 function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, onOpenMember, onNavigate }: {
