@@ -355,8 +355,8 @@ export default function Home() {
   function recordOutcome(memberId: string, outcome: RecoveryOutcome) {
     const member = members.find((item) => item.id === memberId);
     // Recording an outcome must not implicitly count as contacting the member.
-    if (!member?.contactedAt || member.status === 'recovered') return;
-    setMembers((current) => current.map((item) => item.id === memberId && item.contactedAt && item.status !== 'recovered' ? {
+    if (!member?.contactConfirmedAt || member.status === 'recovered') return;
+    setMembers((current) => current.map((item) => item.id === memberId && item.contactConfirmedAt && item.status !== 'recovered' ? {
       ...item,
       recoveryOutcome: outcome,
       followUpAt: outcome === 'follow_up' ? formatFollowUpTimestamp() : undefined,
@@ -420,7 +420,7 @@ export default function Home() {
     if (!member) return;
     setMembers((current) => current.map((item) => item.id === memberId ? {
       ...item,
-      contactedAt: item.contactedAt ?? formatActionTimestamp(),
+      contactConfirmedAt: item.contactConfirmedAt ?? formatActionTimestamp(),
     } : item));
     setSuccess(`${fullName(member)} je evidentiran/a kao kontaktiran/a.`);
   }
@@ -750,7 +750,7 @@ function RecoveryLifecycle({ member }: { member: Member }) {
   // A renewal can happen without confirmed outreach. Display each actual event independently.
   const recorded = {
     detected: true,
-    contacted: Boolean(member.contactedAt),
+    contacted: Boolean(member.contactConfirmedAt),
     renewed: member.status === 'recovered',
   };
   return <ol className="recovery-lifecycle" aria-label="Tok u PULSE">{steps.map(([id, label]) => <li className={recorded[id] ? 'complete' : ''} aria-current={id === current ? 'step' : undefined} key={id}><i />{label}</li>)}</ol>;
@@ -842,7 +842,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
             </button>
           </div>
 
-          {(member.contactedAt || member.recoveryOutcome || member.status === 'recovered') && <div className="today-queue__rail"><RecoveryLifecycle member={member} /></div>}
+          {(member.contactConfirmedAt || member.recoveryOutcome || member.status === 'recovered') && <div className="today-queue__rail"><RecoveryLifecycle member={member} /></div>}
         </article>)}
       </div> : <div className="today-queue__empty"><CheckCircle2 /><span><strong>Nema hitnih kontakata.</strong></span></div>}
 
@@ -868,7 +868,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
 
 function StaffBoard({ members, onOpenMember, onContacted, onOutcome, onAddMember, onFindMember }: { members: Member[]; onOpenMember: (member: Member) => void; onContacted: (memberId: string) => void; onOutcome: (memberId: string, outcome: RecoveryOutcome) => void; onAddMember: () => void; onFindMember: () => void }) {
   const completed = members.filter((member) => member.recoveryOutcome || member.status === 'recovered').length;
-  const followUps = members.filter((member) => member.contactedAt && member.recoveryOutcome === 'follow_up' && member.status !== 'recovered').length;
+  const followUps = members.filter((member) => member.contactConfirmedAt && member.recoveryOutcome === 'follow_up' && member.status !== 'recovered').length;
   return <div className="screen-stack staff-screen">
     <section className="reception-search-shell" aria-labelledby="reception-search-title">
       <button type="button" className="reception-search" onClick={onFindMember}><Search /><span><strong id="reception-search-title">Pronađi člana</strong><em>Ime ili telefon</em></span><ArrowRight /></button>
@@ -887,7 +887,7 @@ function StaffBoard({ members, onOpenMember, onContacted, onOutcome, onAddMember
             ? <span className="task-done"><CheckCircle2 /> Obnovljeno</span>
             : member.recoveryOutcome
               ? <><span className={`outcome-badge outcome-${member.recoveryOutcome}`}><Check /> {outcomeLabels[member.recoveryOutcome]}</span><button onClick={() => onOpenMember(member)}>Nastavi <ArrowRight /></button></>
-              : member.contactedAt ? <>
+              : member.contactConfirmedAt ? <>
                   <span className="task-contacted"><CheckCircle2 /> Kontakt potvrđen</span>
                   <div className="task-outcome-actions">
                     <button onClick={() => onOutcome(member.id, 'no_answer')}><Phone /> Bez odgovora</button>
@@ -1030,9 +1030,9 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
         <Button className="pulse-button" onClick={onQueue} disabled={!message.trim() || member.queuedMessage?.text === message.trim()}>{member.queuedMessage?.text === message.trim() ? <><Check /> Nacrt sačuvan</> : <><Send /> Sačuvaj nacrt</>}</Button>
       </div>
       <div className="fake-service-note"><ShieldAlert /> PULSE ne šalje poruke automatski. Pošaljite u aplikaciji, pa potvrdite kontakt.</div>
-      {!member.contactedAt && member.status !== 'recovered' && <Button className="contact-confirm-button" onClick={onContacted}><CheckCircle2 /> Označi kao kontaktirano</Button>}
-      {member.contactedAt && member.status !== 'recovered' && <>
-        <div className="contact-confirmed-state"><CheckCircle2 /><span><strong>Kontakt potvrđen</strong>{member.contactedAt}</span></div>
+      {!member.contactConfirmedAt && member.status !== 'recovered' && <Button className="contact-confirm-button" onClick={onContacted}><CheckCircle2 /> Označi kao kontaktirano</Button>}
+      {member.contactConfirmedAt && member.status !== 'recovered' && <>
+        <div className="contact-confirmed-state"><CheckCircle2 /><span><strong>Kontakt potvrđen</strong>{member.contactConfirmedAt}</span></div>
         {!member.recoveryOutcome ? <div className="profile-outcome-actions" role="group" aria-label="Ishod kontakta">
           <button type="button" onClick={() => onOutcome('no_answer')}>Bez odgovora</button>
           <button type="button" onClick={() => onOutcome('replied')}>Odgovorio/la</button>
