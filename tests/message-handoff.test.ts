@@ -37,7 +37,7 @@ test('opening messaging applications never updates contactedAt or recoveryOutcom
   const handoff = page.slice(start, end);
   assert.ok(start > -1 && end > start);
   assert.match(handoff, /queuedMessage:/);
-  assert.doesNotMatch(handoff, /contactedAt|recoveryOutcome|recoveredAt/);
+  assert.doesNotMatch(handoff, /contactConfirmedAt|contactedAt|recoveryOutcome|recoveredAt/);
   assert.match(page, /Označi kao kontaktirano/);
   assert.match(page, /PULSE ne šalje poruke automatski/);
 });
