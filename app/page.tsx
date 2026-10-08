@@ -736,8 +736,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
       <header className="today-queue__header">
         <div className="today-queue__heading">
           <p className="eyebrow">DANAS</p>
-          <h2 id="priority-title">Danas — članovi koji trebaju pažnju</h2>
-          <p>Najvažniji članovi za današnji kontakt, poredani za brz pregled i akciju.</p>
+          <h2 id="priority-title">Članovi za kontakt</h2>
         </div>
         <span className="today-queue__count"><strong>{highRiskMembers.length}</strong> već isteklo</span>
       </header>
