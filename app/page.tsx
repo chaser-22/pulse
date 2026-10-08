@@ -1029,7 +1029,7 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
         <Button variant="outline" className="dark-outline" onClick={onCopy} disabled={!message.trim()}><Copy /> Kopiraj</Button>
         <Button className="pulse-button" onClick={onQueue} disabled={!message.trim() || member.queuedMessage?.text === message.trim()}>{member.queuedMessage?.text === message.trim() ? <><Check /> Nacrt sačuvan</> : <><Send /> Sačuvaj nacrt</>}</Button>
       </div>
-      <p className="fake-service-note"><ShieldAlert aria-hidden="true" /> PULSE ne šalje poruke automatski. Pošaljite u aplikaciji, pa potvrdite kontakt.</p>
+      {!member.contactConfirmedAt && member.status !== 'recovered' && <p className="fake-service-note"><ShieldAlert aria-hidden="true" /> PULSE ne šalje poruke automatski. Pošaljite u aplikaciji, pa potvrdite kontakt.</p>}
       {!member.contactConfirmedAt && member.status !== 'recovered' && <Button className="contact-confirm-button" onClick={onContacted}><CheckCircle2 /> Označi kao kontaktirano</Button>}
       {member.contactConfirmedAt && member.status !== 'recovered' && <section className="contact-workflow" aria-label="Evidencija kontakta">
         <div className="contact-confirmed-state" role="status">
