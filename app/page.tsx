@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type SyntheticEvent } from 'react';
 import {
   ArrowRight, Check, CheckCircle2, Copy,
-  ChevronRight, CircleGauge, Clock3, FileSpreadsheet,
+  ChevronRight, Clock3,
   LayoutDashboard, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
-  RotateCcw, Send, ShieldAlert, Sparkles, Upload, Users, X,
+  RotateCcw, Send, ShieldAlert, Upload, Users, X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
