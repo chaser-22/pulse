@@ -394,7 +394,7 @@ export default function Home() {
     }
   }
 
-  function beginMessageHandoff(channel: 'WhatsApp' | 'SMS' | 'Viber') {
+  function beginMessageHandoff() {
     if (!selectedMember || !message.trim()) return;
     // Only preserve the draft. A handoff is NOT a delivered message or confirmed contact.
     setMembers((current) => current.map((member) => {
@@ -946,7 +946,7 @@ function EmptyState({ icon, title, text, action, onAction }: { icon: React.React
 
 function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onQueue, onHandoff, onContacted, onOutcome, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
   member: Member; message: string; renewing: boolean; renewalAmount: string;
-  onMessage: (message: string) => void; onCopy: () => Promise<boolean>; onQueue: () => void; onHandoff: (channel: 'WhatsApp' | 'SMS' | 'Viber') => void; onContacted: () => void; onOutcome: (outcome: RecoveryOutcome) => void; onEdit: () => void;
+  onMessage: (message: string) => void; onCopy: () => Promise<boolean>; onQueue: () => void; onHandoff: () => void; onContacted: () => void; onOutcome: (outcome: RecoveryOutcome) => void; onEdit: () => void;
   onRenew: () => void; onCancelRenew: () => void; onRenewalAmount: (amount: string) => void; onMarkRenewed: (event: SyntheticEvent<HTMLFormElement>) => void;
 }) {
   const [handoff, setHandoff] = useState<'sms' | 'viber' | 'whatsapp' | null>(null);
@@ -957,7 +957,7 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
 
   function openSms() {
     if (!sms) return;
-    onHandoff('SMS');
+    onHandoff();
     if (isMobileMessagingDevice(navigator.userAgent, navigator.maxTouchPoints)) {
       setHandoff('sms');
       window.location.href = sms;
@@ -968,7 +968,7 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
 
   async function openViber() {
     if (!message.trim()) return;
-    onHandoff('Viber');
+    onHandoff();
     const copied = await onCopy();
     setViberCopied(copied);
     setHandoff('viber');
@@ -993,7 +993,7 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
       <div className="message-channel-title">OTVORI PORUKU</div>
       <div className="message-channel-actions">
         {whatsapp
-          ? <a className="message-channel message-channel-whatsapp" href={whatsapp} target="_blank" rel="noopener noreferrer" onClick={() => { onHandoff('WhatsApp'); setHandoff('whatsapp'); }}><MessageCircle />WhatsApp<ArrowRight /></a>
+          ? <a className="message-channel message-channel-whatsapp" href={whatsapp} target="_blank" rel="noopener noreferrer" onClick={() => { onHandoff(); setHandoff('whatsapp'); }}><MessageCircle />WhatsApp<ArrowRight /></a>
           : <button type="button" className="message-channel" disabled aria-label="WhatsApp nije dostupan: provjerite telefonski broj"><MessageCircle />WhatsApp</button>}
         <button type="button" className="message-channel" onClick={openSms} disabled={!sms}><Smartphone />SMS<ArrowRight /></button>
         <button type="button" className="message-channel" onClick={openViber} disabled={!message.trim()}><MessageCircle />Viber<ArrowRight /></button>
