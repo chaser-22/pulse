@@ -867,7 +867,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
 }
 
 function StaffBoard({ members, onOpenMember, onContacted, onOutcome, onAddMember, onFindMember }: { members: Member[]; onOpenMember: (member: Member) => void; onContacted: (memberId: string) => void; onOutcome: (memberId: string, outcome: RecoveryOutcome) => void; onAddMember: () => void; onFindMember: () => void }) {
-  const completed = members.filter((member) => member.recoveryOutcome || member.status === 'recovered').length;
+  const completed = members.filter((member) => (member.contactConfirmedAt && member.recoveryOutcome) || member.status === 'recovered').length;
   const followUps = members.filter((member) => member.contactConfirmedAt && member.recoveryOutcome === 'follow_up' && member.status !== 'recovered').length;
   return <div className="screen-stack staff-screen">
     <section className="reception-search-shell" aria-labelledby="reception-search-title">
@@ -877,7 +877,7 @@ function StaffBoard({ members, onOpenMember, onContacted, onOutcome, onAddMember
     </section>
     <section className="staff-queue panel-card" id="staff-queue">
       <div className="section-heading"><div><h2>Kontakti</h2></div><span className="summary-count">{members.length - completed} preostalo</span></div>
-      <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${member.recoveryOutcome || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
+      <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${(member.contactConfirmedAt && member.recoveryOutcome) || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
         <span className="task-priority">{String(index + 1).padStart(2, '0')}</span>
         <div className="task-person"><span className="avatar large">{initials(member)}</span><span><span className="task-name"><h3>{fullName(member)}</h3></span><small><Phone /> {member.phone} · {euro(member.price)}</small></span></div>
         <div className="task-reason" aria-label="Status"><p>{membershipUrgencyLabel(member)}</p></div>
@@ -885,7 +885,7 @@ function StaffBoard({ members, onOpenMember, onContacted, onOutcome, onAddMember
         <div className="task-actions">
           {member.status === 'recovered'
             ? <span className="task-done"><CheckCircle2 /> Obnovljeno</span>
-            : member.recoveryOutcome
+            : member.recoveryOutcome && member.contactConfirmedAt
               ? <><span className={`outcome-badge outcome-${member.recoveryOutcome}`}><Check /> {outcomeLabels[member.recoveryOutcome]}</span><button onClick={() => onOpenMember(member)}>Nastavi <ArrowRight /></button></>
               : member.contactConfirmedAt ? <>
                   <span className="task-contacted"><CheckCircle2 /> Kontakt potvrđen</span>
