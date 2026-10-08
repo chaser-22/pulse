@@ -29,8 +29,8 @@ test('risk queue excludes recovered members', () => {
 });
 
 test('lifecycle advances from detected to contacted to renewed', () => {
-  const detected = { ...initialMembers[0], queuedMessage: undefined, contactedAt: undefined, recoveryOutcome: undefined };
-  const contacted = { ...detected, contactedAt: '05.10. · 10:00' };
+  const detected = { ...initialMembers[0], queuedMessage: undefined, contactConfirmedAt: undefined, recoveryOutcome: undefined };
+  const contacted = { ...detected, contactConfirmedAt: '05.10. · 10:00' };
   const renewed = { ...contacted, status: 'recovered' as const, risk: 'low' as const };
   assert.equal(getRecoveryLifecycle(detected), 'detected');
   assert.equal(getRecoveryLifecycle(contacted), 'contacted');
@@ -40,7 +40,7 @@ test('lifecycle advances from detected to contacted to renewed', () => {
 test('activity uses only recorded member state', () => {
   const members: Member[] = [
     { ...initialMembers[0], queuedMessage: { channel: 'Poruka', text: 'Test', queuedAt: 'Danas' } },
-    { ...initialMembers[1], contactedAt: '05.10. · 10:00', recoveryOutcome: 'follow_up', followUpAt: 'Sjutra' },
+    { ...initialMembers[1], contactConfirmedAt: '05.10. · 10:00', recoveryOutcome: 'follow_up', followUpAt: 'Sjutra' },
     { ...initialMembers[2], status: 'recovered', risk: 'low', recoveredAmount: 40 },
   ];
   assert.deepEqual(getRecoveryActivity(members), { contacted: 1, followUps: 1, renewed: 1, recoveredAmount: 40 });
@@ -95,7 +95,7 @@ test('drafts, external app handoffs, and outcomes alone do not prove staff confi
 test('renewal without prior outreach increases renewal and amount, not contact', () => {
   const renewed: Member = {
     ...initialMembers[0],
-    contactedAt: undefined,
+    contactConfirmedAt: undefined,
     status: 'recovered',
     risk: 'low',
     recoveredAmount: 35,
@@ -110,7 +110,7 @@ test('renewal without prior outreach increases renewal and amount, not contact',
 test('a completed renewal closes outstanding follow-up but retains explicitly confirmed contact', () => {
   const followedUp: Member = {
     ...initialMembers[0],
-    contactedAt: '05.10. · 10:00',
+    contactConfirmedAt: '05.10. · 10:00',
     recoveryOutcome: 'follow_up',
     followUpAt: '06.10. · 10:00',
   };
@@ -125,9 +125,9 @@ test('a completed renewal closes outstanding follow-up but retains explicitly co
 });
 
 test('contact metrics count distinct members, and only valid recorded renewal amounts', () => {
-  const confirmed: Member = { ...initialMembers[0], contactedAt: 'Danas' };
+  const confirmed: Member = { ...initialMembers[0], contactConfirmedAt: 'Danas' };
   const confirmedAndRenewed: Member = {
-    ...initialMembers[1], contactedAt: 'Juče', status: 'recovered', risk: 'low', recoveredAmount: 45,
+    ...initialMembers[1], contactConfirmedAt: 'Juče', status: 'recovered', risk: 'low', recoveredAmount: 45,
   };
   const invalidAmount: Member = {
     ...initialMembers[2], status: 'recovered', risk: 'low', recoveredAmount: Number.NaN,
@@ -135,4 +135,20 @@ test('contact metrics count distinct members, and only valid recorded renewal am
   assert.deepEqual(getRecoveryActivity([confirmed, confirmedAndRenewed, invalidAmount]), {
     contacted: 2, followUps: 0, renewed: 2, recoveredAmount: 45,
   });
+});
+
+test('legacy automatically assigned contact timestamps are not counted as confirmed outreach', () => {
+  const legacyRenewal: Member = {
+    ...initialMembers[0],
+    status: 'recovered',
+    risk: 'low',
+    contactedAt: '05.10. · 10:00',
+    contactConfirmedAt: undefined,
+    recoveredAmount: 35,
+    recoveredAt: '2026-10-05',
+  };
+  assert.deepEqual(getRecoveryActivity([legacyRenewal]), {
+    contacted: 0, followUps: 0, renewed: 1, recoveredAmount: 35,
+  });
+  assert.equal(getRecoveryLifecycle(legacyRenewal), 'renewed');
 });
