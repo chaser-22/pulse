@@ -2542,10 +2542,6 @@ body {
 .status-expiring,.risk-medium {color:var(--warning);background:#e4ad4b15}
 .status-expired,.risk-high {color:var(--danger);background:#f36c6815}
 .status-recovered,.risk-low {color:var(--success);background:#35c99a15}
-.page-atmosphere--ambient canvas {opacity:.08;filter:saturate(.65)}
-.page-atmosphere--ambient::after {
-  background:radial-gradient(ellipse at 50% 16%,transparent 0%,#05080b9a 47%,#05080be8 90%);
-}
 
 /* Owner / executive risk command */
 .dashboard-screen {gap:0}
@@ -2805,7 +2801,7 @@ body {
   width:min(720px,100vw)!important;max-width:none!important;
   height:100dvh!important;max-height:100dvh!important;
   padding:0!important;margin:0!important;
-  translate:0 0!important;transform:none!important;
+  translate:0 0!important;
   border:0!important;border-left:1px solid var(--border-strong)!important;
   border-radius:0!important;background:#090e13!important;
   display:block!important;overflow:hidden!important;
@@ -2813,7 +2809,7 @@ body {
   animation:pulse-sheet-in 260ms cubic-bezier(.2,.8,.2,1) both!important;
 }
 @keyframes pulse-sheet-in {
-  from {opacity:.85;transform:translateX(20px)}
+  from {opacity:.85;transform:translateX(24px)}
   to {opacity:1;transform:translateX(0)}
 }
 .member-command-sheet [data-slot='dialog-close'] {
