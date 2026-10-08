@@ -10,9 +10,9 @@ test('normal application launch has no artificial loading screen', () => {
   assert.match(page, /const IMPORT_PROGRESS_DELAY_MS = 350;/);
 });
 
-test('first visit uses onboarding rather than a fake loader', () => {
+test('first visit uses concise onboarding rather than a fake loader', () => {
   assert.match(page, /const ONBOARDING_KEY = 'pulse-onboarding-seen-v1';/);
-  assert.match(page, /Vidite šta je pod rizikom\. Znajte koga treba kontaktirati\./);
+  assert.match(page, /Vidite šta je pod rizikom\. Znajte koga kontaktirati\./);
   assert.match(page, /Pokreni demo/);
   assert.match(page, /Uvezi svoj CSV/);
   assert.match(page, /onboarding-signal/);
@@ -40,7 +40,7 @@ test('revenue numbers animate causally and respect reduced motion', () => {
   assert.match(page, /prefers-reduced-motion: reduce/);
   assert.match(page, /requestAnimationFrame/);
   assert.match(page, /<AnimatedCurrency value=\{metrics\.riskRevenue\}/);
-  assert.match(page, /<AnimatedCurrency value=\{metrics\.recoveredRevenue\}/);
+  assert.match(page, /<AnimatedCurrency value=\{recoveryActivity\.recoveredAmount\}/);
 });
 
 test('loading and onboarding visuals use the restrained PULSE signal language', () => {

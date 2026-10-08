@@ -3450,3 +3450,281 @@ body {
     display: none;
   }
 }
+
+
+/* Copy-density cleanup */
+.owner-hero {
+  min-height: 240px;
+}
+
+.owner-hero-copy {
+  width: min(720px, 100%);
+  padding: clamp(24px, 2.8vw, 34px) clamp(20px, 4vw, 40px);
+}
+
+.owner-hero h2 {
+  font-size: clamp(58px, 6.6vw, 84px);
+}
+
+.hero-risk-breakdown {
+  margin-top: 12px;
+}
+
+.hero-priority-summary {
+  margin-top: 7px;
+}
+
+.hero-primary-action {
+  margin-top: 12px;
+}
+
+.today-queue {
+  padding-block: clamp(24px, 2.5vw, 32px);
+}
+
+.today-queue__header {
+  padding-bottom: 14px;
+}
+
+.today-queue__footer {
+  min-height: 42px;
+  justify-content: flex-end;
+}
+
+.today-queue__footer .text-button {
+  margin-left: auto;
+}
+
+.recovery-activity > div:first-child {
+  padding-block: 17px 12px;
+}
+
+.recovery-activity h2 {
+  font-size: 20px;
+}
+
+.recovery-zero-state {
+  padding: 8px var(--owner-grid-inset) 16px;
+}
+
+.gym-card-button {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gym-card-button:hover {
+  border-color: var(--border-strong);
+  background: color-mix(in srgb, var(--primary) 4%, var(--surface));
+}
+
+.reception-search span {
+  gap: 2px;
+}
+
+.staff-queue .section-heading {
+  margin-bottom: 10px;
+}
+
+.task-reason p,
+.task-next p {
+  margin-top: 0;
+}
+
+.radar-summary {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+
+.radar-summary dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  margin: 0;
+}
+
+.radar-summary dl > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 18px 20px;
+  border-left: 1px solid var(--border);
+}
+
+.radar-summary dl > div:first-child {
+  border-left: 0;
+}
+
+.radar-summary dt {
+  min-height: 0;
+}
+
+.radar-summary dd {
+  margin: 0;
+}
+
+.risk-queue > .section-heading {
+  padding-bottom: 14px;
+}
+
+.risk-member-card {
+  grid-template-columns: 24px minmax(220px, 1fr) minmax(260px, 1.45fr) 92px 108px;
+  grid-template-areas: 'order person next value action';
+  min-height: 76px;
+  gap: 14px;
+}
+
+.risk-next {
+  grid-area: next;
+  min-width: 0;
+  padding-left: 16px;
+  border-left: 1px solid var(--border);
+}
+
+.risk-next p {
+  margin: 0;
+  color: #98a3aa;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.risk-value {
+  grid-area: value;
+}
+
+.risk-member-card > button {
+  grid-area: action;
+  min-width: 0;
+  justify-self: stretch;
+}
+
+.profile-context {
+  gap: 14px;
+}
+
+.profile-risk > div {
+  margin-bottom: 8px;
+}
+
+.profile-risk details {
+  margin-top: 0;
+}
+
+.profile-risk details > span {
+  display: block;
+  margin-top: 12px;
+  color: #a7b0b6;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.profile-basis-note {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  color: #707c84;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.recovery-panel-title {
+  margin-bottom: 14px;
+}
+
+.recovery-panel-title h2 {
+  margin: 0;
+}
+
+.message-field {
+  margin-top: 0;
+}
+
+.fake-service-note {
+  margin-top: 10px;
+}
+
+.recovery-divider {
+  height: 1px;
+  margin-block: 18px 14px;
+  background: var(--border);
+}
+
+.onboarding-actions {
+  margin-top: 26px;
+}
+
+.onboarding-card > small {
+  margin-top: 16px;
+}
+
+@media (max-width: 1180px) {
+  .risk-member-card {
+    grid-template-columns: 24px minmax(0, 1fr) 92px 108px;
+    grid-template-areas:
+      'order person value action'
+      '. next next action';
+    gap: 10px 12px;
+  }
+
+  .risk-next {
+    padding-top: 8px;
+    padding-left: 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 680px) {
+  .owner-hero {
+    min-height: 0;
+  }
+
+  .owner-hero-copy {
+    padding: 28px 16px;
+  }
+
+  .today-queue__footer {
+    padding-top: 6px;
+  }
+
+  .radar-summary dl {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .radar-summary dl > div {
+    padding: 14px 12px;
+  }
+
+  .risk-member-card {
+    grid-template-columns: 20px minmax(0, 1fr);
+    grid-template-areas:
+      'order person'
+      '. next'
+      '. value'
+      '. action';
+  }
+
+  .risk-next {
+    padding-top: 10px;
+  }
+}
+
+@media (max-width: 390px) {
+  .radar-summary dl {
+    grid-template-columns: 1fr;
+  }
+
+  .radar-summary dl > div {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .radar-summary dl > div:first-child {
+    border-top: 0;
+  }
+}
