@@ -2909,6 +2909,101 @@ body {
   color:#a6b3bb;background:#0f171b;border:1px solid var(--border);
   border-radius:9px;
 }
+/* Provider-free messaging handoff */
+.member-command-sheet .message-channel-title {
+  margin: 18px 0 10px;
+  color: #91a2ab;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .075em;
+}
+.member-command-sheet .message-channel-actions {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 8px;
+}
+.member-command-sheet .message-channel {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 11px;
+  border-radius: 9px;
+  border: 1px solid #29414a;
+  background: #101b21;
+  color: #d0e2e8;
+  font: 600 12px var(--font-ui);
+  text-decoration: none;
+  transition: border-color 160ms ease,background 160ms ease;
+}
+.member-command-sheet .message-channel > svg:first-child {width:16px;height:16px;flex:0 0 16px}
+.member-command-sheet .message-channel > svg:last-child {width:13px;height:13px;flex:0 0 13px;margin-left:auto;color:#9aabb3}
+.member-command-sheet .message-channel:hover:not(:disabled) {border-color:#397d8d;background:#14252e}
+.member-command-sheet .message-channel:disabled {opacity:.4;cursor:not-allowed}
+.member-command-sheet .message-channel-whatsapp {border-color:#267551;background:#0d271e;color:#8de3b8}
+.member-command-sheet .message-channel-whatsapp:hover {background:#123524;border-color:#34a870}
+.member-command-sheet .message-handoff-warning {
+  margin:10px 0 0;color:var(--warning);font-size:12px;line-height:1.5;
+}
+.member-command-sheet .message-handoff-status {
+  margin:10px 0 0;color:#9ab2bd;font-size:12px;line-height:1.55;
+}
+.member-command-sheet .message-actions {margin-top:14px}
+.member-command-sheet .sms-handoff,
+.member-command-sheet .viber-handoff {
+  margin-top:14px;padding:16px;
+  border:1px solid var(--border-strong);
+  border-radius:10px;
+  background:#0e181e;
+}
+.member-command-sheet .sms-handoff-top {
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;margin-bottom:12px;
+}
+.member-command-sheet .sms-handoff-top strong,
+.member-command-sheet .viber-handoff>strong {font-size:13px;color:#e4f1f5}
+.member-command-sheet .sms-handoff-top>button {
+  display:grid;place-items:center;width:32px;height:32px;
+  border:1px solid var(--border);border-radius:8px;
+  color:#9cabba;background:#111e25;
+}
+.member-command-sheet .sms-handoff-top>button svg {width:15px;height:15px}
+.member-command-sheet .sms-handoff-body {
+  display:grid;grid-template-columns:190px minmax(0,1fr);
+  align-items:center;gap:18px;
+}
+.member-command-sheet .sms-qr-image {
+  display:block;width:190px;height:190px;max-width:100%;
+  border:5px solid white;border-radius:8px;
+  background:white;shape-rendering:crispEdges;
+}
+.member-command-sheet .sms-handoff-body p,
+.member-command-sheet .viber-handoff p {
+  margin:0;color:#bfccd1;font-size:12px;line-height:1.65;
+}
+.member-command-sheet .sms-handoff-body p strong,
+.member-command-sheet .viber-handoff p strong {color:#f3f6f7}
+.member-command-sheet .sms-handoff-body p.message-handoff-secondary {
+  margin-top:8px;color:#91a2aa;font-size:11px;
+}
+.member-command-sheet .sms-qr-error {color:var(--warning);font-size:12px;line-height:1.5}
+.member-command-sheet .sms-open-on-device {
+  display:inline-flex;align-items:center;gap:7px;
+  margin-top:12px;color:var(--primary);
+  font-size:12px;font-weight:600;text-decoration:none;
+}
+.member-command-sheet .sms-open-on-device svg {width:14px;height:14px}
+.member-command-sheet .viber-handoff p {margin-top:6px}
+@media(max-width:520px) {
+  .member-command-sheet .sms-handoff-body {grid-template-columns:1fr;justify-items:center;gap:14px}
+  .member-command-sheet .sms-qr-image {width:min(230px,100%);height:auto}
+}
+@media(max-width:385px) {
+  .member-command-sheet .message-channel-actions {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
 .member-command-sheet .message-actions {display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .member-command-sheet .message-actions button {min-height:43px;border-radius:9px}
 .member-command-sheet .contact-confirm-button {
