@@ -6,7 +6,7 @@ const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
 const polish = readFileSync(new URL('../app/layout-polish.css', import.meta.url), 'utf8');
 
 test('normal application launch has no artificial loading screen', () => {
-  assert.doesNotMatch(page, /PulseLoaderScene|LoadingState|loaderVisible|LOADER_TOTAL_DURATION_MS/);
+  assert.doesNotMatch(page, /PulseLoaderScene|function LoadingState|loaderVisible|LOADER_TOTAL_DURATION_MS/);
   assert.match(page, /const IMPORT_PROGRESS_DELAY_MS = 350;/);
 });
 

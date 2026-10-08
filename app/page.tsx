@@ -5,16 +5,17 @@ import {
   ArrowRight, Check, CheckCircle2, Copy,
   ChevronRight, Clock3,
   LayoutDashboard, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
-  RotateCcw, Send, ShieldAlert, Upload, Users, X,
+  RotateCcw, Send, ShieldAlert, Smartphone, Upload, Users, X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PageAtmosphere } from '@/components/page-atmosphere';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { SmsHandoffQr } from '@/components/sms-handoff-qr';
+import { normalizePhone, smsLink, whatsappLink, isMobileMessagingDevice } from '@/lib/message-handoff';
 import {
   copy,
   type Member, type MemberStatus, type RecoveryOutcome, type RiskLevel,
@@ -29,7 +30,6 @@ import {
   type RecoveryActivity,
 } from '@/lib/pulse-logic';
 import { addDaysIso, inferMembershipState, parseMemberCsv, toLocalIsoDate } from '@/lib/csv-import';
-import { useScrollReveal } from '@/hooks/use-scroll-reveal';
 
 type View = 'dashboard' | 'staff' | 'members' | 'radar';
 type Workspace = 'owner' | 'staff';
@@ -228,6 +228,8 @@ export default function Home() {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
+  const [quickSearchOpen, setQuickSearchOpen] = useState(false);
+  const [quickQuery, setQuickQuery] = useState('');
   const [message, setMessage] = useState('');
   const [renewing, setRenewing] = useState(false);
   const [renewalAmount, setRenewalAmount] = useState('35');
@@ -249,7 +251,6 @@ export default function Home() {
   const [showImportProgress, setShowImportProgress] = useState(false);
   const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
   const [renewalReveal, setRenewalReveal] = useState<RenewalReveal | null>(null);
-  const [recoveryPulse, setRecoveryPulse] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importProgressTimerRef = useRef<number | null>(null);
   const renewalTimerRef = useRef<number | null>(null);
@@ -277,7 +278,6 @@ export default function Home() {
     };
   }, []);
 
-  useScrollReveal(true, `${workspace}:${view}`);
 
   const selectedMember = members.find((member) => member.id === selectedMemberId) ?? null;
 
@@ -292,6 +292,20 @@ export default function Home() {
       return matchesFilter && memberMatchesSearch(member, search);
     });
   }, [members, filter, search]);
+
+  const quickMatches = useMemo(() => members.filter((member) => memberMatchesSearch(member, quickQuery)).slice(0, 6), [members, quickQuery]);
+
+  useEffect(() => {
+    function openFromKeyboard(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setQuickQuery('');
+        setQuickSearchOpen(true);
+      }
+    }
+    window.addEventListener('keydown', openFromKeyboard);
+    return () => window.removeEventListener('keydown', openFromKeyboard);
+  }, []);
 
   function completeOnboarding() {
     try {
@@ -322,6 +336,16 @@ export default function Home() {
     setMobileNav(false);
   }
 
+  function openQuickSearch() {
+    setQuickQuery('');
+    setQuickSearchOpen(true);
+  }
+
+  function selectQuickMember(member: Member) {
+    setQuickSearchOpen(false);
+    openMember(member);
+  }
+
   function switchWorkspace(nextWorkspace: Workspace) {
     setWorkspace(nextWorkspace);
     setView(nextWorkspace === 'owner' ? 'dashboard' : 'staff');
@@ -330,10 +354,10 @@ export default function Home() {
 
   function recordOutcome(memberId: string, outcome: RecoveryOutcome) {
     const member = members.find((item) => item.id === memberId);
-    if (!member) return;
-    setMembers((current) => current.map((item) => item.id === memberId ? {
+    // Recording an outcome must not implicitly count as contacting the member.
+    if (!member?.contactConfirmedAt || member.status === 'recovered') return;
+    setMembers((current) => current.map((item) => item.id === memberId && item.contactConfirmedAt && item.status !== 'recovered' ? {
       ...item,
-      contactedAt: item.contactedAt ?? formatActionTimestamp(),
       recoveryOutcome: outcome,
       followUpAt: outcome === 'follow_up' ? formatFollowUpTimestamp() : undefined,
     } : item));
@@ -347,7 +371,6 @@ export default function Home() {
     setSelectedMemberId(null);
     setFilter('all');
     setSearch('');
-    setRecoveryPulse(0);
     setResetOpen(false);
     setSuccess('Demo je vraćen na početne podatke i spreman je za novu prezentaciju.');
   }
@@ -360,13 +383,28 @@ export default function Home() {
   }
 
   async function copyMessage() {
-    if (!selectedMember || !message.trim()) return;
+    if (!selectedMember || !message.trim()) return false;
     try {
       await navigator.clipboard.writeText(message.trim());
       setSuccess(`Poruka za ${selectedMember.firstName} je kopirana.`);
+      return true;
     } catch {
       setSuccess('Kopiranje nije uspjelo. Označite tekst poruke i kopirajte ga ručno.');
+      return false;
     }
+  }
+
+  function beginMessageHandoff() {
+    if (!selectedMember || !message.trim()) return;
+    // Only preserve the draft. A handoff is NOT a delivered message or confirmed contact.
+    setMembers((current) => current.map((member) => {
+      if (member.id !== selectedMember.id) return member;
+      if (member.queuedMessage?.text === message.trim()) return member;
+      return {
+        ...member,
+        queuedMessage: { channel: 'Poruka', text: message.trim(), queuedAt: formatActionTimestamp() },
+      };
+    }));
   }
 
   function queueMessage() {
@@ -382,7 +420,7 @@ export default function Home() {
     if (!member) return;
     setMembers((current) => current.map((item) => item.id === memberId ? {
       ...item,
-      contactedAt: item.contactedAt ?? formatActionTimestamp(),
+      contactConfirmedAt: item.contactConfirmedAt ?? formatActionTimestamp(),
     } : item));
     setSuccess(`${fullName(member)} je evidentiran/a kao kontaktiran/a.`);
   }
@@ -397,14 +435,14 @@ export default function Home() {
 
     setMembers((current) => current.map((member) => member.id === selectedMember.id ? {
       ...member,
-      contactedAt: member.contactedAt ?? formatActionTimestamp(),
+      // Renewal is a separate, staff-recorded event; it does not confirm prior outreach.
       status: 'recovered', risk: 'low', price: amount, recoveredAmount: amount, recoveredAt: today,
-      startDate: today, endDate: addDaysIso(today, 30), riskReason: `Članarina obnovljena ${prettyDate(today)} uz pomoć PULSE recovery toka.`,
+      startDate: today, endDate: addDaysIso(today, 30), followUpAt: undefined,
+      riskReason: `Članarina obnovljena ${prettyDate(today)} uz pomoć PULSE recovery toka.`,
       nextAction: 'Nije potrebna akcija.',
     } : member));
     setRenewing(false);
     setRenewalReveal({ name: memberName, amount });
-    setRecoveryPulse((current) => current + 1);
 
     if (renewalTimerRef.current !== null) window.clearTimeout(renewalTimerRef.current);
     renewalTimerRef.current = window.setTimeout(() => {
@@ -511,8 +549,7 @@ export default function Home() {
 
       setMembers(result.members);
       setSelectedMemberId(null);
-      setRecoveryPulse(0);
-      setWorkspace('owner');
+        setWorkspace('owner');
       setView('dashboard');
       setImportError('');
       finishImportProgress();
@@ -532,7 +569,7 @@ export default function Home() {
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" data-workspace={workspace}>
       <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
         <div className="brand"><PulseLogo /><span className="brand-word">PULSE</span></div>
         <button className="sidebar-close" aria-label="Zatvori meni" onClick={() => setMobileNav(false)}><X /></button>
@@ -556,7 +593,6 @@ export default function Home() {
       {mobileNav && <button className="nav-backdrop" aria-label="Zatvori meni" onClick={() => setMobileNav(false)} />}
 
       <section className="main-panel">
-        {workspace === 'owner' && view === 'dashboard' && <PageAtmosphere view={view} workspace={workspace} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} urgentCount={highRiskMembers.length} surface="ambient" />}
         <header className="topbar">
           <button className="mobile-menu" aria-label="Otvori meni" onClick={() => setMobileNav(true)}><Menu /></button>
           <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1>{viewMeta[view].subtitle && <p>{viewMeta[view].subtitle}</p>}</div>
@@ -571,17 +607,33 @@ export default function Home() {
         </header>
 
         {view === 'dashboard' && <Dashboard metrics={metrics} recoveryActivity={recoveryActivity} highRiskMembers={highRiskMembers} signalCount={riskMembers.length} onOpenMember={openMember} onNavigate={goTo} />}
-        {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onContacted={markContacted} onOutcome={recordOutcome} onAddMember={() => openMemberForm()} onFindMember={() => goTo('members')} />}
+        {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onContacted={markContacted} onOutcome={recordOutcome} onAddMember={() => openMemberForm()} onFindMember={openQuickSearch} />}
         {view === 'members' && <MembersScreen members={filteredMembers} total={members.length} filter={filter} search={search} onFilter={setFilter} onSearch={setSearch} onOpenMember={openMember} onImport={() => fileInputRef.current?.click()} />}
         {view === 'radar' && <RadarScreen members={riskMembers} onOpenMember={openMember} />}
       </section>
 
+      <Dialog open={quickSearchOpen} onOpenChange={setQuickSearchOpen}>
+        <DialogContent className="quick-search-dialog" aria-label="Brza pretraga članova">
+          <DialogHeader><DialogTitle>Pronađi člana</DialogTitle></DialogHeader>
+          <div className="quick-search-field"><Search /><Input autoFocus value={quickQuery} onChange={(event) => setQuickQuery(event.target.value)} placeholder="Ime ili telefon" aria-label="Ime ili telefon" /></div>
+          <div className="quick-search-results" aria-label="Rezultati pretrage">
+            {quickMatches.length ? quickMatches.map((member) => <button key={member.id} type="button" onClick={() => selectQuickMember(member)}>
+              <span className="avatar">{initials(member)}</span>
+              <span className="quick-search-person"><strong>{fullName(member)}</strong><small>{member.phone}</small></span>
+              <span className={`status-pill ${statusClass(member.status)}`}>{membershipUrgencyLabel(member)}</span>
+              <ChevronRight />
+            </button>) : <p className="quick-search-empty">Nema rezultata</p>}
+          </div>
+          <button type="button" className="quick-search-all" onClick={() => { setQuickSearchOpen(false); setSearch(quickQuery); goTo('members'); }}>Svi članovi <ArrowRight /></button>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={Boolean(selectedMember)} onOpenChange={(open) => { if (!open && !renewalReveal) setSelectedMemberId(null); }}>
-        <DialogContent className={renewalReveal ? 'member-dialog renewal-reveal-dialog' : 'member-dialog'} showCloseButton={!renewalReveal}>
+        <DialogContent className={renewalReveal ? 'member-dialog renewal-reveal-dialog' : 'member-dialog member-command-sheet'} showCloseButton={!renewalReveal}>
           {renewalReveal ? <RenewalConfirmation name={renewalReveal.name} amount={renewalReveal.amount} /> : selectedMember && (
             <MemberProfile
-              member={selectedMember} message={message} renewing={renewing} renewalAmount={renewalAmount}
-              onMessage={setMessage} onCopy={copyMessage} onQueue={queueMessage} onContacted={() => markContacted(selectedMember.id)}
+              key={selectedMember.id} member={selectedMember} message={message} renewing={renewing} renewalAmount={renewalAmount}
+              onMessage={setMessage} onCopy={copyMessage} onQueue={queueMessage} onHandoff={beginMessageHandoff} onContacted={() => markContacted(selectedMember.id)} onOutcome={(outcome) => recordOutcome(selectedMember.id, outcome)}
               onEdit={() => openMemberForm(selectedMember)} onRenew={() => setRenewing(true)} onCancelRenew={() => setRenewing(false)}
               onRenewalAmount={setRenewalAmount} onMarkRenewed={markRenewed}
             />
@@ -695,8 +747,13 @@ function Field({ label, required, children }: { label: string; required?: boolea
 function RecoveryLifecycle({ member }: { member: Member }) {
   const current = getRecoveryLifecycle(member);
   const steps = [['detected', 'Otkriveno'], ['contacted', 'Kontaktirano'], ['renewed', 'Obnovljeno']] as const;
-  const currentIndex = steps.findIndex(([id]) => id === current);
-  return <ol className="recovery-lifecycle" aria-label="Tok u PULSE">{steps.map(([id, label], index) => <li className={index <= currentIndex ? 'complete' : ''} aria-current={id === current ? 'step' : undefined} key={id}><i />{label}</li>)}</ol>;
+  // A renewal can happen without confirmed outreach. Display each actual event independently.
+  const recorded = {
+    detected: true,
+    contacted: Boolean(member.contactConfirmedAt),
+    renewed: member.status === 'recovered',
+  };
+  return <ol className="recovery-lifecycle" aria-label="Tok u PULSE">{steps.map(([id, label]) => <li className={recorded[id] ? 'complete' : ''} aria-current={id === current ? 'step' : undefined} key={id}><i />{label}</li>)}</ol>;
 }
 
 function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, onOpenMember, onNavigate }: {
@@ -704,17 +761,37 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
   recoveryActivity: RecoveryActivity;
   highRiskMembers: Member[]; signalCount: number; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void;
 }) {
+  const expiredValue = Math.min(metrics.actionableRevenue, metrics.riskRevenue);
+  const expiringValue = Math.max(0, metrics.riskRevenue - expiredValue);
+  const expiredShare = metrics.riskRevenue > 0 ? (expiredValue / metrics.riskRevenue) * 100 : 0;
+
   return <div className="screen-stack dashboard-screen">
     <section className="owner-hero" aria-labelledby="owner-risk-title">
       <div className="owner-hero-copy">
-        <p className="eyebrow">PRIHOD POD RIZIKOM</p>
-        <h2 id="owner-risk-title"><AnimatedCurrency value={metrics.riskRevenue} className="number-shift" /></h2>
-        <div className="hero-risk-breakdown">
-          <span><strong>{euro(metrics.actionableRevenue)}</strong> već isteklo</span>
-          <span><strong>{euro(Math.max(0, metrics.riskRevenue - metrics.actionableRevenue))}</strong> ističe u narednih 7 dana</span>
+        <div className="risk-command-primary">
+          <p className="eyebrow">PRIHOD POD RIZIKOM</p>
+          <h2 id="owner-risk-title"><AnimatedCurrency value={metrics.riskRevenue} className="number-shift" /></h2>
+          <div className="hero-priority-summary">
+            <span className="priority-urgent"><i />{metrics.highRisk} hitno</span>
+            <span className="priority-upcoming"><i />{metrics.expiring} za praćenje</span>
+          </div>
         </div>
-        <div className="hero-priority-summary"><strong>{metrics.highRisk} hitno</strong><span>·</span><strong>{metrics.expiring} za praćenje</strong></div>
-        <button type="button" className="hero-link hero-primary-action" onClick={() => onNavigate('radar')}>Otvori {signalCount} prioriteta <ArrowRight /></button>
+        <div className="risk-command-detail">
+          <div className="risk-command-label">STRUKTURA RIZIKA</div>
+          <div className="risk-command-breakdown">
+            <div><span className="risk-legend-dot expired" /><span>Isteklo</span><strong>{euro(expiredValue)}</strong></div>
+            <div><span className="risk-legend-dot expiring" /><span>Ističe za 7 dana</span><strong>{euro(expiringValue)}</strong></div>
+          </div>
+          <div className="risk-distribution" role="img" aria-label={`Istekle članarine ${euro(expiredValue)}, članarine koje ističu ${euro(expiringValue)}`}>
+            {metrics.riskRevenue > 0 ? <>
+              <span className="risk-distribution-expired" style={{ width: `${expiredShare}%` }} />
+              <span className="risk-distribution-expiring" style={{ width: `${100 - expiredShare}%` }} />
+            </> : <span className="risk-distribution-empty" />}
+          </div>
+          <button type="button" className="hero-link hero-primary-action" onClick={() => onNavigate('radar')}>
+            Otvori {signalCount} prioriteta <ArrowRight />
+          </button>
+        </div>
       </div>
     </section>
 
@@ -765,7 +842,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
             </button>
           </div>
 
-          {(member.contactedAt || member.recoveryOutcome || member.status === 'recovered') && <div className="today-queue__rail"><RecoveryLifecycle member={member} /></div>}
+          {(member.contactConfirmedAt || member.recoveryOutcome || member.status === 'recovered') && <div className="today-queue__rail"><RecoveryLifecycle member={member} /></div>}
         </article>)}
       </div> : <div className="today-queue__empty"><CheckCircle2 /><span><strong>Nema hitnih kontakata.</strong></span></div>}
 
@@ -775,20 +852,23 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
     </section>
 
     <section className="recovery-activity" aria-labelledby="activity-title">
-      <div><h2 id="activity-title">Rezultat kontakata</h2></div>
+      <div className="recovery-activity__heading">
+        <h2 id="activity-title">Rezultat kontakata</h2>
+        <span>Ukupno · ručno evidentirano</span>
+      </div>
       {recoveryActivity.contacted || recoveryActivity.followUps || recoveryActivity.renewed ? <dl>
         <div><dt>Kontaktirano</dt><dd>{recoveryActivity.contacted}</dd></div>
         <div><dt>Za praćenje</dt><dd>{recoveryActivity.followUps}</dd></div>
         <div><dt>Obnovljeno</dt><dd>{recoveryActivity.renewed}</dd></div>
         <div className="positive"><dt>Evidentirani iznos obnove</dt><dd><AnimatedCurrency value={recoveryActivity.recoveredAmount} className="number-shift" /></dd></div>
-      </dl> : <div className="recovery-zero-state"><strong>Još nema kontakata.</strong></div>}
+      </dl> : <div className="recovery-zero-state"><strong>Još nema evidentiranih aktivnosti.</strong></div>}
     </section>
   </div>;
 }
 
 function StaffBoard({ members, onOpenMember, onContacted, onOutcome, onAddMember, onFindMember }: { members: Member[]; onOpenMember: (member: Member) => void; onContacted: (memberId: string) => void; onOutcome: (memberId: string, outcome: RecoveryOutcome) => void; onAddMember: () => void; onFindMember: () => void }) {
-  const completed = members.filter((member) => member.recoveryOutcome || member.status === 'recovered').length;
-  const followUps = members.filter((member) => member.recoveryOutcome === 'follow_up').length;
+  const completed = members.filter((member) => (member.contactConfirmedAt && member.recoveryOutcome) || member.status === 'recovered').length;
+  const followUps = members.filter((member) => member.contactConfirmedAt && member.recoveryOutcome === 'follow_up' && member.status !== 'recovered').length;
   return <div className="screen-stack staff-screen">
     <section className="reception-search-shell" aria-labelledby="reception-search-title">
       <button type="button" className="reception-search" onClick={onFindMember}><Search /><span><strong id="reception-search-title">Pronađi člana</strong><em>Ime ili telefon</em></span><ArrowRight /></button>
@@ -797,7 +877,7 @@ function StaffBoard({ members, onOpenMember, onContacted, onOutcome, onAddMember
     </section>
     <section className="staff-queue panel-card" id="staff-queue">
       <div className="section-heading"><div><h2>Kontakti</h2></div><span className="summary-count">{members.length - completed} preostalo</span></div>
-      <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${member.recoveryOutcome || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
+      <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${(member.contactConfirmedAt && member.recoveryOutcome) || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
         <span className="task-priority">{String(index + 1).padStart(2, '0')}</span>
         <div className="task-person"><span className="avatar large">{initials(member)}</span><span><span className="task-name"><h3>{fullName(member)}</h3></span><small><Phone /> {member.phone} · {euro(member.price)}</small></span></div>
         <div className="task-reason" aria-label="Status"><p>{membershipUrgencyLabel(member)}</p></div>
@@ -805,9 +885,9 @@ function StaffBoard({ members, onOpenMember, onContacted, onOutcome, onAddMember
         <div className="task-actions">
           {member.status === 'recovered'
             ? <span className="task-done"><CheckCircle2 /> Obnovljeno</span>
-            : member.recoveryOutcome
+            : member.recoveryOutcome && member.contactConfirmedAt
               ? <><span className={`outcome-badge outcome-${member.recoveryOutcome}`}><Check /> {outcomeLabels[member.recoveryOutcome]}</span><button onClick={() => onOpenMember(member)}>Nastavi <ArrowRight /></button></>
-              : member.contactedAt ? <>
+              : member.contactConfirmedAt ? <>
                   <span className="task-contacted"><CheckCircle2 /> Kontakt potvrđen</span>
                   <div className="task-outcome-actions">
                     <button onClick={() => onOutcome(member.id, 'no_answer')}><Phone /> Bez odgovora</button>
@@ -873,11 +953,36 @@ function EmptyState({ icon, title, text, action, onAction }: { icon: React.React
   return <div className="empty-state"><span>{icon}</span><h3>{title}</h3><p>{text}</p>{action && <Button variant="outline" onClick={onAction}>{action}</Button>}</div>;
 }
 
-function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onQueue, onContacted, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
+function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onQueue, onHandoff, onContacted, onOutcome, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
   member: Member; message: string; renewing: boolean; renewalAmount: string;
-  onMessage: (message: string) => void; onCopy: () => void; onQueue: () => void; onContacted: () => void; onEdit: () => void;
+  onMessage: (message: string) => void; onCopy: () => Promise<boolean>; onQueue: () => void; onHandoff: () => void; onContacted: () => void; onOutcome: (outcome: RecoveryOutcome) => void; onEdit: () => void;
   onRenew: () => void; onCancelRenew: () => void; onRenewalAmount: (amount: string) => void; onMarkRenewed: (event: SyntheticEvent<HTMLFormElement>) => void;
 }) {
+  const [handoff, setHandoff] = useState<'sms' | 'viber' | 'whatsapp' | null>(null);
+  const [viberCopied, setViberCopied] = useState(false);
+  const whatsapp = whatsappLink(member.phone, message);
+  const sms = smsLink(member.phone, message);
+  const normalizedPhone = normalizePhone(member.phone);
+
+  function openSms() {
+    if (!sms) return;
+    onHandoff();
+    if (isMobileMessagingDevice(navigator.userAgent, navigator.maxTouchPoints)) {
+      setHandoff('sms');
+      window.location.href = sms;
+    } else {
+      setHandoff('sms');
+    }
+  }
+
+  async function openViber() {
+    if (!message.trim()) return;
+    onHandoff();
+    const copied = await onCopy();
+    setViberCopied(copied);
+    setHandoff('viber');
+  }
+
   return <div className="profile-layout">
     <div className="profile-main">
       <DialogHeader className="profile-header"><div className="avatar profile-avatar">{initials(member)}</div><div><div className="profile-badges"><span className={`status-pill ${statusClass(member.status)}`}>{membershipUrgencyLabel(member)}</span></div><DialogTitle>{fullName(member)}</DialogTitle><DialogDescription>{member.phone} · {euro(member.price)}</DialogDescription></div></DialogHeader>
@@ -894,15 +999,60 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
     <aside className="recovery-panel">
       <div className="recovery-panel-title"><span><MessageCircle /></span><div><h2>Poruka</h2></div></div>
       <label className="message-field"><span>ZA {member.firstName.toLocaleUpperCase('me')}</span><Textarea value={message} onChange={(event) => onMessage(event.target.value)} rows={7} /></label>
+      <div className="message-channel-title">OTVORI PORUKU</div>
+      <div className="message-channel-actions">
+        {whatsapp
+          ? <a className="message-channel message-channel-whatsapp" href={whatsapp} target="_blank" rel="noopener noreferrer" onClick={() => { onHandoff(); setHandoff('whatsapp'); }}><MessageCircle />WhatsApp<ArrowRight /></a>
+          : <button type="button" className="message-channel" disabled aria-label="WhatsApp nije dostupan: provjerite telefonski broj"><MessageCircle />WhatsApp</button>}
+        <button type="button" className="message-channel" onClick={openSms} disabled={!sms}><Smartphone />SMS<ArrowRight /></button>
+        <button type="button" className="message-channel" onClick={openViber} disabled={!message.trim()}><MessageCircle />Viber<ArrowRight /></button>
+      </div>
+      {!normalizedPhone && <p className="message-handoff-warning">Provjerite broj telefona u profilu da biste otvorili WhatsApp ili SMS.</p>}
+      {handoff === 'sms' && sms && !isMobileMessagingDevice(navigator.userAgent, navigator.maxTouchPoints) && <section className="sms-handoff" aria-label="SMS preko telefona">
+        <div className="sms-handoff-top"><strong>SMS preko telefona</strong><button type="button" aria-label="Zatvori QR prikaz" onClick={() => setHandoff(null)}><X /></button></div>
+        <div className="sms-handoff-body">
+          <SmsHandoffQr uri={sms} memberName={fullName(member)} />
+          <div>
+            <p>Skenirajte QR kod telefonom da otvorite SMS za <strong>{member.phone}</strong>.</p>
+            <p className="message-handoff-secondary">Ako kamera ne prepoznaje SMS QR, kopirajte poruku i unesite broj ručno.</p>
+            <a className="sms-open-on-device" href={sms}>Otvori SMS na ovom uređaju <ArrowRight /></a>
+          </div>
+        </div>
+      </section>}
+      {handoff === 'viber' && <section className="viber-handoff" aria-label="Poruka za Viber">
+        <strong>{viberCopied ? 'Viber — poruka kopirana' : 'Viber — otvorite aplikaciju'}</strong>
+        <p>Otvorite Viber, pronađite <strong>{member.phone}</strong> i {viberCopied ? 'nalijepite poruku' : 'kopirajte poruku ručno'}. Direktno otvaranje privatnog razgovora nije pouzdano na svim uređajima.</p>
+        {normalizedPhone && <a href={`viber://chat?number=${encodeURIComponent(normalizedPhone)}`} className="sms-open-on-device">Pokušaj otvoriti Viber <ArrowRight /></a>}
+      </section>}
+      {handoff === 'whatsapp' && <p className="message-handoff-status">WhatsApp je otvoren u novoj kartici ili aplikaciji. Provjerite da je poruka poslata.</p>}
       <div className="message-actions">
-        <Button variant="outline" className="dark-outline" onClick={onCopy} disabled={!message.trim()}><Copy /> Kopiraj poruku</Button>
+        <Button variant="outline" className="dark-outline" onClick={onCopy} disabled={!message.trim()}><Copy /> Kopiraj</Button>
         <Button className="pulse-button" onClick={onQueue} disabled={!message.trim() || member.queuedMessage?.text === message.trim()}>{member.queuedMessage?.text === message.trim() ? <><Check /> Nacrt sačuvan</> : <><Send /> Sačuvaj nacrt</>}</Button>
       </div>
-      <div className="fake-service-note"><ShieldAlert /> Slanje je ručno. Nakon slanja potvrdite kontakt.</div>
-      {member.queuedMessage && !member.contactedAt && member.status !== 'recovered' && <Button className="contact-confirm-button" onClick={onContacted}><CheckCircle2 /> Označi kao kontaktirano</Button>}
-      {member.contactedAt && member.status !== 'recovered' && <div className="contact-confirmed-state"><CheckCircle2 /><span><strong>Kontakt potvrđen</strong>{member.contactedAt}</span></div>}
-      <div className="recovery-divider" aria-hidden="true" />
-      {!renewing ? <Button variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}><CheckCircle2 /> {member.status === 'recovered' ? 'Već je obnovljeno' : t.actions.renew}</Button> : <form className="renew-form" onSubmit={onMarkRenewed}><div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div><div><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div></form>}
+      {!member.contactConfirmedAt && member.status !== 'recovered' && <p className="fake-service-note"><ShieldAlert aria-hidden="true" /> PULSE ne šalje poruke automatski. Pošaljite u aplikaciji, pa potvrdite kontakt.</p>}
+      {!member.contactConfirmedAt && member.status !== 'recovered' && <Button className="contact-confirm-button" onClick={onContacted}><CheckCircle2 /> Označi kao kontaktirano</Button>}
+      {member.contactConfirmedAt && member.status !== 'recovered' && <section className="contact-workflow" aria-label="Evidencija kontakta">
+        <div className="contact-confirmed-state" role="status">
+          <CheckCircle2 aria-hidden="true" />
+          <span className="contact-confirmed-copy"><strong>Kontakt potvrđen</strong><span>{member.contactConfirmedAt}</span></span>
+        </div>
+        {!member.recoveryOutcome ? <div className="contact-outcome-group">
+          <p className="contact-outcome-label">ISHOD KONTAKTA</p>
+          <div className="profile-outcome-actions" role="group" aria-label="Ishod kontakta">
+            <button type="button" onClick={() => onOutcome('no_answer')}>Bez odgovora</button>
+            <button type="button" onClick={() => onOutcome('replied')}>Odgovorio/la</button>
+            <button type="button" onClick={() => onOutcome('follow_up')}>Prati sjutra</button>
+          </div>
+        </div> : <span className="profile-outcome-confirmed"><CheckCircle2 aria-hidden="true" />{outcomeLabels[member.recoveryOutcome]}</span>}
+      </section>}
+      <section className="renewal-section" aria-labelledby="renewal-section-heading">
+        <div className="recovery-divider" aria-hidden="true" />
+        <h3 id="renewal-section-heading">Obnova članarine</h3>
+        {!renewing ? <Button variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}><CheckCircle2 /> {member.status === 'recovered' ? 'Već je obnovljeno' : t.actions.renew}</Button> : <form className="renew-form" onSubmit={onMarkRenewed}>
+          <div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" required value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div>
+          <div className="renew-form-actions"><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div>
+        </form>}
+      </section>
     </aside>
   </div>;
 }
