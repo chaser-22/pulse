@@ -29,7 +29,6 @@ import {
   type RecoveryActivity,
 } from '@/lib/pulse-logic';
 import { addDaysIso, inferMembershipState, parseMemberCsv, toLocalIsoDate } from '@/lib/csv-import';
-import { useScrollReveal } from '@/hooks/use-scroll-reveal';
 
 type View = 'dashboard' | 'staff' | 'members' | 'radar';
 type Workspace = 'owner' | 'staff';
@@ -277,7 +276,6 @@ export default function Home() {
     };
   }, []);
 
-  useScrollReveal(true, `${workspace}:${view}`);
 
   const selectedMember = members.find((member) => member.id === selectedMemberId) ?? null;
 
@@ -532,7 +530,7 @@ export default function Home() {
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" data-workspace={workspace}>
       <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
         <div className="brand"><PulseLogo /><span className="brand-word">PULSE</span></div>
         <button className="sidebar-close" aria-label="Zatvori meni" onClick={() => setMobileNav(false)}><X /></button>
@@ -577,11 +575,11 @@ export default function Home() {
       </section>
 
       <Dialog open={Boolean(selectedMember)} onOpenChange={(open) => { if (!open && !renewalReveal) setSelectedMemberId(null); }}>
-        <DialogContent className={renewalReveal ? 'member-dialog renewal-reveal-dialog' : 'member-dialog'} showCloseButton={!renewalReveal}>
+        <DialogContent className={renewalReveal ? 'member-dialog renewal-reveal-dialog' : 'member-dialog member-command-sheet'} showCloseButton={!renewalReveal}>
           {renewalReveal ? <RenewalConfirmation name={renewalReveal.name} amount={renewalReveal.amount} /> : selectedMember && (
             <MemberProfile
               member={selectedMember} message={message} renewing={renewing} renewalAmount={renewalAmount}
-              onMessage={setMessage} onCopy={copyMessage} onQueue={queueMessage} onContacted={() => markContacted(selectedMember.id)}
+              onMessage={setMessage} onCopy={copyMessage} onQueue={queueMessage} onContacted={() => markContacted(selectedMember.id)} onOutcome={(outcome) => recordOutcome(selectedMember.id, outcome)}
               onEdit={() => openMemberForm(selectedMember)} onRenew={() => setRenewing(true)} onCancelRenew={() => setRenewing(false)}
               onRenewalAmount={setRenewalAmount} onMarkRenewed={markRenewed}
             />
@@ -704,17 +702,37 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
   recoveryActivity: RecoveryActivity;
   highRiskMembers: Member[]; signalCount: number; onOpenMember: (member: Member) => void; onNavigate: (view: View) => void;
 }) {
+  const expiredValue = Math.min(metrics.actionableRevenue, metrics.riskRevenue);
+  const expiringValue = Math.max(0, metrics.riskRevenue - expiredValue);
+  const expiredShare = metrics.riskRevenue > 0 ? (expiredValue / metrics.riskRevenue) * 100 : 0;
+
   return <div className="screen-stack dashboard-screen">
     <section className="owner-hero" aria-labelledby="owner-risk-title">
       <div className="owner-hero-copy">
-        <p className="eyebrow">PRIHOD POD RIZIKOM</p>
-        <h2 id="owner-risk-title"><AnimatedCurrency value={metrics.riskRevenue} className="number-shift" /></h2>
-        <div className="hero-risk-breakdown">
-          <span><strong>{euro(metrics.actionableRevenue)}</strong> već isteklo</span>
-          <span><strong>{euro(Math.max(0, metrics.riskRevenue - metrics.actionableRevenue))}</strong> ističe u narednih 7 dana</span>
+        <div className="risk-command-primary">
+          <p className="eyebrow">PRIHOD POD RIZIKOM</p>
+          <h2 id="owner-risk-title"><AnimatedCurrency value={metrics.riskRevenue} className="number-shift" /></h2>
+          <div className="hero-priority-summary">
+            <span className="priority-urgent"><i />{metrics.highRisk} hitno</span>
+            <span className="priority-upcoming"><i />{metrics.expiring} za praćenje</span>
+          </div>
         </div>
-        <div className="hero-priority-summary"><strong>{metrics.highRisk} hitno</strong><span>·</span><strong>{metrics.expiring} za praćenje</strong></div>
-        <button type="button" className="hero-link hero-primary-action" onClick={() => onNavigate('radar')}>Otvori {signalCount} prioriteta <ArrowRight /></button>
+        <div className="risk-command-detail">
+          <div className="risk-command-label">STRUKTURA RIZIKA</div>
+          <div className="risk-command-breakdown">
+            <div><span className="risk-legend-dot expired" /><span>Isteklo</span><strong>{euro(expiredValue)}</strong></div>
+            <div><span className="risk-legend-dot expiring" /><span>Ističe za 7 dana</span><strong>{euro(expiringValue)}</strong></div>
+          </div>
+          <div className="risk-distribution" role="img" aria-label={`Istekle članarine ${euro(expiredValue)}, članarine koje ističu ${euro(expiringValue)}`}>
+            {metrics.riskRevenue > 0 ? <>
+              <span className="risk-distribution-expired" style={{ width: `${expiredShare}%` }} />
+              <span className="risk-distribution-expiring" style={{ width: `${100 - expiredShare}%` }} />
+            </> : <span className="risk-distribution-empty" />}
+          </div>
+          <button type="button" className="hero-link hero-primary-action" onClick={() => onNavigate('radar')}>
+            Otvori {signalCount} prioriteta <ArrowRight />
+          </button>
+        </div>
       </div>
     </section>
 
@@ -873,9 +891,9 @@ function EmptyState({ icon, title, text, action, onAction }: { icon: React.React
   return <div className="empty-state"><span>{icon}</span><h3>{title}</h3><p>{text}</p>{action && <Button variant="outline" onClick={onAction}>{action}</Button>}</div>;
 }
 
-function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onQueue, onContacted, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
+function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onQueue, onContacted, onOutcome, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
   member: Member; message: string; renewing: boolean; renewalAmount: string;
-  onMessage: (message: string) => void; onCopy: () => void; onQueue: () => void; onContacted: () => void; onEdit: () => void;
+  onMessage: (message: string) => void; onCopy: () => void; onQueue: () => void; onContacted: () => void; onOutcome: (outcome: RecoveryOutcome) => void; onEdit: () => void;
   onRenew: () => void; onCancelRenew: () => void; onRenewalAmount: (amount: string) => void; onMarkRenewed: (event: SyntheticEvent<HTMLFormElement>) => void;
 }) {
   return <div className="profile-layout">
@@ -900,7 +918,14 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
       </div>
       <div className="fake-service-note"><ShieldAlert /> Slanje je ručno. Nakon slanja potvrdite kontakt.</div>
       {member.queuedMessage && !member.contactedAt && member.status !== 'recovered' && <Button className="contact-confirm-button" onClick={onContacted}><CheckCircle2 /> Označi kao kontaktirano</Button>}
-      {member.contactedAt && member.status !== 'recovered' && <div className="contact-confirmed-state"><CheckCircle2 /><span><strong>Kontakt potvrđen</strong>{member.contactedAt}</span></div>}
+      {member.contactedAt && member.status !== 'recovered' && <>
+        <div className="contact-confirmed-state"><CheckCircle2 /><span><strong>Kontakt potvrđen</strong>{member.contactedAt}</span></div>
+        {!member.recoveryOutcome ? <div className="profile-outcome-actions" role="group" aria-label="Ishod kontakta">
+          <button type="button" onClick={() => onOutcome('no_answer')}>Bez odgovora</button>
+          <button type="button" onClick={() => onOutcome('replied')}>Odgovorio/la</button>
+          <button type="button" onClick={() => onOutcome('follow_up')}>Prati sjutra</button>
+        </div> : <span className="profile-outcome-confirmed"><CheckCircle2 />{outcomeLabels[member.recoveryOutcome]}</span>}
+      </>}
       <div className="recovery-divider" aria-hidden="true" />
       {!renewing ? <Button variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}><CheckCircle2 /> {member.status === 'recovered' ? 'Već je obnovljeno' : t.actions.renew}</Button> : <form className="renew-form" onSubmit={onMarkRenewed}><div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div><div><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div></form>}
     </aside>
