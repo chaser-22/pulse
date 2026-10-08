@@ -55,8 +55,9 @@ export function getRecoveryActivity(members: Member[]): RecoveryActivity {
     // Amounts are staff-entered renewal records, not verified payments.
     recoveredAmount: members.reduce(
       (sum, member) => sum + (
-        member.status === 'recovered' && Number.isFinite(member.recoveredAmount) && (member.recoveredAmount ?? 0) > 0
-          ? member.recoveredAmount ?? 0
+        member.status === 'recovered' && typeof member.recoveredAmount === 'number'
+          && Number.isFinite(member.recoveredAmount) && member.recoveredAmount > 0
+          ? member.recoveredAmount
           : 0
       ),
       0,
