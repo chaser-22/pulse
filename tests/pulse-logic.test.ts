@@ -80,3 +80,59 @@ test('member search accepts local and international phone formats', () => {
   assert.equal(memberMatchesSearch(milos, 'Miloš'), true);
   assert.equal(memberMatchesSearch(milos, 'milos.v@example.test'), false);
 });
+
+test('drafts, external app handoffs, and outcomes alone do not prove staff confirmed contact', () => {
+  const draft = {
+    ...initialMembers[0],
+    queuedMessage: { channel: 'Poruka' as const, text: 'Pozdrav', queuedAt: 'Danas' },
+  };
+  const outcomeWithoutConfirmation = { ...initialMembers[1], recoveryOutcome: 'follow_up' as const };
+  const activity = getRecoveryActivity([draft, outcomeWithoutConfirmation]);
+  assert.deepEqual(activity, { contacted: 0, followUps: 0, renewed: 0, recoveredAmount: 0 });
+  assert.equal(getRecoveryLifecycle(outcomeWithoutConfirmation), 'detected');
+});
+
+test('renewal without prior outreach increases renewal and amount, not contact', () => {
+  const renewed: Member = {
+    ...initialMembers[0],
+    contactedAt: undefined,
+    status: 'recovered',
+    risk: 'low',
+    recoveredAmount: 35,
+    recoveredAt: '2026-10-05',
+  };
+  assert.deepEqual(getRecoveryActivity([renewed]), {
+    contacted: 0, followUps: 0, renewed: 1, recoveredAmount: 35,
+  });
+  assert.equal(getRecoveryLifecycle(renewed), 'renewed');
+});
+
+test('a completed renewal closes outstanding follow-up but retains explicitly confirmed contact', () => {
+  const followedUp: Member = {
+    ...initialMembers[0],
+    contactedAt: '05.10. · 10:00',
+    recoveryOutcome: 'follow_up',
+    followUpAt: '06.10. · 10:00',
+  };
+  const before = getRecoveryActivity([followedUp]);
+  assert.deepEqual(before, { contacted: 1, followUps: 1, renewed: 0, recoveredAmount: 0 });
+  const renewed: Member = {
+    ...followedUp, status: 'recovered', risk: 'low', recoveredAmount: 35, recoveredAt: '2026-10-06',
+  };
+  assert.deepEqual(getRecoveryActivity([renewed]), {
+    contacted: 1, followUps: 0, renewed: 1, recoveredAmount: 35,
+  });
+});
+
+test('contact metrics count distinct members, and only valid recorded renewal amounts', () => {
+  const confirmed: Member = { ...initialMembers[0], contactedAt: 'Danas' };
+  const confirmedAndRenewed: Member = {
+    ...initialMembers[1], contactedAt: 'Juče', status: 'recovered', risk: 'low', recoveredAmount: 45,
+  };
+  const invalidAmount: Member = {
+    ...initialMembers[2], status: 'recovered', risk: 'low', recoveredAmount: Number.NaN,
+  };
+  assert.deepEqual(getRecoveryActivity([confirmed, confirmedAndRenewed, invalidAmount]), {
+    contacted: 2, followUps: 0, renewed: 2, recoveredAmount: 45,
+  });
+});
