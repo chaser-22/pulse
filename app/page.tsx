@@ -1052,7 +1052,7 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
           <div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" required value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div>
           <div className="renew-form-actions"><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div>
         </form>}
-      </section>}
+      </section>
     </aside>
   </div>;
 }
