@@ -1029,18 +1029,30 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
         <Button variant="outline" className="dark-outline" onClick={onCopy} disabled={!message.trim()}><Copy /> Kopiraj</Button>
         <Button className="pulse-button" onClick={onQueue} disabled={!message.trim() || member.queuedMessage?.text === message.trim()}>{member.queuedMessage?.text === message.trim() ? <><Check /> Nacrt sačuvan</> : <><Send /> Sačuvaj nacrt</>}</Button>
       </div>
-      <div className="fake-service-note"><ShieldAlert /> PULSE ne šalje poruke automatski. Pošaljite u aplikaciji, pa potvrdite kontakt.</div>
+      <p className="fake-service-note"><ShieldAlert aria-hidden="true" /> PULSE ne šalje poruke automatski. Pošaljite u aplikaciji, pa potvrdite kontakt.</p>
       {!member.contactConfirmedAt && member.status !== 'recovered' && <Button className="contact-confirm-button" onClick={onContacted}><CheckCircle2 /> Označi kao kontaktirano</Button>}
-      {member.contactConfirmedAt && member.status !== 'recovered' && <>
-        <div className="contact-confirmed-state"><CheckCircle2 /><span><strong>Kontakt potvrđen</strong>{member.contactConfirmedAt}</span></div>
-        {!member.recoveryOutcome ? <div className="profile-outcome-actions" role="group" aria-label="Ishod kontakta">
-          <button type="button" onClick={() => onOutcome('no_answer')}>Bez odgovora</button>
-          <button type="button" onClick={() => onOutcome('replied')}>Odgovorio/la</button>
-          <button type="button" onClick={() => onOutcome('follow_up')}>Prati sjutra</button>
-        </div> : <span className="profile-outcome-confirmed"><CheckCircle2 />{outcomeLabels[member.recoveryOutcome]}</span>}
-      </>}
-      <div className="recovery-divider" aria-hidden="true" />
-      {!renewing ? <Button variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}><CheckCircle2 /> {member.status === 'recovered' ? 'Već je obnovljeno' : t.actions.renew}</Button> : <form className="renew-form" onSubmit={onMarkRenewed}><div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div><div><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div></form>}
+      {member.contactConfirmedAt && member.status !== 'recovered' && <section className="contact-workflow" aria-label="Evidencija kontakta">
+        <div className="contact-confirmed-state" role="status">
+          <CheckCircle2 aria-hidden="true" />
+          <span className="contact-confirmed-copy"><strong>Kontakt potvrđen</strong><span>{member.contactConfirmedAt}</span></span>
+        </div>
+        {!member.recoveryOutcome ? <div className="contact-outcome-group">
+          <p className="contact-outcome-label">ISHOD KONTAKTA</p>
+          <div className="profile-outcome-actions" role="group" aria-label="Ishod kontakta">
+            <button type="button" onClick={() => onOutcome('no_answer')}>Bez odgovora</button>
+            <button type="button" onClick={() => onOutcome('replied')}>Odgovorio/la</button>
+            <button type="button" onClick={() => onOutcome('follow_up')}>Prati sjutra</button>
+          </div>
+        </div> : <span className="profile-outcome-confirmed"><CheckCircle2 aria-hidden="true" />{outcomeLabels[member.recoveryOutcome]}</span>}
+      </section>}
+      <section className="renewal-section" aria-labelledby="renewal-section-heading">
+        <div className="recovery-divider" aria-hidden="true" />
+        <h3 id="renewal-section-heading">Obnova članarine</h3>
+        {!renewing ? <Button variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}><CheckCircle2 /> {member.status === 'recovered' ? 'Već je obnovljeno' : t.actions.renew}</Button> : <form className="renew-form" onSubmit={onMarkRenewed}>
+          <div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" required value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div>
+          <div className="renew-form-actions"><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div>
+        </form>}
+      </section>}
     </aside>
   </div>;
 }
