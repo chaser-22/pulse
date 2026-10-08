@@ -22,6 +22,9 @@ export type Member = {
   recoveredAmount?: number;
   recoveredAt?: string;
   queuedMessage?: { channel: Channel; text: string; queuedAt: string };
+  /** Set only when a staff member explicitly confirms outreach in PULSE. */
+  contactConfirmedAt?: string;
+  /** Legacy snapshots may contain auto-generated contact timestamps. Never treat these as proof. */
   contactedAt?: string;
   recoveryOutcome?: RecoveryOutcome;
   followUpAt?: string;
