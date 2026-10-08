@@ -383,12 +383,14 @@ export default function Home() {
   }
 
   async function copyMessage() {
-    if (!selectedMember || !message.trim()) return;
+    if (!selectedMember || !message.trim()) return false;
     try {
       await navigator.clipboard.writeText(message.trim());
       setSuccess(`Poruka za ${selectedMember.firstName} je kopirana.`);
+      return true;
     } catch {
       setSuccess('Kopiranje nije uspjelo. Označite tekst poruke i kopirajte ga ručno.');
+      return false;
     }
   }
 
@@ -944,10 +946,11 @@ function EmptyState({ icon, title, text, action, onAction }: { icon: React.React
 
 function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onQueue, onHandoff, onContacted, onOutcome, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
   member: Member; message: string; renewing: boolean; renewalAmount: string;
-  onMessage: (message: string) => void; onCopy: () => void; onQueue: () => void; onHandoff: (channel: 'WhatsApp' | 'SMS' | 'Viber') => void; onContacted: () => void; onOutcome: (outcome: RecoveryOutcome) => void; onEdit: () => void;
+  onMessage: (message: string) => void; onCopy: () => Promise<boolean>; onQueue: () => void; onHandoff: (channel: 'WhatsApp' | 'SMS' | 'Viber') => void; onContacted: () => void; onOutcome: (outcome: RecoveryOutcome) => void; onEdit: () => void;
   onRenew: () => void; onCancelRenew: () => void; onRenewalAmount: (amount: string) => void; onMarkRenewed: (event: SyntheticEvent<HTMLFormElement>) => void;
 }) {
   const [handoff, setHandoff] = useState<'sms' | 'viber' | 'whatsapp' | null>(null);
+  const [viberCopied, setViberCopied] = useState(false);
   const whatsapp = whatsappLink(member.phone, message);
   const sms = smsLink(member.phone, message);
   const normalizedPhone = normalizePhone(member.phone);
@@ -963,10 +966,11 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
     }
   }
 
-  function openViber() {
+  async function openViber() {
     if (!message.trim()) return;
     onHandoff('Viber');
-    onCopy();
+    const copied = await onCopy();
+    setViberCopied(copied);
     setHandoff('viber');
   }
 
@@ -1007,8 +1011,8 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
         </div>
       </section>}
       {handoff === 'viber' && <section className="viber-handoff" aria-label="Poruka za Viber">
-        <strong>Viber — poruka kopirana</strong>
-        <p>Otvorite Viber, pronađite <strong>{member.phone}</strong> i nalijepite poruku. Direktno otvaranje privatnog razgovora nije pouzdano na svim uređajima.</p>
+        <strong>{viberCopied ? 'Viber — poruka kopirana' : 'Viber — otvorite aplikaciju'}</strong>
+        <p>Otvorite Viber, pronađite <strong>{member.phone}</strong> i {viberCopied ? 'nalijepite poruku' : 'kopirajte poruku ručno'}. Direktno otvaranje privatnog razgovora nije pouzdano na svim uređajima.</p>
         {normalizedPhone && <a href={`viber://chat?number=${encodeURIComponent(normalizedPhone)}`} className="sms-open-on-device">Pokušaj otvoriti Viber <ArrowRight /></a>}
       </section>}
       {handoff === 'whatsapp' && <p className="message-handoff-status">WhatsApp je otvoren u novoj kartici ili aplikaciji. Provjerite da je poruka poslata.</p>}
