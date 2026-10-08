@@ -598,8 +598,8 @@ export default function Home() {
         <DialogContent className="quick-search-dialog" aria-label="Brza pretraga članova">
           <DialogHeader><DialogTitle>Pronađi člana</DialogTitle></DialogHeader>
           <div className="quick-search-field"><Search /><Input autoFocus value={quickQuery} onChange={(event) => setQuickQuery(event.target.value)} placeholder="Ime ili telefon" aria-label="Ime ili telefon" /></div>
-          <div className="quick-search-results" role="list" aria-label="Rezultati pretrage">
-            {quickMatches.length ? quickMatches.map((member) => <button key={member.id} type="button" role="listitem" onClick={() => selectQuickMember(member)}>
+          <div className="quick-search-results" aria-label="Rezultati pretrage">
+            {quickMatches.length ? quickMatches.map((member) => <button key={member.id} type="button" onClick={() => selectQuickMember(member)}>
               <span className="avatar">{initials(member)}</span>
               <span className="quick-search-person"><strong>{fullName(member)}</strong><small>{member.phone}</small></span>
               <span className={`status-pill ${statusClass(member.status)}`}>{membershipUrgencyLabel(member)}</span>
