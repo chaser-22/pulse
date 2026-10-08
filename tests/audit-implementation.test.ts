@@ -34,7 +34,7 @@ test('Recovery sheet exposes truthful contact outcomes without bypassing confirm
   assert.match(page, /onOutcome\('no_answer'\)/);
   assert.match(page, /onOutcome\('replied'\)/);
   assert.match(page, /onOutcome\('follow_up'\)/);
-  assert.match(logic, /member\.contactedAt \|\| member\.recoveryOutcome/);
+  assert.match(logic, /contacted: members\.filter\(\(member\) => Boolean\(member\.contactedAt\)\)\.length/);
 });
 
 test('New semantic dark system has one active palette', () => {
