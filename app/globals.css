@@ -498,17 +498,16 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textar
 .queue-button { width: 100%; margin-top: 12px; }
 .fake-service-note { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: #70766b; font-size: 12px; }
 .fake-service-note svg { width: 11px; }
-.recovery-divider { display: flex; align-items: center; gap: 10px; margin: 19px 0 12px; color: #676d62; font-size: 12px; letter-spacing: .11em; }
-.recovery-divider::before, .recovery-divider::after { content: ''; height: 1px; flex: 1; background: #2b2e28; }
-.renew-button { width: 100%; border-color: #ff6a5e38; background: #ff6a5e08; color: var(--primary); }
-.renew-form { padding: 13px; border: 1px solid #ff6a5e2d; border-radius: 11px; background: #ff6a5e06; }
-.renew-form .renew-label { display: grid; gap: 6px; color: #cbd0c5; font-size: 12px; }
+.recovery-divider { height: 1px; margin: 20px 0; background: var(--border); }
+.renew-button { width: 100%; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--foreground); }
+.renew-form { display: grid; gap: 16px; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.renew-form .renew-label { display: grid; gap: 8px; color: var(--foreground); font-size: 12px; }
 .amount-input { position: relative; }
-.amount-input input { padding-right: 28px; }
-.amount-input > span { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #7d8377; font-size: 12px; }
-.renew-form p { color: #787e73; font-size: 12px; line-height: 1.45; }
-.renew-form > div:last-child { display: flex; justify-content: flex-end; gap: 7px; }
-.renew-form button { height: 30px; }
+.amount-input input { padding-right: 36px; }
+.amount-input > span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted-foreground); font-size: 12px; }
+.renew-form p { color: var(--muted-foreground); font-size: 12px; line-height: 1.45; }
+.renew-form > div:last-child { display: flex; justify-content: flex-end; gap: 10px; }
+.renew-form button { min-height: 44px; }
 .form-dialog { width: min(650px,calc(100vw - 28px)); max-width: none; padding: 22px; border: 1px solid #30342d; background: #151714; }
 .member-form { display: grid; gap: 17px; }
 .form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
