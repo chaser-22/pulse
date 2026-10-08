@@ -354,10 +354,10 @@ export default function Home() {
 
   function recordOutcome(memberId: string, outcome: RecoveryOutcome) {
     const member = members.find((item) => item.id === memberId);
-    if (!member) return;
-    setMembers((current) => current.map((item) => item.id === memberId ? {
+    // Recording an outcome must not implicitly count as contacting the member.
+    if (!member?.contactedAt || member.status === 'recovered') return;
+    setMembers((current) => current.map((item) => item.id === memberId && item.contactedAt && item.status !== 'recovered' ? {
       ...item,
-      contactedAt: item.contactedAt ?? formatActionTimestamp(),
       recoveryOutcome: outcome,
       followUpAt: outcome === 'follow_up' ? formatFollowUpTimestamp() : undefined,
     } : item));
@@ -435,9 +435,10 @@ export default function Home() {
 
     setMembers((current) => current.map((member) => member.id === selectedMember.id ? {
       ...member,
-      contactedAt: member.contactedAt ?? formatActionTimestamp(),
+      // Renewal is a separate, staff-recorded event; it does not confirm prior outreach.
       status: 'recovered', risk: 'low', price: amount, recoveredAmount: amount, recoveredAt: today,
-      startDate: today, endDate: addDaysIso(today, 30), riskReason: `Članarina obnovljena ${prettyDate(today)} uz pomoć PULSE recovery toka.`,
+      startDate: today, endDate: addDaysIso(today, 30), followUpAt: undefined,
+      riskReason: `Članarina obnovljena ${prettyDate(today)} uz pomoć PULSE recovery toka.`,
       nextAction: 'Nije potrebna akcija.',
     } : member));
     setRenewing(false);
@@ -846,20 +847,23 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
     </section>
 
     <section className="recovery-activity" aria-labelledby="activity-title">
-      <div><h2 id="activity-title">Rezultat kontakata</h2></div>
+      <div className="recovery-activity__heading">
+        <h2 id="activity-title">Rezultat kontakata</h2>
+        <span>Ukupno · ručno evidentirano</span>
+      </div>
       {recoveryActivity.contacted || recoveryActivity.followUps || recoveryActivity.renewed ? <dl>
         <div><dt>Kontaktirano</dt><dd>{recoveryActivity.contacted}</dd></div>
         <div><dt>Za praćenje</dt><dd>{recoveryActivity.followUps}</dd></div>
         <div><dt>Obnovljeno</dt><dd>{recoveryActivity.renewed}</dd></div>
         <div className="positive"><dt>Evidentirani iznos obnove</dt><dd><AnimatedCurrency value={recoveryActivity.recoveredAmount} className="number-shift" /></dd></div>
-      </dl> : <div className="recovery-zero-state"><strong>Još nema kontakata.</strong></div>}
+      </dl> : <div className="recovery-zero-state"><strong>Još nema evidentiranih aktivnosti.</strong></div>}
     </section>
   </div>;
 }
 
 function StaffBoard({ members, onOpenMember, onContacted, onOutcome, onAddMember, onFindMember }: { members: Member[]; onOpenMember: (member: Member) => void; onContacted: (memberId: string) => void; onOutcome: (memberId: string, outcome: RecoveryOutcome) => void; onAddMember: () => void; onFindMember: () => void }) {
   const completed = members.filter((member) => member.recoveryOutcome || member.status === 'recovered').length;
-  const followUps = members.filter((member) => member.recoveryOutcome === 'follow_up').length;
+  const followUps = members.filter((member) => member.contactedAt && member.recoveryOutcome === 'follow_up' && member.status !== 'recovered').length;
   return <div className="screen-stack staff-screen">
     <section className="reception-search-shell" aria-labelledby="reception-search-title">
       <button type="button" className="reception-search" onClick={onFindMember}><Search /><span><strong id="reception-search-title">Pronađi člana</strong><em>Ime ili telefon</em></span><ArrowRight /></button>
@@ -1021,7 +1025,7 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
         <Button className="pulse-button" onClick={onQueue} disabled={!message.trim() || member.queuedMessage?.text === message.trim()}>{member.queuedMessage?.text === message.trim() ? <><Check /> Nacrt sačuvan</> : <><Send /> Sačuvaj nacrt</>}</Button>
       </div>
       <div className="fake-service-note"><ShieldAlert /> PULSE ne šalje poruke automatski. Pošaljite u aplikaciji, pa potvrdite kontakt.</div>
-      {member.queuedMessage && !member.contactedAt && member.status !== 'recovered' && <Button className="contact-confirm-button" onClick={onContacted}><CheckCircle2 /> Označi kao kontaktirano</Button>}
+      {!member.contactedAt && member.status !== 'recovered' && <Button className="contact-confirm-button" onClick={onContacted}><CheckCircle2 /> Označi kao kontaktirano</Button>}
       {member.contactedAt && member.status !== 'recovered' && <>
         <div className="contact-confirmed-state"><CheckCircle2 /><span><strong>Kontakt potvrđen</strong>{member.contactedAt}</span></div>
         {!member.recoveryOutcome ? <div className="profile-outcome-actions" role="group" aria-label="Ishod kontakta">
