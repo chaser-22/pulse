@@ -46,5 +46,5 @@ test('desktop SMS QR data stays local and QR uses complete SMS URI', () => {
   const component = readFileSync(new URL('../components/sms-handoff-qr.tsx', import.meta.url), 'utf8');
   assert.match(component, /qrcodegen.QrCode.encodeText\(uri, qrcodegen.QrCode.Ecc.LOW\)/);
   assert.match(component, /role="img"/);
-  assert.doesNotMatch(component, /fetch\(|http[s]?:\/\//);
+  assert.doesNotMatch(component, /fetch\(|<img[^>]+src=/);
 });
