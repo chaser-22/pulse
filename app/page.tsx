@@ -226,6 +226,8 @@ export default function Home() {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
+  const [quickSearchOpen, setQuickSearchOpen] = useState(false);
+  const [quickQuery, setQuickQuery] = useState('');
   const [message, setMessage] = useState('');
   const [renewing, setRenewing] = useState(false);
   const [renewalAmount, setRenewalAmount] = useState('35');
@@ -289,6 +291,20 @@ export default function Home() {
     });
   }, [members, filter, search]);
 
+  const quickMatches = useMemo(() => members.filter((member) => memberMatchesSearch(member, quickQuery)).slice(0, 6), [members, quickQuery]);
+
+  useEffect(() => {
+    function openFromKeyboard(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setQuickQuery('');
+        setQuickSearchOpen(true);
+      }
+    }
+    window.addEventListener('keydown', openFromKeyboard);
+    return () => window.removeEventListener('keydown', openFromKeyboard);
+  }, []);
+
   function completeOnboarding() {
     try {
       localStorage.setItem(ONBOARDING_KEY, '1');
@@ -316,6 +332,16 @@ export default function Home() {
   function goTo(nextView: View) {
     setView(nextView);
     setMobileNav(false);
+  }
+
+  function openQuickSearch() {
+    setQuickQuery('');
+    setQuickSearchOpen(true);
+  }
+
+  function selectQuickMember(member: Member) {
+    setQuickSearchOpen(false);
+    openMember(member);
   }
 
   function switchWorkspace(nextWorkspace: Workspace) {
@@ -563,10 +589,26 @@ export default function Home() {
         </header>
 
         {view === 'dashboard' && <Dashboard metrics={metrics} recoveryActivity={recoveryActivity} highRiskMembers={highRiskMembers} signalCount={riskMembers.length} onOpenMember={openMember} onNavigate={goTo} />}
-        {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onContacted={markContacted} onOutcome={recordOutcome} onAddMember={() => openMemberForm()} onFindMember={() => goTo('members')} />}
+        {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onContacted={markContacted} onOutcome={recordOutcome} onAddMember={() => openMemberForm()} onFindMember={openQuickSearch} />}
         {view === 'members' && <MembersScreen members={filteredMembers} total={members.length} filter={filter} search={search} onFilter={setFilter} onSearch={setSearch} onOpenMember={openMember} onImport={() => fileInputRef.current?.click()} />}
         {view === 'radar' && <RadarScreen members={riskMembers} onOpenMember={openMember} />}
       </section>
+
+      <Dialog open={quickSearchOpen} onOpenChange={setQuickSearchOpen}>
+        <DialogContent className="quick-search-dialog" aria-label="Brza pretraga članova">
+          <DialogHeader><DialogTitle>Pronađi člana</DialogTitle></DialogHeader>
+          <div className="quick-search-field"><Search /><Input autoFocus value={quickQuery} onChange={(event) => setQuickQuery(event.target.value)} placeholder="Ime ili telefon" aria-label="Ime ili telefon" /></div>
+          <div className="quick-search-results" role="list" aria-label="Rezultati pretrage">
+            {quickMatches.length ? quickMatches.map((member) => <button key={member.id} type="button" role="listitem" onClick={() => selectQuickMember(member)}>
+              <span className="avatar">{initials(member)}</span>
+              <span className="quick-search-person"><strong>{fullName(member)}</strong><small>{member.phone}</small></span>
+              <span className={`status-pill ${statusClass(member.status)}`}>{membershipUrgencyLabel(member)}</span>
+              <ChevronRight />
+            </button>) : <p className="quick-search-empty">Nema rezultata</p>}
+          </div>
+          <button type="button" className="quick-search-all" onClick={() => { setQuickSearchOpen(false); setSearch(quickQuery); goTo('members'); }}>Svi članovi <ArrowRight /></button>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(selectedMember)} onOpenChange={(open) => { if (!open && !renewalReveal) setSelectedMemberId(null); }}>
         <DialogContent className={renewalReveal ? 'member-dialog renewal-reveal-dialog' : 'member-dialog member-command-sheet'} showCloseButton={!renewalReveal}>
