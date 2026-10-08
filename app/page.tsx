@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PageAtmosphere } from '@/components/page-atmosphere';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -248,7 +247,6 @@ export default function Home() {
   const [showImportProgress, setShowImportProgress] = useState(false);
   const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
   const [renewalReveal, setRenewalReveal] = useState<RenewalReveal | null>(null);
-  const [recoveryPulse, setRecoveryPulse] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importProgressTimerRef = useRef<number | null>(null);
   const renewalTimerRef = useRef<number | null>(null);
@@ -345,7 +343,6 @@ export default function Home() {
     setSelectedMemberId(null);
     setFilter('all');
     setSearch('');
-    setRecoveryPulse(0);
     setResetOpen(false);
     setSuccess('Demo je vraćen na početne podatke i spreman je za novu prezentaciju.');
   }
@@ -402,7 +399,6 @@ export default function Home() {
     } : member));
     setRenewing(false);
     setRenewalReveal({ name: memberName, amount });
-    setRecoveryPulse((current) => current + 1);
 
     if (renewalTimerRef.current !== null) window.clearTimeout(renewalTimerRef.current);
     renewalTimerRef.current = window.setTimeout(() => {
@@ -509,8 +505,7 @@ export default function Home() {
 
       setMembers(result.members);
       setSelectedMemberId(null);
-      setRecoveryPulse(0);
-      setWorkspace('owner');
+        setWorkspace('owner');
       setView('dashboard');
       setImportError('');
       finishImportProgress();
@@ -554,7 +549,6 @@ export default function Home() {
       {mobileNav && <button className="nav-backdrop" aria-label="Zatvori meni" onClick={() => setMobileNav(false)} />}
 
       <section className="main-panel">
-        {workspace === 'owner' && view === 'dashboard' && <PageAtmosphere view={view} workspace={workspace} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} urgentCount={highRiskMembers.length} surface="ambient" />}
         <header className="topbar">
           <button className="mobile-menu" aria-label="Otvori meni" onClick={() => setMobileNav(true)}><Menu /></button>
           <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1>{viewMeta[view].subtitle && <p>{viewMeta[view].subtitle}</p>}</div>
