@@ -62,7 +62,7 @@ const outcomeLabels: Record<RecoveryOutcome, string> = {
 };
 
 const viewMeta: Record<View, { eyebrow: string; title: string; subtitle: string }> = {
-  dashboard: { eyebrow: 'DANAŠNJI PREGLED', title: 'Pregled članarina', subtitle: 'PULSE pretvara vaš CSV u dnevnu listu članova za kontakt i prati šta se obnovilo.' },
+  dashboard: { eyebrow: 'DANAŠNJI PREGLED', title: 'Pregled članarina', subtitle: '' },
   staff: { eyebrow: 'RADNI PROSTOR RECEPCIJE', title: 'Danas na recepciji', subtitle: 'Pronađite člana, zabilježite ishod kontakta i završite današnje prioritete.' },
   members: { eyebrow: 'BAZA ČLANOVA', title: 'Članovi', subtitle: 'Pretražite članove, provjerite članarinu i otvorite sljedeću akciju.' },
   radar: { eyebrow: 'PRIORITETI IZ CSV-A', title: 'Prioriteti članarina', subtitle: 'Prioriteti izračunati samo iz datuma isteka i cijene članarine.' },
@@ -559,7 +559,7 @@ export default function Home() {
         {workspace === 'owner' && view === 'dashboard' && <PageAtmosphere view={view} workspace={workspace} recoveryPulse={recoveryPulse} signalCount={riskMembers.length} urgentCount={highRiskMembers.length} surface="ambient" />}
         <header className="topbar">
           <button className="mobile-menu" aria-label="Otvori meni" onClick={() => setMobileNav(true)}><Menu /></button>
-          <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1><p>{viewMeta[view].subtitle}</p></div>
+          <div className="page-title"><p className="eyebrow">{viewMeta[view].eyebrow}</p><h1>{viewMeta[view].title}</h1>{viewMeta[view].subtitle && <p>{viewMeta[view].subtitle}</p>}</div>
           <div className="top-actions">
             <fieldset className="workspace-switch"><legend className="sr-only">Izaberite radni prostor</legend><button type="button" aria-pressed={workspace === 'owner'} className={workspace === 'owner' ? 'active' : ''} onClick={() => switchWorkspace('owner')}><LayoutDashboard /> Vlasnik</button><button type="button" aria-pressed={workspace === 'staff'} className={workspace === 'staff' ? 'active' : ''} onClick={() => switchWorkspace('staff')}><Users /> Recepcija</button></fieldset>
             {workspace === 'owner' ? <>
