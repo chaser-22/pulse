@@ -5,7 +5,7 @@ import {
   ArrowRight, Check, CheckCircle2, Copy,
   ChevronRight, Clock3,
   LayoutDashboard, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
-  RotateCcw, Send, ShieldAlert, Smartphone, Upload, Users, X,
+  RotateCcw, ShieldAlert, Smartphone, Upload, Users, X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -417,10 +417,10 @@ export default function Home() {
     // Only preserve the draft. A handoff is NOT a delivered message or confirmed contact.
     setMembers((current) => current.map((member) => {
       if (member.id !== selectedMember.id) return member;
-      if (member.queuedMessage?.text === message.trim()) return member;
+      if (member.queuedMessage?.text === message) return member;
       return {
         ...member,
-        queuedMessage: { channel: 'Poruka', text: message.trim(), queuedAt: formatActionTimestamp() },
+        queuedMessage: { channel: 'Poruka', text: message, queuedAt: formatActionTimestamp() },
       };
     }));
   }
@@ -1092,5 +1092,5 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
         </form>}
       </section>
     </section>
-  </div>
+  </div>;
 }
