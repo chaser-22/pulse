@@ -854,7 +854,6 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
     <section className="recovery-activity" aria-labelledby="activity-title">
       <div className="recovery-activity__heading">
         <h2 id="activity-title">Rezultat kontakata</h2>
-        <span>Ukupno · ručno evidentirano</span>
       </div>
       {recoveryActivity.contacted || recoveryActivity.followUps || recoveryActivity.renewed ? <dl>
         <div><dt>Kontaktirano</dt><dd>{recoveryActivity.contacted}</dd></div>
