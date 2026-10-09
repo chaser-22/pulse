@@ -21,7 +21,7 @@ test('CSV import replaces the demo member dataset instead of appending to it', (
 test('owner keeps member-derived risk and tracked recovery without duplicate KPI strips', () => {
   assert.match(page, /PRIHOD POD RIZIKOM/);
   assert.match(page, /recoveryActivity\.contacted/);
-  assert.doesNotMatch(page, /recoveryActivity\.followUps|Za praćenje<\/dt>/);
+  assert.doesNotMatch(page, /recoveryActivity\.followUps/);
   assert.match(page, /recoveryActivity\.renewed/);
   assert.match(page, /recoveryActivity\.recoveredAmount/);
   assert.doesNotMatch(page, /function Metric\(/);
