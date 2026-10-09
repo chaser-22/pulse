@@ -1,7 +1,6 @@
 export type MemberStatus = 'active' | 'expiring' | 'expired' | 'recovered';
 export type RiskLevel = 'high' | 'medium' | 'low';
 export type Channel = 'Telefon' | 'Poruka';
-export type RecoveryOutcome = 'no_answer' | 'replied' | 'follow_up' | 'declined';
 
 export type Member = {
   id: string;
@@ -26,8 +25,6 @@ export type Member = {
   contactConfirmedAt?: string;
   /** Legacy snapshots may contain auto-generated contact timestamps. Never treat these as proof. */
   contactedAt?: string;
-  recoveryOutcome?: RecoveryOutcome;
-  followUpAt?: string;
 };
 
 export const copy = {

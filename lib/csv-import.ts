@@ -318,9 +318,8 @@ export function parseMemberCsv(
       recoveredAmount: existing?.recoveredAmount,
       recoveredAt: existing?.recoveredAt,
       queuedMessage: existing?.queuedMessage,
+      contactConfirmedAt: existing?.contactConfirmedAt,
       contactedAt: existing?.contactedAt,
-      recoveryOutcome: existing?.recoveryOutcome,
-      followUpAt: existing?.followUpAt,
     });
   });
 

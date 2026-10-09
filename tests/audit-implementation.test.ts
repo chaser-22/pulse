@@ -26,14 +26,12 @@ test('Owner and Reception preserve distinct operating hierarchies', () => {
   assert.doesNotMatch(page, /<RevenueTrend|CHURN SCORE|occupancy rate/i);
 });
 
-test('Recovery sheet exposes truthful contact outcomes without bypassing confirmation', () => {
+test('Recovery sheet exposes only explicit contact and renewal actions', () => {
   assert.match(page, /member-dialog member-command-sheet/);
   assert.match(page, /Označi kao kontaktirano/);
   assert.match(page, /PULSE ne šalje poruke automatski\. Potvrdite kontakt tek nakon slanja/);
-  assert.match(page, /Ishod kontakta/);
-  assert.match(page, /onOutcome\('no_answer'\)/);
-  assert.match(page, /onOutcome\('replied'\)/);
-  assert.match(page, /onOutcome\('follow_up'\)/);
+  assert.match(page, /Evidentiraj obnovu/);
+  assert.doesNotMatch(page, /Ishod kontakta|onOutcome|Bez odgovora|Prati sjutra/);
   assert.match(logic, /contacted: members\.filter\(\(member\) => Boolean\(member\.contactConfirmedAt\)\)\.length/);
 });
 

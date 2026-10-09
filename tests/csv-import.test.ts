@@ -78,7 +78,7 @@ test('re-import preserves PULSE recovery state for a matching member', () => {
     risk: 'low' as const,
     recoveredAmount: 35,
     recoveredAt: '2026-09-25',
-    recoveryOutcome: 'replied' as const,
+    contactConfirmedAt: '25.09. · 10:00',
   };
 
   const csv = [
@@ -92,7 +92,7 @@ test('re-import preserves PULSE recovery state for a matching member', () => {
   assert.equal(result.members[0].id, 'existing-member');
   assert.equal(result.members[0].status, 'recovered');
   assert.equal(result.members[0].recoveredAmount, 35);
-  assert.equal(result.members[0].recoveryOutcome, 'replied');
+  assert.equal(result.members[0].contactConfirmedAt, '25.09. · 10:00');
   assert.equal(result.members[0].price, 40);
   assert.equal(result.members[0].endDate, '2026-10-27');
 });

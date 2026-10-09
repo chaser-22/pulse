@@ -12,43 +12,36 @@ function segment(start: string, end: string): string {
   return page.slice(from, to);
 }
 
-test('message editing immediately persists local draft, even if cleared, without contact side effects', () => {
+test('editing a message only autosaves its draft (including empty edits)', () => {
   const editor = segment('function updateMessage(', 'async function copyMessage(');
   assert.match(editor, /setMessage\(nextMessage\)/);
-  assert.match(editor, /if \(!selectedMemberId\) return/);
   assert.match(editor, /queuedMessage:\s*\{/);
   assert.match(editor, /text: nextMessage/);
-  assert.doesNotMatch(editor, /\.trim\(\)/);
-  assert.doesNotMatch(editor, /contactConfirmedAt:|recoveryOutcome:|status: 'recovered'/);
+  assert.doesNotMatch(editor, /contactConfirmedAt:|status: 'recovered'|\.trim\(\)/);
   assert.match(page, /onMessage=\{updateMessage\}/);
-  assert.doesNotMatch(page, /function queueMessage\(|onQueue=|Sačuvaj nacrt|Nacrt sačuvan/);
+  assert.doesNotMatch(page, /Sačuvaj nacrt|onQueue=|function queueMessage\(/);
 });
 
-test('member sheet keeps messaging, contact, and renewal as progressive sections', () => {
-  assert.match(page, /className="profile-layout compact-member-flow"/);
-  assert.match(page, /className="compact-member-overview"/);
-  assert.match(page, /className="compact-message-stage"/);
-  assert.match(page, /className="compact-member-actions"/);
-  assert.match(page, /className="message-field compact-message-field"/);
-  assert.match(page, /className="compact-member-risk-details"/);
-  const contact = segment('className="compact-member-actions"', '</div>;\n}');
-  assert.match(contact, /!member\.contactConfirmedAt && member\.status !== 'recovered'/);
-  assert.match(contact, /member\.contactConfirmedAt &&/);
-  assert.match(contact, /!member\.recoveryOutcome \? <div className="contact-outcome-group"/);
-  assert.match(contact, /!renewing \? <div className="compact-renewal-summary"/);
+test('profile shows contact and renewal without extra outcome or lifecycle controls', () => {
+  const member = page.slice(page.indexOf('function MemberProfile('));
+  assert.match(member, /className="profile-layout compact-member-flow"/);
+  assert.match(member, /className="compact-message-stage"/);
+  assert.match(member, /className="compact-member-actions"/);
+  assert.match(member, /Označi kao kontaktirano/);
+  assert.match(member, /Evidentiraj obnovu/);
+  assert.match(member, /!renewing \? <Button/);
+  assert.match(member, /<form className="renew-form" onSubmit=\{onMarkRenewed\}>/);
+  assert.doesNotMatch(member, /onOutcome|recoveryOutcome|ISHOD KONTAKTA|member-recovery-path|RecoveryLifecycle/);
 });
 
-test('compact flow uses the short message editor and preserves mobile scrolling', () => {
+test('short desktop editor remains touch-friendly and mobile stays scrollable', () => {
   assert.match(css, /\.member-command-sheet \.profile-layout\.compact-member-flow\s*\{[^}]*overflow-y:auto/);
   assert.match(css, /\.member-command-sheet \.compact-message-field textarea\s*\{[^}]*height:clamp\(104px,13dvh,130px\)/);
-  assert.match(css, /@media \(max-width:680px\)[\s\S]*?\.profile-layout\.compact-member-flow/);
-  assert.match(css, /\.member-command-sheet \.compact-member-actions \.renewal-section\s*\{[^}]*border-top:1px solid var\(--border\)/);
+  assert.match(css, /\.compact-member-actions \.renew-button\s*\{[^}]*min-height:44px/);
 });
 
-test('outcomes and renewal still require separate explicit actions', () => {
-  const outcome = segment('function recordOutcome(', 'function resetDemo(');
+test('renewal does not fabricate a contact confirmation', () => {
   const renewal = segment('function markRenewed(', 'function openMemberForm(');
-  assert.match(outcome, /if \(!member\?\.contactConfirmedAt \|\| member\.status === 'recovered'\) return/);
   assert.doesNotMatch(renewal, /contactConfirmedAt:/);
   assert.match(page, /PULSE ne šalje poruke automatski/);
 });

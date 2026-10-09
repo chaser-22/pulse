@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type SyntheticEvent } from 'react';
 import {
   ArrowRight, Check, CheckCircle2, Copy,
-  ChevronRight, Clock3,
+  ChevronRight,
   LayoutDashboard, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
   RotateCcw, ShieldAlert, Smartphone, Upload, Users, X,
 } from 'lucide-react';
@@ -18,13 +18,12 @@ import { SmsHandoffQr } from '@/components/sms-handoff-qr';
 import { normalizePhone, smsLink, whatsappLink, isMobileMessagingDevice } from '@/lib/message-handoff';
 import {
   copy,
-  type Member, type MemberStatus, type RecoveryOutcome, type RiskLevel,
+  type Member, type MemberStatus, type RiskLevel,
 } from '@/lib/pulse-data';
 import { createDemoMembers } from '@/lib/demo-data';
 import {
   getPulseMetrics,
   getRecoveryActivity,
-  getRecoveryLifecycle,
   getRiskMembers,
   memberMatchesSearch,
   type RecoveryActivity,
@@ -53,13 +52,6 @@ const filters: Array<{ id: Filter; label: string }> = [
   { id: 'all', label: 'Svi' }, { id: 'active', label: 'Aktivni' }, { id: 'expiring', label: 'Ističu' },
   { id: 'expired', label: 'Istekli' }, { id: 'recovered', label: 'Obnovljeni u PULSE' },
 ];
-
-const outcomeLabels: Record<RecoveryOutcome, string> = {
-  no_answer: 'Bez odgovora',
-  replied: 'Odgovorio/la',
-  follow_up: 'Pratiti sjutra',
-  declined: 'Ne želi obnovu',
-};
 
 const viewMeta: Record<View, { eyebrow: string; title: string; subtitle: string }> = {
   dashboard: { eyebrow: 'DANAŠNJI PREGLED', title: 'Pregled članarina', subtitle: '' },
@@ -114,18 +106,6 @@ function formatActionTimestamp(date = new Date()) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date).replace(',', ' ·');
-}
-
-function formatFollowUpTimestamp(date = new Date()) {
-  const followUp = new Date(date);
-  followUp.setDate(followUp.getDate() + 1);
-  followUp.setHours(10, 0, 0, 0);
-  return new Intl.DateTimeFormat('sr-Latn-ME', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(followUp).replace(',', ' ·');
 }
 
 function memberSignalCopy(status: MemberStatus) {
@@ -352,18 +332,6 @@ export default function Home() {
     setMobileNav(false);
   }
 
-  function recordOutcome(memberId: string, outcome: RecoveryOutcome) {
-    const member = members.find((item) => item.id === memberId);
-    // Recording an outcome must not implicitly count as contacting the member.
-    if (!member?.contactConfirmedAt || member.status === 'recovered') return;
-    setMembers((current) => current.map((item) => item.id === memberId && item.contactConfirmedAt && item.status !== 'recovered' ? {
-      ...item,
-      recoveryOutcome: outcome,
-      followUpAt: outcome === 'follow_up' ? formatFollowUpTimestamp() : undefined,
-    } : item));
-    setSuccess(`${fullName(member)}: ${outcomeLabels[outcome]}.`);
-  }
-
   function resetDemo() {
     setMembers(createDemoMembers());
     setWorkspace('owner');
@@ -447,7 +415,7 @@ export default function Home() {
       ...member,
       // Renewal is a separate, staff-recorded event; it does not confirm prior outreach.
       status: 'recovered', risk: 'low', price: amount, recoveredAmount: amount, recoveredAt: today,
-      startDate: today, endDate: addDaysIso(today, 30), followUpAt: undefined,
+      startDate: today, endDate: addDaysIso(today, 30),
       riskReason: `Članarina obnovljena ${prettyDate(today)} uz pomoć PULSE recovery toka.`,
       nextAction: 'Nije potrebna akcija.',
     } : member));
@@ -595,7 +563,7 @@ export default function Home() {
         </nav>
         {workspace === 'owner'
           ? metrics.recoveredRevenue > 0 && <div className="sidebar-insight"><span className="pulse-dot" /><div><strong>{euro(metrics.recoveredRevenue)}</strong><small>obnovljeno</small></div></div>
-          : <div className="sidebar-insight reception-insight"><span className="pulse-dot" /><div><strong>{riskMembers.filter((member) => !member.recoveryOutcome && member.status !== 'recovered').length}</strong><small>kontakata preostalo</small></div></div>}
+          : <div className="sidebar-insight reception-insight"><span className="pulse-dot" /><div><strong>{riskMembers.filter((member) => !member.contactConfirmedAt).length}</strong><small>kontakata preostalo</small></div></div>}
         {workspace === 'owner' && <button className="demo-reset-button" onClick={() => setResetOpen(true)}><RotateCcw /> Resetuj demo</button>}
         <button type="button" className="gym-card gym-card-button" onClick={() => setPilotOpen(true)}><span className="gym-monogram">PD</span><span><strong>{t.gymName}</strong><small>CSV demo</small></span></button>
       </aside>
@@ -617,7 +585,7 @@ export default function Home() {
         </header>
 
         {view === 'dashboard' && <Dashboard metrics={metrics} recoveryActivity={recoveryActivity} highRiskMembers={highRiskMembers} signalCount={riskMembers.length} onOpenMember={openMember} onNavigate={goTo} />}
-        {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onContacted={markContacted} onOutcome={recordOutcome} onAddMember={() => openMemberForm()} onFindMember={openQuickSearch} />}
+        {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onAddMember={() => openMemberForm()} onFindMember={openQuickSearch} />}
         {view === 'members' && <MembersScreen members={filteredMembers} total={members.length} filter={filter} search={search} onFilter={setFilter} onSearch={setSearch} onOpenMember={openMember} onImport={() => fileInputRef.current?.click()} />}
         {view === 'radar' && <RadarScreen members={riskMembers} onOpenMember={openMember} />}
       </section>
@@ -643,7 +611,7 @@ export default function Home() {
           {renewalReveal ? <RenewalConfirmation name={renewalReveal.name} amount={renewalReveal.amount} /> : selectedMember && (
             <MemberProfile
               key={selectedMember.id} member={selectedMember} message={message} renewing={renewing} renewalAmount={renewalAmount}
-              onMessage={updateMessage} onCopy={copyMessage} onHandoff={beginMessageHandoff} onContacted={() => markContacted(selectedMember.id)} onOutcome={(outcome) => recordOutcome(selectedMember.id, outcome)}
+              onMessage={updateMessage} onCopy={copyMessage} onHandoff={beginMessageHandoff} onContacted={() => markContacted(selectedMember.id)}
               onEdit={() => openMemberForm(selectedMember)} onRenew={() => setRenewing(true)} onCancelRenew={() => setRenewing(false)}
               onRenewalAmount={setRenewalAmount} onMarkRenewed={markRenewed}
             />
@@ -754,18 +722,6 @@ function Field({ label, required, children }: { label: string; required?: boolea
   return <label className="field"><span>{label}{required && ' *'}</span>{children}</label>;
 }
 
-function RecoveryLifecycle({ member }: { member: Member }) {
-  const current = getRecoveryLifecycle(member);
-  const steps = [['detected', 'Otkriveno'], ['contacted', 'Kontaktirano'], ['renewed', 'Obnovljeno']] as const;
-  // A renewal can happen without confirmed outreach. Display each actual event independently.
-  const recorded = {
-    detected: true,
-    contacted: Boolean(member.contactConfirmedAt),
-    renewed: member.status === 'recovered',
-  };
-  return <ol className="recovery-lifecycle" aria-label="Tok u PULSE">{steps.map(([id, label]) => <li className={recorded[id] ? 'complete' : ''} aria-current={id === current ? 'step' : undefined} key={id}><i />{label}</li>)}</ol>;
-}
-
 function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, onOpenMember, onNavigate }: {
   metrics: ReturnType<typeof getPulseMetrics>;
   recoveryActivity: RecoveryActivity;
@@ -852,7 +808,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
             </button>
           </div>
 
-          {(member.contactConfirmedAt || member.recoveryOutcome || member.status === 'recovered') && <div className="today-queue__rail"><RecoveryLifecycle member={member} /></div>}
+          {(member.contactConfirmedAt || member.status === 'recovered') && <div className="today-queue__rail"><span className="simple-contact-state"><CheckCircle2 />{member.status === 'recovered' ? 'Obnovljeno' : 'Kontaktirano'}</span></div>}
         </article>)}
       </div> : <div className="today-queue__empty"><CheckCircle2 /><span><strong>Nema hitnih kontakata.</strong></span></div>}
 
@@ -865,9 +821,8 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
       <div className="recovery-activity__heading">
         <h2 id="activity-title">Rezultat kontakata</h2>
       </div>
-      {recoveryActivity.contacted || recoveryActivity.followUps || recoveryActivity.renewed ? <dl>
+      {recoveryActivity.contacted || recoveryActivity.renewed ? <dl>
         <div><dt>Kontaktirano</dt><dd>{recoveryActivity.contacted}</dd></div>
-        <div><dt>Za praćenje</dt><dd>{recoveryActivity.followUps}</dd></div>
         <div><dt>Obnovljeno</dt><dd>{recoveryActivity.renewed}</dd></div>
         <div className="positive"><dt>Evidentirani iznos obnove</dt><dd><AnimatedCurrency value={recoveryActivity.recoveredAmount} className="number-shift" /></dd></div>
       </dl> : <div className="recovery-zero-state"><strong>Još nema evidentiranih aktivnosti.</strong></div>}
@@ -875,40 +830,29 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
   </div>;
 }
 
-function StaffBoard({ members, onOpenMember, onContacted, onOutcome, onAddMember, onFindMember }: { members: Member[]; onOpenMember: (member: Member) => void; onContacted: (memberId: string) => void; onOutcome: (memberId: string, outcome: RecoveryOutcome) => void; onAddMember: () => void; onFindMember: () => void }) {
-  const completed = members.filter((member) => (member.contactConfirmedAt && member.recoveryOutcome) || member.status === 'recovered').length;
-  const followUps = members.filter((member) => member.contactConfirmedAt && member.recoveryOutcome === 'follow_up' && member.status !== 'recovered').length;
+function StaffBoard({ members, onOpenMember, onAddMember, onFindMember }: { members: Member[]; onOpenMember: (member: Member) => void; onAddMember: () => void; onFindMember: () => void }) {
+  // Reception works from the current risk queue. Contacted members stay visible until renewal.
+  const awaitingContact = members.filter((member) => !member.contactConfirmedAt && member.status !== 'recovered').length;
+  const contacted = members.filter((member) => Boolean(member.contactConfirmedAt) && member.status !== 'recovered').length;
   return <div className="screen-stack staff-screen">
     <section className="reception-search-shell" aria-labelledby="reception-search-title">
       <button type="button" className="reception-search" onClick={onFindMember}><Search /><span><strong id="reception-search-title">Pronađi člana</strong><em>Ime ili telefon</em></span><ArrowRight /></button>
       <button type="button" className="reception-secondary" onClick={onAddMember}><Plus /> Dodaj člana</button>
-      <dl className="staff-stats"><div><dt>Preostalo</dt><dd>{members.length - completed}</dd></div><div><dt>Završeno</dt><dd>{completed}</dd></div><div><dt>Praćenja</dt><dd>{followUps}</dd></div></dl>
+      <dl className="staff-stats"><div><dt>Za kontakt</dt><dd>{awaitingContact}</dd></div><div><dt>Kontaktirano</dt><dd>{contacted}</dd></div></dl>
     </section>
     <section className="staff-queue panel-card" id="staff-queue">
-      <div className="section-heading"><div><h2>Kontakti</h2></div><span className="summary-count">{members.length - completed} preostalo</span></div>
-      <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${(member.contactConfirmedAt && member.recoveryOutcome) || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
+      <div className="section-heading"><div><h2>Kontakti</h2></div><span className="summary-count">{awaitingContact} za kontakt</span></div>
+      <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
         <span className="task-priority">{String(index + 1).padStart(2, '0')}</span>
         <div className="task-person"><span className="avatar large">{initials(member)}</span><span><span className="task-name"><h3>{fullName(member)}</h3></span><small><Phone /> {member.phone} · {euro(member.price)}</small></span></div>
         <div className="task-reason" aria-label="Status"><p>{membershipUrgencyLabel(member)}</p></div>
         <div className="task-next" aria-label="Sljedeći potez"><p>{member.nextAction}</p></div>
-        <div className="task-actions">
+        <div className="task-actions simple-task-actions">
           {member.status === 'recovered'
             ? <span className="task-done"><CheckCircle2 /> Obnovljeno</span>
-            : member.recoveryOutcome && member.contactConfirmedAt
-              ? <><span className={`outcome-badge outcome-${member.recoveryOutcome}`}><Check /> {outcomeLabels[member.recoveryOutcome]}</span><button onClick={() => onOpenMember(member)}>Nastavi <ArrowRight /></button></>
-              : member.contactConfirmedAt ? <>
-                  <span className="task-contacted"><CheckCircle2 /> Kontakt potvrđen</span>
-                  <div className="task-outcome-actions">
-                    <button onClick={() => onOutcome(member.id, 'no_answer')}><Phone /> Bez odgovora</button>
-                    <button onClick={() => onOutcome(member.id, 'replied')}><MessageCircle /> Odgovorio/la</button>
-                    <button onClick={() => onOutcome(member.id, 'follow_up')}><Clock3 /> Prati sjutra</button>
-                  </div>
-                </>
-                : member.queuedMessage ? <>
-                    <span className="task-draft-ready"><CheckCircle2 /> Nacrt spreman</span>
-                    <button className="task-primary" onClick={() => onContacted(member.id)}>Označi kao kontaktirano <ArrowRight /></button>
-                  </>
-                  : <button className="task-primary" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button>}
+            : member.contactConfirmedAt
+              ? <><span className="task-contacted"><CheckCircle2 /> Kontaktirano</span><button type="button" className="task-primary" onClick={() => onOpenMember(member)}>Otvori <ArrowRight /></button></>
+              : <button type="button" className="task-primary" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button>}
         </div>
       </article>)}</div>
     </section>
@@ -962,9 +906,9 @@ function EmptyState({ icon, title, text, action, onAction }: { icon: React.React
   return <div className="empty-state"><span>{icon}</span><h3>{title}</h3><p>{text}</p>{action && <Button variant="outline" onClick={onAction}>{action}</Button>}</div>;
 }
 
-function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onHandoff, onContacted, onOutcome, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
+function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onHandoff, onContacted, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
   member: Member; message: string; renewing: boolean; renewalAmount: string;
-  onMessage: (message: string) => void; onCopy: () => Promise<boolean>; onHandoff: () => void; onContacted: () => void; onOutcome: (outcome: RecoveryOutcome) => void; onEdit: () => void;
+  onMessage: (message: string) => void; onCopy: () => Promise<boolean>; onHandoff: () => void; onContacted: () => void; onEdit: () => void;
   onRenew: () => void; onCancelRenew: () => void; onRenewalAmount: (amount: string) => void; onMarkRenewed: (event: SyntheticEvent<HTMLFormElement>) => void;
 }) {
   const [handoff, setHandoff] = useState<'sms' | 'viber' | 'whatsapp' | null>(null);
@@ -1019,8 +963,7 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
           <dl><div><dt>Cijena</dt><dd>{euro(member.price)}</dd></div><div><dt>Ističe</dt><dd>{prettyDate(member.endDate)}</dd></div></dl>
         </details>
       </div>
-      <div className="compact-member-progress"><RecoveryLifecycle member={member} /></div>
-    </section>
+      </section>
 
     <section className="compact-message-stage" aria-labelledby="compact-member-message-title">
       <div className="compact-message-heading">
@@ -1069,25 +1012,14 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
       {member.contactConfirmedAt && <div className="contact-workflow">
         <div className="contact-confirmed-state" role="status">
           <CheckCircle2 aria-hidden="true" />
-          <span className="contact-confirmed-copy"><strong>Kontakt potvrđen</strong><span>{member.contactConfirmedAt}</span></span>
+          <span className="contact-confirmed-copy"><strong>Kontaktirano</strong><span>{member.contactConfirmedAt}</span></span>
         </div>
-        {member.status !== 'recovered' && (!member.recoveryOutcome ? <div className="contact-outcome-group">
-          <p className="contact-outcome-label">ISHOD KONTAKTA</p>
-          <div className="profile-outcome-actions" role="group" aria-label="Ishod kontakta">
-            <button type="button" onClick={() => onOutcome('no_answer')}>Bez odgovora</button>
-            <button type="button" onClick={() => onOutcome('replied')}>Odgovorio/la</button>
-            <button type="button" onClick={() => onOutcome('follow_up')}>Prati sjutra</button>
-          </div>
-        </div> : <span className="profile-outcome-confirmed"><CheckCircle2 aria-hidden="true" />{outcomeLabels[member.recoveryOutcome]}</span>)}
       </div>}
-      <section className="renewal-section" aria-labelledby="renewal-section-heading">
-        {!renewing ? <div className="compact-renewal-summary">
-          <h3 id="renewal-section-heading">Obnova članarine</h3>
-          <Button type="button" variant="ghost" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}>
-            {member.status === 'recovered' ? 'Obnovljeno' : 'Evidentiraj obnovu'} <ChevronRight />
-          </Button>
-        </div> : <form className="renew-form" onSubmit={onMarkRenewed}>
-          <div className="renew-label"><label id="renewal-section-heading" htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" required value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div>
+      <section className="renewal-section" aria-label="Obnova članarine">
+        {!renewing ? <Button type="button" variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}>
+          {member.status === 'recovered' ? <><CheckCircle2 /> Obnovljeno</> : <>Evidentiraj obnovu <ChevronRight /></>}
+        </Button> : <form className="renew-form" onSubmit={onMarkRenewed}>
+          <div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" required value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div>
           <div className="renew-form-actions"><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div>
         </form>}
       </section>
