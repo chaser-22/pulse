@@ -842,7 +842,7 @@ function StaffBoard({ members, onOpenMember, onAddMember, onFindMember }: { memb
     </section>
     <section className="staff-queue panel-card" id="staff-queue">
       <div className="section-heading"><div><h2>Kontakti</h2></div><span className="summary-count">{awaitingContact} za kontakt</span></div>
-      <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${member.contactConfirmedAt || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
+      <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
         <span className="task-priority">{String(index + 1).padStart(2, '0')}</span>
         <div className="task-person"><span className="avatar large">{initials(member)}</span><span><span className="task-name"><h3>{fullName(member)}</h3></span><small><Phone /> {member.phone} · {euro(member.price)}</small></span></div>
         <div className="task-reason" aria-label="Status"><p>{membershipUrgencyLabel(member)}</p></div>
