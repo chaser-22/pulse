@@ -14,6 +14,13 @@ test('Owner screen avoids repeating the same revenue and priority story', () => 
   assert.doesNotMatch(page, /Prioriteti su spremni za današnji kontakt/);
 });
 
+test('Reception sidebar no longer repeats remaining contacts beside its dashboard metrics', () => {
+  assert.doesNotMatch(page, /reception-insight|kontakata preostalo/);
+  assert.match(page, /<dt>Za kontakt<\/dt>/);
+  assert.match(page, /<dt>Kontaktirano<\/dt>/);
+  assert.match(page, /workspace === 'owner' && metrics\.recoveredRevenue > 0/);
+});
+
 test('Reception and priority screens use short scan labels', () => {
   assert.match(page, /title: 'Danas'/);
   assert.match(page, /<h2>Kontakti<\/h2>/);
