@@ -36,7 +36,7 @@ test('manual sending remains explicit and contact is not inferred from message h
   assert.match(page, /PULSE ne šalje poruke automatski/);
   assert.match(page, /Označi kao kontaktirano/);
   const start = page.indexOf('function beginMessageHandoff(');
-  const end = page.indexOf('function queueMessage()', start);
+  const end = page.indexOf('function markContacted(', start);
   assert.ok(start > -1 && end > start);
   assert.doesNotMatch(page.slice(start, end), /contactConfirmedAt|contactedAt|recoveryOutcome/);
 });
