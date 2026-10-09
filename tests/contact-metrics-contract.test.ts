@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
 const logic = readFileSync(new URL('../lib/pulse-logic.ts', import.meta.url), 'utf8');
 const model = readFileSync(new URL('../lib/pulse-data.ts', import.meta.url), 'utf8');
+const importSource = readFileSync(new URL('../lib/csv-import.ts', import.meta.url), 'utf8');
 
 function between(start: string, end: string) {
   const from = page.indexOf(start);
@@ -13,34 +14,38 @@ function between(start: string, end: string) {
   return page.slice(from, to);
 }
 
-test('only the explicit staff confirmation action records confirmed contact', () => {
+test('contact still requires an independent explicit reception action', () => {
   const confirmation = between('function markContacted(', 'function markRenewed(');
-  assert.match(confirmation, /contactConfirmedAt: item\.contactConfirmedAt \?\? formatActionTimestamp\(\)/);
-
-  const outcome = between('function recordOutcome(', 'function resetDemo(');
-  assert.match(outcome, /if \(!member\?\.contactConfirmedAt \|\| member\.status === 'recovered'\) return/);
-  assert.doesNotMatch(outcome, /contactConfirmedAt\s*:/);
-
   const renewal = between('function markRenewed(', 'function openMemberForm(');
+  assert.match(confirmation, /contactConfirmedAt: item\.contactConfirmedAt \?\? formatActionTimestamp\(\)/);
   assert.doesNotMatch(renewal, /contactConfirmedAt\s*:/);
-  assert.match(renewal, /followUpAt: undefined/);
+  assert.match(page, /Označi kao kontaktirano/);
 });
 
-test('legacy timestamps cannot masquerade as explicit contact proof', () => {
+test('legacy contact timestamps cannot become confirmed outreach', () => {
   assert.match(model, /contactConfirmedAt\?: string/);
   assert.match(logic, /Boolean\(member\.contactConfirmedAt\)/);
   assert.doesNotMatch(logic, /Boolean\(member\.contactedAt\)/);
+  assert.match(importSource, /contactConfirmedAt: existing\?\.contactConfirmedAt/);
 });
 
-test('owner results are cumulative, staff-entered totals rather than payment-verified receipts', () => {
-  assert.doesNotMatch(page, /Ukupno · ručno evidentirano/);
+test('no obsolete outcome / follow-up workflow affects metrics or member state', () => {
+  assert.doesNotMatch(page, /recordOutcome|onOutcome|Prati sjutra|Bez odgovora|ISHOD KONTAKTA/);
+  assert.doesNotMatch(logic, /followUps|recoveryOutcome|followUpAt/);
+  assert.doesNotMatch(model, /RecoveryOutcome|recoveryOutcome|followUpAt/);
+  assert.doesNotMatch(importSource, /recoveryOutcome|followUpAt/);
+});
+
+test('recorded renewals never claim verified payments', () => {
   assert.match(page, /Evidentirani iznos obnove/);
+  assert.match(page, /Evidentiraj obnovu/);
   assert.doesNotMatch(page, /Potvrđene uplate|Naplaćeno preko PULSE/);
+  assert.doesNotMatch(page, /recoveryActivity\.followUps/);
+  assert.match(logic, /recoveredAmount: members\.reduce/);
 });
 
-test('completed recovery does not visually imply a contact that never occurred', () => {
-  const lifecycle = between('function RecoveryLifecycle(', 'function Dashboard(');
-  assert.match(lifecycle, /contacted: Boolean\(member\.contactConfirmedAt\)/);
-  assert.match(lifecycle, /renewed: member\.status === 'recovered'/);
-  assert.doesNotMatch(lifecycle, /index <= currentIndex/);
+test('a compact status replaces the three-stage progress UI', () => {
+  assert.doesNotMatch(page, /function RecoveryLifecycle\(/);
+  assert.match(page, /className="simple-contact-state"/);
+  assert.match(page, /className="contact-confirmed-state" role="status"/);
 });
