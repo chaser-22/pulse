@@ -22,8 +22,7 @@ test('fresh demo contains no invented recovery/contact history', () => {
   assert.ok(members.every((member) => member.recoveredAmount === undefined));
   assert.ok(members.every((member) => member.recoveredAt === undefined));
   assert.ok(members.every((member) => member.queuedMessage === undefined));
-  assert.ok(members.every((member) => member.recoveryOutcome === undefined));
-  assert.ok(members.every((member) => member.followUpAt === undefined));
+  assert.ok(members.every((member) => member.contactConfirmedAt === undefined));
 });
 
 test('fresh demo does not invent optional member facts', () => {
