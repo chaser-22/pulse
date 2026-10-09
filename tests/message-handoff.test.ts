@@ -33,7 +33,7 @@ test('mobile guidance is only a device hint, never a delivery guarantee', () => 
 test('opening messaging applications never updates contactedAt or recoveryOutcome', () => {
   const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
   const start = page.indexOf('function beginMessageHandoff(');
-  const end = page.indexOf('function queueMessage()', start);
+  const end = page.indexOf('function markContacted(', start);
   const handoff = page.slice(start, end);
   assert.ok(start > -1 && end > start);
   assert.match(handoff, /queuedMessage:/);
