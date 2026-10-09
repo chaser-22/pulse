@@ -906,9 +906,9 @@ function EmptyState({ icon, title, text, action, onAction }: { icon: React.React
   return <div className="empty-state"><span>{icon}</span><h3>{title}</h3><p>{text}</p>{action && <Button variant="outline" onClick={onAction}>{action}</Button>}</div>;
 }
 
-function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onHandoff, onContacted, onOutcome, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
+function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onHandoff, onContacted, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
   member: Member; message: string; renewing: boolean; renewalAmount: string;
-  onMessage: (message: string) => void; onCopy: () => Promise<boolean>; onHandoff: () => void; onContacted: () => void; onOutcome: (outcome: RecoveryOutcome) => void; onEdit: () => void;
+  onMessage: (message: string) => void; onCopy: () => Promise<boolean>; onHandoff: () => void; onContacted: () => void; onEdit: () => void;
   onRenew: () => void; onCancelRenew: () => void; onRenewalAmount: (amount: string) => void; onMarkRenewed: (event: SyntheticEvent<HTMLFormElement>) => void;
 }) {
   const [handoff, setHandoff] = useState<'sms' | 'viber' | 'whatsapp' | null>(null);
@@ -1012,25 +1012,14 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
       {member.contactConfirmedAt && <div className="contact-workflow">
         <div className="contact-confirmed-state" role="status">
           <CheckCircle2 aria-hidden="true" />
-          <span className="contact-confirmed-copy"><strong>Kontakt potvrđen</strong><span>{member.contactConfirmedAt}</span></span>
+          <span className="contact-confirmed-copy"><strong>Kontaktirano</strong><span>{member.contactConfirmedAt}</span></span>
         </div>
-        {member.status !== 'recovered' && (!member.recoveryOutcome ? <div className="contact-outcome-group">
-          <p className="contact-outcome-label">ISHOD KONTAKTA</p>
-          <div className="profile-outcome-actions" role="group" aria-label="Ishod kontakta">
-            <button type="button" onClick={() => onOutcome('no_answer')}>Bez odgovora</button>
-            <button type="button" onClick={() => onOutcome('replied')}>Odgovorio/la</button>
-            <button type="button" onClick={() => onOutcome('follow_up')}>Prati sjutra</button>
-          </div>
-        </div> : <span className="profile-outcome-confirmed"><CheckCircle2 aria-hidden="true" />{outcomeLabels[member.recoveryOutcome]}</span>)}
       </div>}
-      <section className="renewal-section" aria-labelledby="renewal-section-heading">
-        {!renewing ? <div className="compact-renewal-summary">
-          <h3 id="renewal-section-heading">Obnova članarine</h3>
-          <Button type="button" variant="ghost" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}>
-            {member.status === 'recovered' ? 'Obnovljeno' : 'Evidentiraj obnovu'} <ChevronRight />
-          </Button>
-        </div> : <form className="renew-form" onSubmit={onMarkRenewed}>
-          <div className="renew-label"><label id="renewal-section-heading" htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" required value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div>
+      <section className="renewal-section" aria-label="Obnova članarine">
+        {!renewing ? <Button type="button" variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}>
+          {member.status === 'recovered' ? <><CheckCircle2 /> Obnovljeno</> : <>Evidentiraj obnovu <ChevronRight /></>}
+        </Button> : <form className="renew-form" onSubmit={onMarkRenewed}>
+          <div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" required value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div>
           <div className="renew-form-actions"><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div>
         </form>}
       </section>
