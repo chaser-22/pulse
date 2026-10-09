@@ -33,7 +33,7 @@ test('legacy timestamps cannot masquerade as explicit contact proof', () => {
 });
 
 test('owner results are cumulative, staff-entered totals rather than payment-verified receipts', () => {
-  assert.match(page, /Ukupno · ručno evidentirano/);
+  assert.doesNotMatch(page, /Ukupno · ručno evidentirano/);
   assert.match(page, /Evidentirani iznos obnove/);
   assert.doesNotMatch(page, /Potvrđene uplate|Naplaćeno preko PULSE/);
 });
