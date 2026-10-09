@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type SyntheticEvent } from 'react';
 import {
   ArrowRight, Check, CheckCircle2, Copy,
-  ChevronRight, Clock3,
+  ChevronRight,
   LayoutDashboard, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
   RotateCcw, ShieldAlert, Smartphone, Upload, Users, X,
 } from 'lucide-react';
@@ -18,13 +18,12 @@ import { SmsHandoffQr } from '@/components/sms-handoff-qr';
 import { normalizePhone, smsLink, whatsappLink, isMobileMessagingDevice } from '@/lib/message-handoff';
 import {
   copy,
-  type Member, type MemberStatus, type RecoveryOutcome, type RiskLevel,
+  type Member, type MemberStatus, type RiskLevel,
 } from '@/lib/pulse-data';
 import { createDemoMembers } from '@/lib/demo-data';
 import {
   getPulseMetrics,
   getRecoveryActivity,
-  getRecoveryLifecycle,
   getRiskMembers,
   memberMatchesSearch,
   type RecoveryActivity,
@@ -53,13 +52,6 @@ const filters: Array<{ id: Filter; label: string }> = [
   { id: 'all', label: 'Svi' }, { id: 'active', label: 'Aktivni' }, { id: 'expiring', label: 'Ističu' },
   { id: 'expired', label: 'Istekli' }, { id: 'recovered', label: 'Obnovljeni u PULSE' },
 ];
-
-const outcomeLabels: Record<RecoveryOutcome, string> = {
-  no_answer: 'Bez odgovora',
-  replied: 'Odgovorio/la',
-  follow_up: 'Pratiti sjutra',
-  declined: 'Ne želi obnovu',
-};
 
 const viewMeta: Record<View, { eyebrow: string; title: string; subtitle: string }> = {
   dashboard: { eyebrow: 'DANAŠNJI PREGLED', title: 'Pregled članarina', subtitle: '' },
@@ -114,18 +106,6 @@ function formatActionTimestamp(date = new Date()) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date).replace(',', ' ·');
-}
-
-function formatFollowUpTimestamp(date = new Date()) {
-  const followUp = new Date(date);
-  followUp.setDate(followUp.getDate() + 1);
-  followUp.setHours(10, 0, 0, 0);
-  return new Intl.DateTimeFormat('sr-Latn-ME', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(followUp).replace(',', ' ·');
 }
 
 function memberSignalCopy(status: MemberStatus) {
@@ -352,18 +332,6 @@ export default function Home() {
     setMobileNav(false);
   }
 
-  function recordOutcome(memberId: string, outcome: RecoveryOutcome) {
-    const member = members.find((item) => item.id === memberId);
-    // Recording an outcome must not implicitly count as contacting the member.
-    if (!member?.contactConfirmedAt || member.status === 'recovered') return;
-    setMembers((current) => current.map((item) => item.id === memberId && item.contactConfirmedAt && item.status !== 'recovered' ? {
-      ...item,
-      recoveryOutcome: outcome,
-      followUpAt: outcome === 'follow_up' ? formatFollowUpTimestamp() : undefined,
-    } : item));
-    setSuccess(`${fullName(member)}: ${outcomeLabels[outcome]}.`);
-  }
-
   function resetDemo() {
     setMembers(createDemoMembers());
     setWorkspace('owner');
@@ -447,7 +415,7 @@ export default function Home() {
       ...member,
       // Renewal is a separate, staff-recorded event; it does not confirm prior outreach.
       status: 'recovered', risk: 'low', price: amount, recoveredAmount: amount, recoveredAt: today,
-      startDate: today, endDate: addDaysIso(today, 30), followUpAt: undefined,
+      startDate: today, endDate: addDaysIso(today, 30),
       riskReason: `Članarina obnovljena ${prettyDate(today)} uz pomoć PULSE recovery toka.`,
       nextAction: 'Nije potrebna akcija.',
     } : member));
@@ -595,7 +563,7 @@ export default function Home() {
         </nav>
         {workspace === 'owner'
           ? metrics.recoveredRevenue > 0 && <div className="sidebar-insight"><span className="pulse-dot" /><div><strong>{euro(metrics.recoveredRevenue)}</strong><small>obnovljeno</small></div></div>
-          : <div className="sidebar-insight reception-insight"><span className="pulse-dot" /><div><strong>{riskMembers.filter((member) => !member.recoveryOutcome && member.status !== 'recovered').length}</strong><small>kontakata preostalo</small></div></div>}
+          : <div className="sidebar-insight reception-insight"><span className="pulse-dot" /><div><strong>{riskMembers.filter((member) => !member.contactConfirmedAt).length}</strong><small>kontakata preostalo</small></div></div>}
         {workspace === 'owner' && <button className="demo-reset-button" onClick={() => setResetOpen(true)}><RotateCcw /> Resetuj demo</button>}
         <button type="button" className="gym-card gym-card-button" onClick={() => setPilotOpen(true)}><span className="gym-monogram">PD</span><span><strong>{t.gymName}</strong><small>CSV demo</small></span></button>
       </aside>
@@ -617,7 +585,7 @@ export default function Home() {
         </header>
 
         {view === 'dashboard' && <Dashboard metrics={metrics} recoveryActivity={recoveryActivity} highRiskMembers={highRiskMembers} signalCount={riskMembers.length} onOpenMember={openMember} onNavigate={goTo} />}
-        {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onContacted={markContacted} onOutcome={recordOutcome} onAddMember={() => openMemberForm()} onFindMember={openQuickSearch} />}
+        {view === 'staff' && <StaffBoard members={riskMembers} onOpenMember={openMember} onAddMember={() => openMemberForm()} onFindMember={openQuickSearch} />}
         {view === 'members' && <MembersScreen members={filteredMembers} total={members.length} filter={filter} search={search} onFilter={setFilter} onSearch={setSearch} onOpenMember={openMember} onImport={() => fileInputRef.current?.click()} />}
         {view === 'radar' && <RadarScreen members={riskMembers} onOpenMember={openMember} />}
       </section>
@@ -643,7 +611,7 @@ export default function Home() {
           {renewalReveal ? <RenewalConfirmation name={renewalReveal.name} amount={renewalReveal.amount} /> : selectedMember && (
             <MemberProfile
               key={selectedMember.id} member={selectedMember} message={message} renewing={renewing} renewalAmount={renewalAmount}
-              onMessage={updateMessage} onCopy={copyMessage} onHandoff={beginMessageHandoff} onContacted={() => markContacted(selectedMember.id)} onOutcome={(outcome) => recordOutcome(selectedMember.id, outcome)}
+              onMessage={updateMessage} onCopy={copyMessage} onHandoff={beginMessageHandoff} onContacted={() => markContacted(selectedMember.id)}
               onEdit={() => openMemberForm(selectedMember)} onRenew={() => setRenewing(true)} onCancelRenew={() => setRenewing(false)}
               onRenewalAmount={setRenewalAmount} onMarkRenewed={markRenewed}
             />
@@ -754,18 +722,6 @@ function Field({ label, required, children }: { label: string; required?: boolea
   return <label className="field"><span>{label}{required && ' *'}</span>{children}</label>;
 }
 
-function RecoveryLifecycle({ member }: { member: Member }) {
-  const current = getRecoveryLifecycle(member);
-  const steps = [['detected', 'Otkriveno'], ['contacted', 'Kontaktirano'], ['renewed', 'Obnovljeno']] as const;
-  // A renewal can happen without confirmed outreach. Display each actual event independently.
-  const recorded = {
-    detected: true,
-    contacted: Boolean(member.contactConfirmedAt),
-    renewed: member.status === 'recovered',
-  };
-  return <ol className="recovery-lifecycle" aria-label="Tok u PULSE">{steps.map(([id, label]) => <li className={recorded[id] ? 'complete' : ''} aria-current={id === current ? 'step' : undefined} key={id}><i />{label}</li>)}</ol>;
-}
-
 function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, onOpenMember, onNavigate }: {
   metrics: ReturnType<typeof getPulseMetrics>;
   recoveryActivity: RecoveryActivity;
@@ -852,7 +808,7 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
             </button>
           </div>
 
-          {(member.contactConfirmedAt || member.recoveryOutcome || member.status === 'recovered') && <div className="today-queue__rail"><RecoveryLifecycle member={member} /></div>}
+          {(member.contactConfirmedAt || member.status === 'recovered') && <div className="today-queue__rail"><span className="simple-contact-state"><CheckCircle2 />{member.status === 'recovered' ? 'Obnovljeno' : 'Kontaktirano'}</span></div>}
         </article>)}
       </div> : <div className="today-queue__empty"><CheckCircle2 /><span><strong>Nema hitnih kontakata.</strong></span></div>}
 
@@ -865,9 +821,8 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
       <div className="recovery-activity__heading">
         <h2 id="activity-title">Rezultat kontakata</h2>
       </div>
-      {recoveryActivity.contacted || recoveryActivity.followUps || recoveryActivity.renewed ? <dl>
+      {recoveryActivity.contacted || recoveryActivity.renewed ? <dl>
         <div><dt>Kontaktirano</dt><dd>{recoveryActivity.contacted}</dd></div>
-        <div><dt>Za praćenje</dt><dd>{recoveryActivity.followUps}</dd></div>
         <div><dt>Obnovljeno</dt><dd>{recoveryActivity.renewed}</dd></div>
         <div className="positive"><dt>Evidentirani iznos obnove</dt><dd><AnimatedCurrency value={recoveryActivity.recoveredAmount} className="number-shift" /></dd></div>
       </dl> : <div className="recovery-zero-state"><strong>Još nema evidentiranih aktivnosti.</strong></div>}
@@ -1019,8 +974,7 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
           <dl><div><dt>Cijena</dt><dd>{euro(member.price)}</dd></div><div><dt>Ističe</dt><dd>{prettyDate(member.endDate)}</dd></div></dl>
         </details>
       </div>
-      <div className="compact-member-progress"><RecoveryLifecycle member={member} /></div>
-    </section>
+      </section>
 
     <section className="compact-message-stage" aria-labelledby="compact-member-message-title">
       <div className="compact-message-heading">
