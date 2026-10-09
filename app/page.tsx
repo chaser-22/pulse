@@ -830,40 +830,29 @@ function Dashboard({ metrics, recoveryActivity, highRiskMembers, signalCount, on
   </div>;
 }
 
-function StaffBoard({ members, onOpenMember, onContacted, onOutcome, onAddMember, onFindMember }: { members: Member[]; onOpenMember: (member: Member) => void; onContacted: (memberId: string) => void; onOutcome: (memberId: string, outcome: RecoveryOutcome) => void; onAddMember: () => void; onFindMember: () => void }) {
-  const completed = members.filter((member) => (member.contactConfirmedAt && member.recoveryOutcome) || member.status === 'recovered').length;
-  const followUps = members.filter((member) => member.contactConfirmedAt && member.recoveryOutcome === 'follow_up' && member.status !== 'recovered').length;
+function StaffBoard({ members, onOpenMember, onAddMember, onFindMember }: { members: Member[]; onOpenMember: (member: Member) => void; onAddMember: () => void; onFindMember: () => void }) {
+  // Reception works from the current risk queue. Contacted members stay visible until renewal.
+  const awaitingContact = members.filter((member) => !member.contactConfirmedAt && member.status !== 'recovered').length;
+  const contacted = members.filter((member) => Boolean(member.contactConfirmedAt) && member.status !== 'recovered').length;
   return <div className="screen-stack staff-screen">
     <section className="reception-search-shell" aria-labelledby="reception-search-title">
       <button type="button" className="reception-search" onClick={onFindMember}><Search /><span><strong id="reception-search-title">Pronađi člana</strong><em>Ime ili telefon</em></span><ArrowRight /></button>
       <button type="button" className="reception-secondary" onClick={onAddMember}><Plus /> Dodaj člana</button>
-      <dl className="staff-stats"><div><dt>Preostalo</dt><dd>{members.length - completed}</dd></div><div><dt>Završeno</dt><dd>{completed}</dd></div><div><dt>Praćenja</dt><dd>{followUps}</dd></div></dl>
+      <dl className="staff-stats"><div><dt>Za kontakt</dt><dd>{awaitingContact}</dd></div><div><dt>Kontaktirano</dt><dd>{contacted}</dd></div></dl>
     </section>
     <section className="staff-queue panel-card" id="staff-queue">
-      <div className="section-heading"><div><h2>Kontakti</h2></div><span className="summary-count">{members.length - completed} preostalo</span></div>
-      <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${(member.contactConfirmedAt && member.recoveryOutcome) || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
+      <div className="section-heading"><div><h2>Kontakti</h2></div><span className="summary-count">{awaitingContact} za kontakt</span></div>
+      <div className="staff-task-list">{members.map((member, index) => <article className={`staff-task ${member.contactConfirmedAt || member.status === 'recovered' ? 'completed' : ''}`} key={member.id}>
         <span className="task-priority">{String(index + 1).padStart(2, '0')}</span>
         <div className="task-person"><span className="avatar large">{initials(member)}</span><span><span className="task-name"><h3>{fullName(member)}</h3></span><small><Phone /> {member.phone} · {euro(member.price)}</small></span></div>
         <div className="task-reason" aria-label="Status"><p>{membershipUrgencyLabel(member)}</p></div>
         <div className="task-next" aria-label="Sljedeći potez"><p>{member.nextAction}</p></div>
-        <div className="task-actions">
+        <div className="task-actions simple-task-actions">
           {member.status === 'recovered'
             ? <span className="task-done"><CheckCircle2 /> Obnovljeno</span>
-            : member.recoveryOutcome && member.contactConfirmedAt
-              ? <><span className={`outcome-badge outcome-${member.recoveryOutcome}`}><Check /> {outcomeLabels[member.recoveryOutcome]}</span><button onClick={() => onOpenMember(member)}>Nastavi <ArrowRight /></button></>
-              : member.contactConfirmedAt ? <>
-                  <span className="task-contacted"><CheckCircle2 /> Kontakt potvrđen</span>
-                  <div className="task-outcome-actions">
-                    <button onClick={() => onOutcome(member.id, 'no_answer')}><Phone /> Bez odgovora</button>
-                    <button onClick={() => onOutcome(member.id, 'replied')}><MessageCircle /> Odgovorio/la</button>
-                    <button onClick={() => onOutcome(member.id, 'follow_up')}><Clock3 /> Prati sjutra</button>
-                  </div>
-                </>
-                : member.queuedMessage ? <>
-                    <span className="task-draft-ready"><CheckCircle2 /> Nacrt spreman</span>
-                    <button className="task-primary" onClick={() => onContacted(member.id)}>Označi kao kontaktirano <ArrowRight /></button>
-                  </>
-                  : <button className="task-primary" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button>}
+            : member.contactConfirmedAt
+              ? <><span className="task-contacted"><CheckCircle2 /> Kontaktirano</span><button type="button" className="task-primary" onClick={() => onOpenMember(member)}>Otvori <ArrowRight /></button></>
+              : <button type="button" className="task-primary" onClick={() => onOpenMember(member)}>Kontaktiraj <ArrowRight /></button>}
         </div>
       </article>)}</div>
     </section>
