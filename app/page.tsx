@@ -994,7 +994,6 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
         <details open={member.risk === 'high' ? true : undefined}><summary>Detalji</summary><dl><div><dt>Cijena</dt><dd>{euro(member.price)}</dd></div><div><dt>Ističe</dt><dd>{prettyDate(member.endDate)}</dd></div></dl><span>{member.nextAction}</span></details>
       </section>
       <section className="member-recovery-path" aria-labelledby="member-recovery-title"><p className="eyebrow" id="member-recovery-title">TOK</p><RecoveryLifecycle member={member} /></section>
-      <p className="profile-basis-note">Prioritet koristi datum isteka i cijenu članarine.</p>
     </section>
     <aside className="recovery-panel">
       <div className="recovery-panel-title"><span><MessageCircle /></span><div><h2>Poruka</h2></div></div>
