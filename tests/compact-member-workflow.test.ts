@@ -29,7 +29,7 @@ test('member sheet keeps messaging, contact, and renewal as progressive sections
   assert.match(page, /className="compact-member-overview"/);
   assert.match(page, /className="compact-message-stage"/);
   assert.match(page, /className="compact-member-actions"/);
-  assert.match(page, /className="compact-message-field"/);
+  assert.match(page, /className="message-field compact-message-field"/);
   assert.match(page, /className="compact-member-risk-details"/);
   const contact = segment('className="compact-member-actions"', '</div>\n}');
   assert.match(contact, /!member\.contactConfirmedAt && member\.status !== 'recovered'/);
