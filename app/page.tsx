@@ -5,7 +5,7 @@ import {
   ArrowRight, Check, CheckCircle2, Copy,
   ChevronRight, Clock3,
   LayoutDashboard, Menu, MessageCircle, Pencil, Phone, Plus, Radar, Search,
-  RotateCcw, Send, ShieldAlert, Smartphone, Upload, Users, X,
+  RotateCcw, ShieldAlert, Smartphone, Upload, Users, X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -382,6 +382,24 @@ export default function Home() {
     setRenewing(false);
   }
 
+  function updateMessage(nextMessage: string) {
+    setMessage(nextMessage);
+    if (!selectedMemberId) return;
+    // Autosave the entire edited draft locally, including deliberate empty edits.
+    // Editing never confirms outreach or renewal.
+    setMembers((current) => current.map((member) => {
+      if (member.id !== selectedMemberId || member.queuedMessage?.text === nextMessage) return member;
+      return {
+        ...member,
+        queuedMessage: {
+          channel: 'Poruka',
+          text: nextMessage,
+          queuedAt: formatActionTimestamp(),
+        },
+      };
+    }));
+  }
+
   async function copyMessage() {
     if (!selectedMember || !message.trim()) return false;
     try {
@@ -399,20 +417,12 @@ export default function Home() {
     // Only preserve the draft. A handoff is NOT a delivered message or confirmed contact.
     setMembers((current) => current.map((member) => {
       if (member.id !== selectedMember.id) return member;
-      if (member.queuedMessage?.text === message.trim()) return member;
+      if (member.queuedMessage?.text === message) return member;
       return {
         ...member,
-        queuedMessage: { channel: 'Poruka', text: message.trim(), queuedAt: formatActionTimestamp() },
+        queuedMessage: { channel: 'Poruka', text: message, queuedAt: formatActionTimestamp() },
       };
     }));
-  }
-
-  function queueMessage() {
-    if (!selectedMember || !message.trim()) return;
-    setMembers((current) => current.map((member) => member.id === selectedMember.id ? {
-      ...member, preferredChannel: 'Poruka', queuedMessage: { channel: 'Poruka', text: message.trim(), queuedAt: formatActionTimestamp() },
-    } : member));
-    setSuccess(`Nacrt poruke za ${selectedMember.firstName} je sačuvan. Kontakt nije evidentiran dok ga ručno ne potvrdite.`);
   }
 
   function markContacted(memberId: string) {
@@ -633,7 +643,7 @@ export default function Home() {
           {renewalReveal ? <RenewalConfirmation name={renewalReveal.name} amount={renewalReveal.amount} /> : selectedMember && (
             <MemberProfile
               key={selectedMember.id} member={selectedMember} message={message} renewing={renewing} renewalAmount={renewalAmount}
-              onMessage={setMessage} onCopy={copyMessage} onQueue={queueMessage} onHandoff={beginMessageHandoff} onContacted={() => markContacted(selectedMember.id)} onOutcome={(outcome) => recordOutcome(selectedMember.id, outcome)}
+              onMessage={updateMessage} onCopy={copyMessage} onHandoff={beginMessageHandoff} onContacted={() => markContacted(selectedMember.id)} onOutcome={(outcome) => recordOutcome(selectedMember.id, outcome)}
               onEdit={() => openMemberForm(selectedMember)} onRenew={() => setRenewing(true)} onCancelRenew={() => setRenewing(false)}
               onRenewalAmount={setRenewalAmount} onMarkRenewed={markRenewed}
             />
@@ -952,9 +962,9 @@ function EmptyState({ icon, title, text, action, onAction }: { icon: React.React
   return <div className="empty-state"><span>{icon}</span><h3>{title}</h3><p>{text}</p>{action && <Button variant="outline" onClick={onAction}>{action}</Button>}</div>;
 }
 
-function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onQueue, onHandoff, onContacted, onOutcome, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
+function MemberProfile({ member, message, renewing, renewalAmount, onMessage, onCopy, onHandoff, onContacted, onOutcome, onEdit, onRenew, onCancelRenew, onRenewalAmount, onMarkRenewed }: {
   member: Member; message: string; renewing: boolean; renewalAmount: string;
-  onMessage: (message: string) => void; onCopy: () => Promise<boolean>; onQueue: () => void; onHandoff: () => void; onContacted: () => void; onOutcome: (outcome: RecoveryOutcome) => void; onEdit: () => void;
+  onMessage: (message: string) => void; onCopy: () => Promise<boolean>; onHandoff: () => void; onContacted: () => void; onOutcome: (outcome: RecoveryOutcome) => void; onEdit: () => void;
   onRenew: () => void; onCancelRenew: () => void; onRenewalAmount: (amount: string) => void; onMarkRenewed: (event: SyntheticEvent<HTMLFormElement>) => void;
 }) {
   const [handoff, setHandoff] = useState<'sms' | 'viber' | 'whatsapp' | null>(null);
@@ -982,30 +992,56 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
     setHandoff('viber');
   }
 
-  return <div className="profile-layout">
-    <div className="profile-main">
-      <DialogHeader className="profile-header"><div className="avatar profile-avatar">{initials(member)}</div><div><div className="profile-badges"><span className={`status-pill ${statusClass(member.status)}`}>{membershipUrgencyLabel(member)}</span></div><DialogTitle>{fullName(member)}</DialogTitle><DialogDescription>{member.phone} · {euro(member.price)}</DialogDescription></div></DialogHeader>
-      <div className="profile-quick-actions"><Button variant="outline" onClick={onEdit}><Pencil /> Uredi podatke</Button></div>
-    </div>
-    <section className="profile-context">
-      <section className={`profile-risk ${riskClass(member.risk)}`}>
-        <div><h3>{member.risk === 'high' ? 'Članarina je istekla' : member.risk === 'medium' ? 'Članarina uskoro ističe' : 'Članarina je aktivna'}</h3></div>
-        <details open={member.risk === 'high' ? true : undefined}><summary>Detalji</summary><dl><div><dt>Cijena</dt><dd>{euro(member.price)}</dd></div><div><dt>Ističe</dt><dd>{prettyDate(member.endDate)}</dd></div></dl><span>{member.nextAction}</span></details>
-      </section>
-      <section className="member-recovery-path" aria-labelledby="member-recovery-title"><p className="eyebrow" id="member-recovery-title">TOK</p><RecoveryLifecycle member={member} /></section>
-    </section>
-    <aside className="recovery-panel">
-      <div className="recovery-panel-title"><span><MessageCircle /></span><div><h2>Poruka</h2></div></div>
-      <label className="message-field"><span>ZA {member.firstName.toLocaleUpperCase('me')}</span><Textarea value={message} onChange={(event) => onMessage(event.target.value)} rows={7} /></label>
-      <div className="message-channel-title">OTVORI PORUKU</div>
-      <div className="message-channel-actions">
-        {whatsapp
-          ? <a className="message-channel message-channel-whatsapp" href={whatsapp} target="_blank" rel="noopener noreferrer" onClick={() => { onHandoff(); setHandoff('whatsapp'); }}><MessageCircle />WhatsApp<ArrowRight /></a>
-          : <button type="button" className="message-channel" disabled aria-label="WhatsApp nije dostupan: provjerite telefonski broj"><MessageCircle />WhatsApp</button>}
-        <button type="button" className="message-channel" onClick={openSms} disabled={!sms}><Smartphone />SMS<ArrowRight /></button>
-        <button type="button" className="message-channel" onClick={openViber} disabled={!message.trim()}><MessageCircle />Viber<ArrowRight /></button>
+
+  return <div className="profile-layout compact-member-flow">
+    <header className="compact-member-header">
+      <DialogHeader className="compact-member-identity">
+        <div className="avatar compact-member-avatar">{initials(member)}</div>
+        <div className="compact-member-title">
+          <span className={['status-pill', statusClass(member.status)].join(' ')}>{membershipUrgencyLabel(member)}</span>
+          <DialogTitle>{fullName(member)}</DialogTitle>
+          <DialogDescription>{member.phone} · {euro(member.price)}</DialogDescription>
+        </div>
+      </DialogHeader>
+      <Button variant="ghost" className="compact-edit-action" onClick={onEdit}><Pencil /> Uredi</Button>
+    </header>
+
+    <section className="compact-member-overview" aria-label="Status članarine i tok">
+      <div className="compact-member-riskline">
+        <div className="compact-member-riskcopy">
+          <span className={['compact-risk-dot', riskClass(member.risk)].join(' ')} aria-hidden="true" />
+          <strong>{member.status === 'recovered' ? 'Članarina obnovljena' : member.risk === 'high' ? 'Članarina je istekla' : member.risk === 'medium' ? 'Članarina uskoro ističe' : 'Članarina je aktivna'}</strong>
+          <span className="compact-risk-date">Ističe {prettyDate(member.endDate)}</span>
+        </div>
+        <details className="compact-member-risk-details">
+          <summary>Detalji</summary>
+          <p>{member.nextAction}</p>
+          <dl><div><dt>Cijena</dt><dd>{euro(member.price)}</dd></div><div><dt>Ističe</dt><dd>{prettyDate(member.endDate)}</dd></div></dl>
+        </details>
       </div>
-      {!normalizedPhone && <p className="message-handoff-warning">Provjerite broj telefona u profilu da biste otvorili WhatsApp ili SMS.</p>}
+      <div className="compact-member-progress"><RecoveryLifecycle member={member} /></div>
+    </section>
+
+    <section className="compact-message-stage" aria-labelledby="compact-member-message-title">
+      <div className="compact-message-heading">
+        <h2 id="compact-member-message-title">Poruka</h2>
+        <div className="compact-message-utilities">
+          <span>{member.queuedMessage?.text === message ? 'Sačuvano na ovom uređaju' : 'Izmjene se čuvaju automatski'}</span>
+          <Button type="button" variant="ghost" onClick={onCopy} disabled={!message.trim()}><Copy /> Kopiraj</Button>
+        </div>
+      </div>
+      <label className="message-field compact-message-field">
+        <span className="sr-only">Poruka za {member.firstName}</span>
+        <Textarea aria-label={`Poruka za ${member.firstName}`} value={message} onChange={(event) => onMessage(event.target.value)} rows={4} />
+      </label>
+      <div className="message-channel-actions compact-message-channels" role="group" aria-label="Otvori poruku u aplikaciji">
+        {whatsapp
+          ? <a className="message-channel message-channel-whatsapp" href={whatsapp} target="_blank" rel="noopener noreferrer" onClick={() => { onHandoff(); setHandoff('whatsapp'); }}><MessageCircle /> WhatsApp <ArrowRight /></a>
+          : <button type="button" className="message-channel" disabled aria-label="WhatsApp nije dostupan: provjerite telefonski broj"><MessageCircle /> WhatsApp</button>}
+        <button type="button" className="message-channel" onClick={openSms} disabled={!sms}><Smartphone /> SMS <ArrowRight /></button>
+        <button type="button" className="message-channel" onClick={openViber} disabled={!message.trim()}><MessageCircle /> Viber <ArrowRight /></button>
+      </div>
+      {!normalizedPhone && <p className="message-handoff-warning">Provjerite broj telefona za WhatsApp ili SMS.</p>}
       {handoff === 'sms' && sms && !isMobileMessagingDevice(navigator.userAgent, navigator.maxTouchPoints) && <section className="sms-handoff" aria-label="SMS preko telefona">
         <div className="sms-handoff-top"><strong>SMS preko telefona</strong><button type="button" aria-label="Zatvori QR prikaz" onClick={() => setHandoff(null)}><X /></button></div>
         <div className="sms-handoff-body">
@@ -1020,37 +1056,41 @@ function MemberProfile({ member, message, renewing, renewalAmount, onMessage, on
       {handoff === 'viber' && <section className="viber-handoff" aria-label="Poruka za Viber">
         <strong>{viberCopied ? 'Viber — poruka kopirana' : 'Viber — otvorite aplikaciju'}</strong>
         <p>Otvorite Viber, pronađite <strong>{member.phone}</strong> i {viberCopied ? 'nalijepite poruku' : 'kopirajte poruku ručno'}. Direktno otvaranje privatnog razgovora nije pouzdano na svim uređajima.</p>
-        {normalizedPhone && <a href={`viber://chat?number=${encodeURIComponent(normalizedPhone)}`} className="sms-open-on-device">Pokušaj otvoriti Viber <ArrowRight /></a>}
+        {normalizedPhone && <a href={'viber://chat?number=' + encodeURIComponent(normalizedPhone)} className="sms-open-on-device">Pokušaj otvoriti Viber <ArrowRight /></a>}
       </section>}
-      {handoff === 'whatsapp' && <p className="message-handoff-status">WhatsApp je otvoren u novoj kartici ili aplikaciji. Provjerite da je poruka poslata.</p>}
-      <div className="message-actions">
-        <Button variant="outline" className="dark-outline" onClick={onCopy} disabled={!message.trim()}><Copy /> Kopiraj</Button>
-        <Button className="pulse-button" onClick={onQueue} disabled={!message.trim() || member.queuedMessage?.text === message.trim()}>{member.queuedMessage?.text === message.trim() ? <><Check /> Nacrt sačuvan</> : <><Send /> Sačuvaj nacrt</>}</Button>
-      </div>
-      {!member.contactConfirmedAt && member.status !== 'recovered' && <p className="fake-service-note"><ShieldAlert aria-hidden="true" /> PULSE ne šalje poruke automatski. Pošaljite u aplikaciji, pa potvrdite kontakt.</p>}
-      {!member.contactConfirmedAt && member.status !== 'recovered' && <Button className="contact-confirm-button" onClick={onContacted}><CheckCircle2 /> Označi kao kontaktirano</Button>}
-      {member.contactConfirmedAt && member.status !== 'recovered' && <section className="contact-workflow" aria-label="Evidencija kontakta">
+      {handoff === 'whatsapp' && <p className="message-handoff-status">Provjerite da je poruka zaista poslata u WhatsApp aplikaciji.</p>}
+    </section>
+
+    <section className="compact-member-actions" aria-label="Evidencija kontakta">
+      {!member.contactConfirmedAt && member.status !== 'recovered' && <>
+        <Button className="contact-confirm-button" onClick={onContacted}><CheckCircle2 /> Označi kao kontaktirano</Button>
+        <p className="fake-service-note"><ShieldAlert aria-hidden="true" /> PULSE ne šalje poruke automatski. Potvrdite kontakt tek nakon slanja.</p>
+      </>}
+      {member.contactConfirmedAt && <div className="contact-workflow">
         <div className="contact-confirmed-state" role="status">
           <CheckCircle2 aria-hidden="true" />
           <span className="contact-confirmed-copy"><strong>Kontakt potvrđen</strong><span>{member.contactConfirmedAt}</span></span>
         </div>
-        {!member.recoveryOutcome ? <div className="contact-outcome-group">
+        {member.status !== 'recovered' && (!member.recoveryOutcome ? <div className="contact-outcome-group">
           <p className="contact-outcome-label">ISHOD KONTAKTA</p>
           <div className="profile-outcome-actions" role="group" aria-label="Ishod kontakta">
             <button type="button" onClick={() => onOutcome('no_answer')}>Bez odgovora</button>
             <button type="button" onClick={() => onOutcome('replied')}>Odgovorio/la</button>
             <button type="button" onClick={() => onOutcome('follow_up')}>Prati sjutra</button>
           </div>
-        </div> : <span className="profile-outcome-confirmed"><CheckCircle2 aria-hidden="true" />{outcomeLabels[member.recoveryOutcome]}</span>}
-      </section>}
+        </div> : <span className="profile-outcome-confirmed"><CheckCircle2 aria-hidden="true" />{outcomeLabels[member.recoveryOutcome]}</span>)}
+      </div>}
       <section className="renewal-section" aria-labelledby="renewal-section-heading">
-        <div className="recovery-divider" aria-hidden="true" />
-        <h3 id="renewal-section-heading">Obnova članarine</h3>
-        {!renewing ? <Button variant="outline" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}><CheckCircle2 /> {member.status === 'recovered' ? 'Već je obnovljeno' : t.actions.renew}</Button> : <form className="renew-form" onSubmit={onMarkRenewed}>
-          <div className="renew-label"><label htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" required value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div>
+        {!renewing ? <div className="compact-renewal-summary">
+          <h3 id="renewal-section-heading">Obnova članarine</h3>
+          <Button type="button" variant="ghost" className="renew-button" onClick={onRenew} disabled={member.status === 'recovered'}>
+            {member.status === 'recovered' ? 'Obnovljeno' : 'Evidentiraj obnovu'} <ChevronRight />
+          </Button>
+        </div> : <form className="renew-form" onSubmit={onMarkRenewed}>
+          <div className="renew-label"><label id="renewal-section-heading" htmlFor="renewal-amount">Iznos obnove</label><div className="amount-input"><Input id="renewal-amount" type="number" min="1" step="1" required value={renewalAmount} onChange={(event) => onRenewalAmount(event.target.value)} /><span>€</span></div></div>
           <div className="renew-form-actions"><Button type="button" variant="ghost" onClick={onCancelRenew}>Odustani</Button><Button type="submit" className="pulse-button"><Check /> Potvrdi obnovu</Button></div>
         </form>}
       </section>
-    </aside>
+    </section>
   </div>;
 }

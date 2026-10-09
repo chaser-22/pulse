@@ -29,7 +29,7 @@ test('Owner and Reception preserve distinct operating hierarchies', () => {
 test('Recovery sheet exposes truthful contact outcomes without bypassing confirmation', () => {
   assert.match(page, /member-dialog member-command-sheet/);
   assert.match(page, /Označi kao kontaktirano/);
-  assert.match(page, /PULSE ne šalje poruke automatski\. Pošaljite u aplikaciji, pa potvrdite kontakt/);
+  assert.match(page, /PULSE ne šalje poruke automatski\. Potvrdite kontakt tek nakon slanja/);
   assert.match(page, /Ishod kontakta/);
   assert.match(page, /onOutcome\('no_answer'\)/);
   assert.match(page, /onOutcome\('replied'\)/);

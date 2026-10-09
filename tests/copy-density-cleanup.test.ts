@@ -23,7 +23,7 @@ test('Reception and priority screens use short scan labels', () => {
 
 test('Member profile keeps actions and removes duplicate facts', () => {
   assert.doesNotMatch(page, /Prioritet koristi datum isteka i cijenu članarine|profile-basis-note/);
-  assert.match(page, /PULSE ne šalje poruke automatski\. Pošaljite u aplikaciji, pa potvrdite kontakt/);
+  assert.match(page, /PULSE ne šalje poruke automatski\. Potvrdite kontakt tek nakon slanja/);
   assert.doesNotMatch(page, /Podaci iz CSV-a|RAZLOG PRIORITETA|PULSE prijedlog|znakova/);
   assert.doesNotMatch(page, /profile-history-grid/);
 });
