@@ -561,9 +561,7 @@ export default function Home() {
           <NavButton active={view === 'members'} icon={<Users />} label={t.nav.members} count={members.length} onClick={() => goTo('members')} />
           </>}
         </nav>
-        {workspace === 'owner'
-          ? metrics.recoveredRevenue > 0 && <div className="sidebar-insight"><span className="pulse-dot" /><div><strong>{euro(metrics.recoveredRevenue)}</strong><small>obnovljeno</small></div></div>
-          : <div className="sidebar-insight reception-insight"><span className="pulse-dot" /><div><strong>{riskMembers.filter((member) => !member.contactConfirmedAt).length}</strong><small>kontakata preostalo</small></div></div>}
+        {workspace === 'owner' && metrics.recoveredRevenue > 0 && <div className="sidebar-insight"><span className="pulse-dot" /><div><strong>{euro(metrics.recoveredRevenue)}</strong><small>obnovljeno</small></div></div>}
         {workspace === 'owner' && <button className="demo-reset-button" onClick={() => setResetOpen(true)}><RotateCcw /> Resetuj demo</button>}
         <button type="button" className="gym-card gym-card-button" onClick={() => setPilotOpen(true)}><span className="gym-monogram">PD</span><span><strong>{t.gymName}</strong><small>CSV demo</small></span></button>
       </aside>
