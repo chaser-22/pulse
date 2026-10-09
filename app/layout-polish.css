@@ -2829,7 +2829,7 @@ body {
 .risk-member-card {
   grid-template-columns:24px minmax(200px,1fr) minmax(220px,1.25fr) 92px 100px;
   grid-template-areas:'order person next value action';
-  gap:16px;align-items:center;padding:17px 4px;
+  gap:16px;align-items:center;padding:17px 0 17px 18px;
   min-height:78px;background:transparent;border:0;border-top:1px solid var(--border);
 }
 .risk-order {grid-area:order;color:#73848d}
@@ -2838,7 +2838,13 @@ body {
 .risk-next p {margin:0;color:#aab6bd;font-size:12px;line-height:1.5}
 .risk-value {grid-area:value;justify-items:end;text-align:right;font-variant-numeric:tabular-nums}
 .risk-value strong {color:var(--foreground);font-size:14px}
-.risk-member-card>button {grid-area:action;min-height:40px;justify-self:stretch;border-radius:9px}
+.risk-member-card>button {
+  grid-area:action;
+  width:100%;min-width:0;box-sizing:border-box;
+  min-height:44px;justify-self:stretch;align-self:center;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:8px 9px;border-radius:9px;white-space:nowrap;
+}
 .risk-member-card:hover {background:#ffffff04}
 
 /* Member command sheet / contextual workflow */
