@@ -3141,6 +3141,209 @@ body {
 .number-shift {animation:pulse-number-settle 240ms ease both}
 @keyframes pulse-number-settle {from {opacity:.75}to{opacity:1}}
 
+/* Compact member command: one focused workflow, not a stack of large cards. */
+.member-command-sheet .profile-layout.compact-member-flow {
+  display:block;min-height:0;height:100%;
+  padding:0 28px 24px;overflow-y:auto;overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+.member-command-sheet .compact-member-header {
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-width:0;padding:22px 48px 16px 0;border-bottom:1px solid var(--border);
+}
+.member-command-sheet .compact-member-identity {
+  display:flex;flex-direction:row;align-items:center;gap:13px;
+  min-width:0;text-align:left;
+}
+.member-command-sheet .compact-member-avatar {
+  display:grid;place-items:center;flex:0 0 42px;
+  width:42px;height:42px;font-size:13px;
+}
+.member-command-sheet .compact-member-title {
+  display:grid;justify-items:start;gap:2px;min-width:0;
+}
+.member-command-sheet .compact-member-title .status-pill {
+  padding:3px 8px;min-height:21px;font-size:10px;
+}
+.member-command-sheet .compact-member-title [data-slot='dialog-title'] {
+  font-size:22px;line-height:1.15;letter-spacing:-.035em;
+}
+.member-command-sheet .compact-member-title [data-slot='dialog-description'] {
+  margin:0;font-size:12px;color:#9faeb7;line-height:1.45;
+}
+.member-command-sheet .compact-edit-action {
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  flex:0 0 auto;min-height:36px;padding:6px 10px;
+  border:1px solid var(--border);border-radius:8px;
+  color:#b8c8d1;font-size:12px;
+}
+.member-command-sheet .compact-edit-action svg {width:14px;height:14px}
+.member-command-sheet .compact-member-overview {
+  display:grid;gap:10px;padding:15px 0 13px;border-bottom:1px solid var(--border);
+}
+.member-command-sheet .compact-member-riskline {
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  gap:8px 12px;min-width:0;
+}
+.member-command-sheet .compact-member-riskcopy {
+  display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;min-width:0;
+  font-size:12px;line-height:1.5;
+}
+.member-command-sheet .compact-member-riskcopy strong {font-size:13px;color:#e4e9ec;font-weight:600}
+.member-command-sheet .compact-risk-dot {
+  display:inline-block;flex:0 0 6px;width:6px;height:6px;border-radius:50%;
+  background:var(--success);
+}
+.member-command-sheet .compact-risk-dot.risk-high {background:var(--danger)}
+.member-command-sheet .compact-risk-dot.risk-medium {background:var(--warning)}
+.member-command-sheet .compact-risk-date {color:#8c9da6;font-size:11px}
+.member-command-sheet .compact-member-risk-details {flex:0 1 auto;min-width:0}
+.member-command-sheet .compact-member-risk-details summary {
+  display:inline-flex;align-items:center;min-height:32px;
+  color:#86c7d8;font-size:11px;cursor:pointer;list-style:none;
+}
+.member-command-sheet .compact-member-risk-details summary::-webkit-details-marker {display:none}
+.member-command-sheet .compact-member-risk-details[open] {flex-basis:100%}
+.member-command-sheet .compact-member-risk-details[open] summary {margin-bottom:8px}
+.member-command-sheet .compact-member-risk-details p {
+  margin:0 0 9px;color:#a2b3bc;font-size:12px;line-height:1.5;
+}
+.member-command-sheet .compact-member-risk-details dl {
+  display:flex;flex-wrap:wrap;gap:10px 22px;margin:0;
+}
+.member-command-sheet .compact-member-risk-details dl>div {display:flex;gap:7px;font-size:11px}
+.member-command-sheet .compact-member-risk-details dt {color:#8599a3}
+.member-command-sheet .compact-member-risk-details dd {margin:0;color:#d7e2e8}
+.member-command-sheet .compact-member-progress .recovery-lifecycle {
+  display:flex;align-items:center;flex-wrap:wrap;gap:7px 18px;
+  padding:0;margin:0;font-size:11px;line-height:1.35;
+}
+.member-command-sheet .compact-member-progress .recovery-lifecycle li {
+  font-size:11px;white-space:nowrap;
+}
+.member-command-sheet .compact-message-stage {min-width:0;padding:16px 0 14px}
+.member-command-sheet .compact-message-heading {
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:6px 14px;margin:0 0 9px;
+}
+.member-command-sheet .compact-message-heading h2 {
+  margin:0;color:var(--foreground);
+  font-size:15px;font-weight:650;letter-spacing:-.02em;
+}
+.member-command-sheet .compact-message-utilities {
+  display:flex;align-items:center;justify-content:flex-end;
+  gap:10px;min-width:0;
+}
+.member-command-sheet .compact-message-utilities>span {
+  color:#8498a3;font-size:10px;line-height:1.4;
+}
+.member-command-sheet .compact-message-utilities button {
+  display:inline-flex;align-items:center;gap:6px;
+  min-height:34px;padding:6px 9px;border:1px solid var(--border);
+  border-radius:8px;font-size:11px;color:#c5d4da;
+}
+.member-command-sheet .compact-message-utilities button svg {width:13px;height:13px}
+.member-command-sheet .compact-message-field {
+  display:block;min-width:0;margin:0;
+}
+.member-command-sheet .compact-message-field textarea {
+  display:block;width:100%;height:clamp(104px,13dvh,130px);
+  min-height:104px;max-height:240px;padding:11px 13px;
+  border:1px solid var(--border-strong);border-radius:10px;
+  background:#0d141a;color:var(--foreground);
+  font-size:12px;line-height:1.55;resize:vertical;
+}
+.member-command-sheet .compact-message-channels {
+  margin-top:10px;gap:8px;
+}
+.member-command-sheet .compact-message-channels .message-channel {
+  min-height:44px;padding:8px 10px;
+}
+.member-command-sheet .compact-member-actions {
+  min-width:0;padding-top:13px;border-top:1px solid var(--border);
+}
+.member-command-sheet .compact-member-actions .contact-confirm-button {
+  width:100%;min-height:44px;margin:0;
+}
+.member-command-sheet .compact-member-actions .fake-service-note {
+  margin:7px 0 0;padding:0;border:0;background:none;
+  font-size:10px;line-height:1.55;color:#8497a1;
+}
+.member-command-sheet .compact-member-actions .contact-workflow {
+  display:grid;gap:10px;margin:0;
+}
+.member-command-sheet .compact-member-actions .contact-confirmed-state {
+  min-height:44px;padding:9px 12px;
+}
+.member-command-sheet .compact-member-actions .contact-outcome-group {gap:7px}
+.member-command-sheet .compact-member-actions .profile-outcome-actions {gap:8px}
+.member-command-sheet .compact-member-actions .profile-outcome-actions button {
+  min-height:44px;
+}
+.member-command-sheet .compact-member-actions .renewal-section {
+  min-width:0;margin-top:13px;padding-top:12px;border-top:1px solid var(--border);
+}
+.member-command-sheet .compact-renewal-summary {
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.member-command-sheet .compact-member-actions .renewal-section h3 {
+  margin:0;font-size:13px;font-weight:600;color:#d5e0e5;
+}
+.member-command-sheet .compact-member-actions .renew-button {
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  width:auto;min-height:36px;padding:6px 8px;border:0;
+  background:transparent;color:#86d2e4;font-size:12px;
+}
+.member-command-sheet .compact-member-actions .renew-button svg {width:15px;height:15px}
+.member-command-sheet .compact-member-actions .renew-form {
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  align-items:end;gap:12px;margin:0;padding:0;border:0;background:none;
+}
+.member-command-sheet .compact-member-actions .renew-form .renew-label {gap:5px}
+.member-command-sheet .compact-member-actions .renew-form .amount-input input {
+  height:44px;min-height:44px;
+}
+.member-command-sheet .compact-member-actions .renew-form-actions {
+  display:flex;align-items:center;gap:8px;
+}
+.member-command-sheet .compact-member-actions .renew-form-actions button {
+  min-height:44px;
+}
+@media (max-width:680px) {
+  .member-command-sheet .profile-layout.compact-member-flow {padding:0 17px 24px}
+  .member-command-sheet .compact-member-header {padding:50px 0 14px}
+  .member-command-sheet .compact-member-title [data-slot='dialog-title'] {font-size:21px}
+  .member-command-sheet .compact-member-avatar {flex-basis:38px;width:38px;height:38px}
+  .member-command-sheet .compact-message-field textarea {height:124px}
+}
+@media (max-width:480px) {
+  .member-command-sheet .compact-member-header {align-items:flex-start}
+  .member-command-sheet .compact-edit-action {align-self:center}
+  .member-command-sheet .compact-member-riskline {align-items:flex-start}
+  .member-command-sheet .compact-message-utilities>span {display:none}
+  .member-command-sheet .compact-member-actions .renew-form {
+    grid-template-columns:1fr;
+  }
+  .member-command-sheet .compact-member-actions .renew-form-actions {
+    justify-content:stretch;
+  }
+  .member-command-sheet .compact-member-actions .renew-form-actions button {flex:1}
+}
+@media (max-width:365px) {
+  .member-command-sheet .compact-member-identity {gap:8px}
+  .member-command-sheet .compact-member-title [data-slot='dialog-title'] {font-size:18px}
+  .member-command-sheet .compact-edit-action {font-size:0;min-width:36px}
+  .member-command-sheet .compact-edit-action svg {width:16px;height:16px}
+  .member-command-sheet .compact-message-channels {grid-template-columns:1fr}
+}
+@media (min-width:681px) and (max-height:750px) {
+  .member-command-sheet .compact-member-header {padding-top:15px;padding-bottom:10px}
+  .member-command-sheet .compact-member-overview {padding-top:11px;padding-bottom:10px;gap:7px}
+  .member-command-sheet .compact-message-stage {padding-top:11px;padding-bottom:10px}
+  .member-command-sheet .compact-message-field textarea {height:104px}
+  .member-command-sheet .compact-member-actions {padding-top:10px}
+}
+
 /* Responsive / no universal scaling of desktop */
 @media (max-width:1180px) {
   :root {--page-gutter:22px}
